@@ -1,0 +1,316 @@
+// Kron CMS — Prisma sema (PostgreSQL)
+// Prisma 7: datasource url ve .env yuklemesi prisma.config.ts icinde.
+// Cekirdek tasarim: tek "Entry" tablosu (PAGE/PRODUCT/POST) ortak alanlari tasir;
+// tur-ozel alanlar 1:1 detay tablolarinda (ProductDetail/PostDetail).
+// Cok dil: her kayit bir Locale'e ait, ceviriler TranslationGroup ile eslesir.
+// Bloklar: ContentBlock(type, order, data:JSON) — bilesen ekleme/siralama.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs" // NestJS CommonJS ile uyum (import.meta yok)
+  runtime      = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================ ENUM'LAR ============================
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum EntryType {
+  PAGE
+  PRODUCT
+  POST
+}
+
+enum EntryStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+enum BlockType {
+  HERO
+  SECTION_HEADING
+  FEATURE_GRID
+  PRODUCT_SHOWCASE
+  VALUE_PROP
+  STATS
+  CASE_STUDY
+  BLOG_CAROUSEL
+  RICH_TEXT
+  MEDIA_TEXT
+  LOGO_CLOUD
+  CTA_BANNER
+  CONTACT_FORM
+  FAQ
+}
+
+enum CategoryKind {
+  PRODUCT
+  BLOG
+}
+
+enum SubmissionStatus {
+  NEW
+  READ
+  SPAM
+  ARCHIVED
+}
+
+// ============================ KIMLIK / ROL ============================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         Role     @default(EDITOR)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  entries   Entry[]          @relation("EntryAuthor")
+  versions  ContentVersion[]
+  auditLogs AuditLog[]
+  media     Media[]
+}
+
+// ============================ COK DILLILIK ============================
+
+// Dil tablosu: yeni dil eklemek migration gerektirmez (enum yerine tablo).
+model Locale {
+  code      String  @id // "tr", "en"
+  name      String // "Turkce", "English"
+  isDefault Boolean @default(false)
+  enabled   Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  entries    Entry[]
+  categories Category[]
+}
+
+// Bir icerigin tum dillerdeki surumlerini gruplar (hreflang + icerik eslestirme).
+model TranslationGroup {
+  id        String    @id @default(cuid())
+  type      EntryType
+  createdAt DateTime  @default(now())
+
+  entries Entry[]
+}
+
+// ============================ CEKIRDEK ICERIK ============================
+
+model Entry {
+  id     String      @id @default(cuid())
+  type   EntryType
+  status EntryStatus @default(DRAFT)
+
+  // i18n
+  localeCode String
+  locale     Locale           @relation(fields: [localeCode], references: [code])
+  groupId    String
+  group      TranslationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // yonlendirme + ortak alanlar
+  slug         String
+  title        String
+  excerpt      String?
+  coverImageId String?
+  coverImage   Media?  @relation("EntryCover", fields: [coverImageId], references: [id])
+
+  // yayin
+  publishAt   DateTime?
+  publishedAt DateTime?
+
+  // iliskiler
+  seo        Seo?
+  blocks     ContentBlock[]
+  product    ProductDetail?
+  post       PostDetail?
+  categories CategoryOnEntry[]
+  versions   ContentVersion[]
+
+  authorId String?
+  author   User?   @relation("EntryAuthor", fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([localeCode, slug]) // flat URL: dil + slug benzersiz, tek cozumleyici
+  @@index([type, status])
+  @@index([groupId])
+  @@index([status, publishAt]) // zamanlanmis yayin taramasi
+}
+
+model ProductDetail {
+  entryId  String  @id
+  entry    Entry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tagline  String?
+  // urune ozel yapisal alanlar (ozellik listesi vb.)
+  features Json?
+}
+
+model PostDetail {
+  entryId    String   @id
+  entry      Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  readingMin Int?
+  tags       String[]
+}
+
+model ContentBlock {
+  id      String    @id @default(cuid())
+  entryId String
+  entry   Entry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  type    BlockType
+  order   Int       @default(0)
+  enabled Boolean   @default(true)
+  data    Json // tipi packages/shared'deki Zod semasiyla dogrulanir (no any)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entryId, order])
+}
+
+model Seo {
+  id      String @id @default(cuid())
+  entryId String @unique
+  entry   Entry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  metaTitle       String?
+  metaDescription String?
+  canonicalUrl    String?
+  robotsIndex     Boolean  @default(true)
+  robotsFollow    Boolean  @default(true)
+  ogTitle         String?
+  ogDescription   String?
+  ogImageId       String?
+  ogImage         Media?   @relation("SeoOg", fields: [ogImageId], references: [id])
+  structuredData  Json? // schema.org ek/override (GEO)
+  keywords        String[]
+}
+
+// ============================ TAKSONOMI ============================
+
+model Category {
+  id         String       @id @default(cuid())
+  kind       CategoryKind
+  slug       String
+  title      String
+  localeCode String
+  locale     Locale       @relation(fields: [localeCode], references: [code])
+  groupId    String? // kategori cevirileri (opsiyonel)
+
+  entries CategoryOnEntry[]
+
+  @@unique([localeCode, kind, slug])
+  @@index([kind])
+}
+
+model CategoryOnEntry {
+  entryId    String
+  categoryId String
+  entry      Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([entryId, categoryId])
+}
+
+// ============================ MEDYA ============================
+
+model Media {
+  id          String   @id @default(cuid())
+  key         String   @unique // S3 obje anahtari
+  url         String
+  mime        String
+  size        Int
+  width       Int?
+  height      Int?
+  alt         String?
+  title       String?
+  folder      String?  @default("/")
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  entryCovers Entry[] @relation("EntryCover")
+  seoOg       Seo[]   @relation("SeoOg")
+}
+
+// ============================ REDIRECT (SEO) ============================
+
+model Redirect {
+  id          String   @id @default(cuid())
+  source      String   @unique // /eski-url
+  destination String // /yeni-url
+  statusCode  Int      @default(301)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// ============================ FORMLAR ============================
+
+model FormDefinition {
+  id        String   @id @default(cuid())
+  key       String   @unique // "demo", "contact"
+  name      String
+  fields    Json // [{name,label,type,required,options}]
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  submissions FormSubmission[]
+}
+
+model FormSubmission {
+  id          String           @id @default(cuid())
+  formId      String
+  form        FormDefinition   @relation(fields: [formId], references: [id], onDelete: Cascade)
+  localeCode  String?
+  data        Json
+  consent     Boolean          @default(false) // KVKK onayi
+  consentText String?
+  ipHash      String?
+  userAgent   String?
+  status      SubmissionStatus @default(NEW)
+  createdAt   DateTime         @default(now())
+
+  @@index([formId, status])
+  @@index([createdAt])
+}
+
+// ============================ VERSIYON & AUDIT ============================
+
+model ContentVersion {
+  id          String   @id @default(cuid())
+  entryId     String
+  entry       Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  version     Int
+  snapshot    Json // entry + blocks + seo anlik goruntusu
+  note        String?
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([entryId, version])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String // "entry.publish", "media.delete" ...
+  entityType String
+  entityId   String
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
