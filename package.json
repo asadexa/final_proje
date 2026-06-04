@@ -1,0 +1,26 @@
+{
+  "name": "kron-cms",
+  "version": "0.0.0",
+  "private": true,
+  "description": "krontech.com yeniden gelistirme — headless CMS + cok dilli Next.js frontend",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run start:dev -w @kron/api",
+    "dev:web": "npm run dev -w @kron/web",
+    "build": "npm run build -w @kron/api && npm run build -w @kron/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "prettier": "^3.4.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

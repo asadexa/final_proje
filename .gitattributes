@@ -1,0 +1,14 @@
+# Tutarli satir sonu (LF) — Docker/Linux ile uyum, gereksiz diff'leri onler
+* text=auto eol=lf
+
+# Ikili dosyalar
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.avif binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

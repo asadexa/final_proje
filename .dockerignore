@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/.next
+**/out
+**/coverage
+**/.turbo
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+*.log
+.volumes
+docs
+**/*.md
+!README.md

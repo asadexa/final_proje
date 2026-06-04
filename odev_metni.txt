@@ -1,0 +1,76 @@
+Krontech.com Web Sitesi – Yeniden Geliştirme Ödevi
+Amaç
+Bu çalışmanın amacı, krontech.com web sitesinin mevcut tasarımı korunarak modern, yönetilebilir ve ölçeklenebilir bir altyapı ile yeniden geliştirilmesidir. Beklenen çıktı yalnızca görsel bir kopya değil; içerik yönetimi, SEO/GEO altyapısı, performans ve yayın süreçleriyle birlikte ele alınmış bütüncül bir sistemdir.
+Genel Beklentiler
+Tasarım korunmalıdır Tüm içerikler yönetilebilir olmalıdır SEO ve GEO gereksinimleri karşılanmalıdır Çok dilli yapı doğru modellenmelidir Performans ve cache stratejileri düşünülmelidir Uzun vadede sürdürülebilir bir mimari kurulmalıdır
+AI Kullanımı
+AI araçlarının aktif kullanımı beklenmektedir AI geliştirme sürecinin merkezinde konumlandırılmalıdır Üretilen çıktılar değerlendirilip iyileştirilmelidir Amaç, yalnızca AI kullanmak değil; AI ile doğru sistem tasarımı yapabilmektir.
+Teknoloji
+Zorunlu
+Frontend: Next.js + TypeScript Dil: Proje genelinde TypeScript kullanımı zorunludur; any kullanımından kaçınılmalıdır
+Backend
+Aşağıdaki seçeneklerden biri tercih edilmelidir: NestJS Spring Boot
+Seçimin teknik gerekçesi açıklanmalıdır.
+Önerilen
+PostgreSQL Redis S3 uyumlu obje depolama Docker / Docker Compose
+Kapsam
+
+Site Analizi
+Analiz Edilecek Başlıklar Sayfa tipleri İçerik tipleri Tekrarlayan bileşen yapıları Çok dilli yapı SEO alanları
+Beklenen Çıktılar İçerik modeli (entity ve ilişkiler) Sayfa tipi envanteri Bileşen yapısı
+Frontend (Next.js)
+Geliştirilecek Sayfalar Ana sayfa Ürün detay sayfası Blog liste sayfası Blog detay sayfası Kaynaklar sayfası Form sayfası (demo talep / iletişim)
+Beklentiler SSR / ISR kullanımının doğru kurgulanması Çok dilli routing yapısı ( /tr , /en vb.) SEO uyumlu çıktı GEO uyumlu içerik üretimi Component tabanlı yapı Responsive tasarım Performans optimizasyonu (Core Web Vitals) Temel erişilebilirlik standartları (semantic HTML, ARIA)
+Backend / Admin Panel
+İçerik Yönetimi Sayfa oluşturma ve düzenleme Bileşen ekleme ve sıralama Blog ve ürün yönetimi
+Medya Yönetimi Dosya yükleme Medya tekrar kullanımı
+SEO / GEO Yönetimi Meta alanları Canonical ve index ayarları
+
+Structured data yönetimi Yayın Süreçleri
+Draft / Publish Zamanlanmış yayın Preview link Çok Dil İçerik eşleştirme Dil bazlı içerik yönetimi Form Yönetimi Form tanımlama Form verilerini görüntüleme ve export Yetkilendirme Basit rol yapısı (admin / editor) JWT tabanlı authentication önerilir; tercih gerekçelendirilmelidir API Tasarımı REST veya GraphQL; tercih gerekçelendirilmelidir API dokümantasyonu (Swagger / OpenAPI) sunulmalıdır Rate limiting uygulanmalıdır
+SEO ve GEO
+GEO (Generative Engine Optimization) Nedir? Yapay zeka destekli arama motorlarının (ChatGPT, Gemini, Perplexity vb.) içerikleri doğru anlayıp yanıtlarında kaynak olarak kullanabilmesi için içerik yapısının optimize edilmesidir. Klasik SEO ile birlikte uygulanmalıdır. SEO Gereksinimleri
+Meta title ve description Canonical Robots meta Open Graph Sitemap (dinamik) robots.txt hreflang Redirect yönetimi GEO Gereksinimleri Structured data (schema.org) Semantik HTML LLM uyumlu içerik yapısı Anlamlı içerik blokları FAQ / zengin içerik yapıları Çözülmesi Gereken Konular Mevcut URL yapısı korunarak geçiş nasıl sağlanacak
+
+SEO kaybı nasıl minimize edilecek Sitemap ve indexleme stratejisi nasıl kurulacak
+Cache ve Performans
+Cache Katmanları CDN cache Next.js ISR cache Uygulama cache (Redis vb.)
+Beklentiler Cache invalidation stratejisi Görsel optimizasyonu (Next.js Image, WebP/AVIF) Lazy loading API caching
+Çözülmesi Gereken Konular İçerik publish edildiğinde hangi cache katmanları etkilenir Cache temizleme mekanizması nasıl çalışır
+Form ve Lead Süreçleri
+Formlar Demo talep İletişim
+Beklentiler Validasyon (client-side + server-side) Spam koruma (CAPTCHA veya alternatif bir mekanizma) KVKK / onay alanları Admin panelde görüntüleme Export veya webhook
+Yayın Süreçleri
+Draft / publish Zamanlanmış yayın Versiyonlama (temel seviyede) Preview link Audit log (temel seviyede)
+Test
+Unit testler için temel kapsam sağlanmalıdır Kritik API endpointleri için integration test yazılmalıdır Kullanılan test framework gerekçelendirilmelidir (Jest, Vitest, Supertest vb.)
+Mimari
+Sistem mimarisi
+
+Servis yapısı Deployment yaklaşımı Ölçekleme stratejisi Logging ve monitoring Local geliştirme ortamı (Docker Compose ile tek komutla ayağa kalkmalıdır)
+
+Teslimler
+Kod Deposu
+Çalışır proje (GitHub / GitLab) README (kurulum adımları açık ve eksiksiz; docker compose up ile çalışabilmeli) Ortam değişkenleri örneği ( .env.example ) Anlamlı commit geçmişi
+Sunum
+Canlı demo gösterimi Mimari ve teknik kararların sözlü aktarımı AI'ın geliştirme sürecine katkısı
+
+Değerlendirme Kriterleri
+
+Alan Sistem tasarımı İçerik modelleme
+
+Açıklama Mimari kararların tutarlılığı ve gerekçesi Entity yapısının doğruluğu ve genişletilebilirliği
+
+Teknik karar kalitesi Kod kalitesi SEO / GEO
+
+Trade-off'ların farkındalığı, teknoloji seçim gerekçeleri TypeScript kullanımı, okunabilirlik, test kapsamı Gereksinimlerin ne kadar doğru uygulandığı
+
+AI destekli geliştirme AI'ın sürece entegrasyonu ve çıktı kalitesi
+
+Çalışan demo
+
+Sistemin gerçekten işlevsel olması
+
+Görsel benzerlik önemli olmakla birlikte, altyapı doğru kurulmadığı sürece çalışma başarılı sayılmaz.
+
+
