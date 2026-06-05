@@ -6,7 +6,7 @@ export function SiteFooter({ locale, dict }: { locale: Locale; dict: Dictionary 
   return (
     <footer className="mt-20">
       {/* Footer ustu mavi bar (krontech) */}
-      <div className="h-1 w-full bg-primary" />
+      <div className="h-1.5 w-full bg-primary" />
 
       <div className="bg-surface-muted">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
