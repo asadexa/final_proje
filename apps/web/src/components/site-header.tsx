@@ -31,7 +31,7 @@ export function SiteHeader({ locale, dict }: { locale: Locale; dict: Dictionary 
         className="text-white"
         style={{ background: "linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%), #1563FF" }}
       >
-        <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-[1200px] items-center px-4 sm:px-6">
           <span className="mr-auto text-sm">{dict.announcement.text}</span>
           <Link
             href={`${base}/contact`}
@@ -45,7 +45,7 @@ export function SiteHeader({ locale, dict }: { locale: Locale; dict: Dictionary 
 
       {/* Ana header (sticky) */}
       <header className="sticky top-0 z-50 border-b border-line bg-surface">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-[1140px] items-center justify-between px-4 sm:px-6">
           {/* Logo */}
           <Link href={base} aria-label="Kron Technologies" className="flex shrink-0 items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}

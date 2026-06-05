@@ -11,7 +11,7 @@ export default async function BlogPage({ params }: PageProps<"/[locale]/blog">) 
   const items = list?.items ?? [];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+    <div className="mx-auto max-w-[1140px] px-4 py-16 sm:px-6">
       <h1 className="mb-10 text-3xl font-bold text-dark">{dict.blog.title}</h1>
       {items.length === 0 ? (
         <p className="text-muted">{dict.blog.empty}</p>

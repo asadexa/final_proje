@@ -21,4 +21,6 @@ html {
 body {
   font-family: var(--font-sans);
   color: var(--color-ink);
+  font-size: 14px; /* krontech gercek body font-size */
+  background-color: #f5f6f8; /* krontech body bg */
 }

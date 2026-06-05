@@ -9,7 +9,7 @@ export function SiteFooter({ locale, dict }: { locale: Locale; dict: Dictionary 
       <div className="h-1.5 w-full bg-primary" />
 
       <div className="bg-surface-muted">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+        <div className="mx-auto max-w-[1140px] px-4 py-12 sm:px-6">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
               {/* eslint-disable-next-line @next/next/no-img-element */}

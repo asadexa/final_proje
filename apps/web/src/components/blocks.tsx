@@ -11,8 +11,21 @@ function arr<T>(v: unknown): T[] {
 }
 type Cta = { label?: string; href?: string };
 
-function Container({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`mx-auto max-w-7xl px-4 sm:px-6 ${className}`}>{children}</div>;
+function Container({
+  children,
+  className = "",
+  wide = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  wide?: boolean;
+}) {
+  // krontech: .container = 1140px, .extended-container = 1200px
+  return (
+    <div className={`mx-auto ${wide ? "max-w-[1200px]" : "max-w-[1140px]"} px-4 sm:px-6 ${className}`}>
+      {children}
+    </div>
+  );
 }
 
 type BlockProps = { data: Record<string, unknown> };
@@ -24,7 +37,7 @@ function Hero({ data }: BlockProps): ReactElement {
       className="relative bg-[#0a1733] bg-cover bg-center text-white"
       style={{ backgroundImage: "url('/hero-bg.png')" }}
     >
-      <Container className="py-24 md:py-32">
+      <Container wide className="py-24 md:py-32">
         {str(data.eyebrow) && (
           <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">
             {str(data.eyebrow)}
