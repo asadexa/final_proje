@@ -1,0 +1,22 @@
+{
+  "nav": {
+    "products": "Products",
+    "solutions": "Solutions",
+    "resources": "Resources",
+    "blog": "Blog",
+    "contact": "Contact"
+  },
+  "cta": {
+    "demo": "Request a Demo",
+    "contact": "Contact Us"
+  },
+  "blog": {
+    "title": "Blog",
+    "readMore": "Read more",
+    "empty": "No posts yet."
+  },
+  "footer": {
+    "tagline": "Enterprise cybersecurity and telecom solutions.",
+    "rights": "All rights reserved."
+  }
+}

@@ -105,7 +105,7 @@ bunu Faz 8'de kurariz.
 | Konu | Karar | Kisa gerekce |
 |------|-------|--------------|
 | ORM | **Prisma 7** | Tip-guvenli sorgu, migration, okunabilir sema; entity modelini netlestirir |
-| i18n | **next-intl 4** | App Router ile uyumlu, `/tr` `/en` routing + mesaj yonetimi |
+| i18n | **Native Next 16 i18n** (next-intl yerine; Faz 4'te guncellendi) | `[locale]` + `proxy` + JSON sozluk; sifir bagimlilik, seffaf (icerik zaten API'den locale bazli gelir) |
 | Stil | **Tailwind CSS** | Tasarim korumayi hizli/surdurulebilir kilar, tutarli token'lar |
 | Admin | **Next.js icinde `/admin`** | Daha az hareketli parca, tip paylasimi, tek deploy |
 | Obje depolama | **MinIO** | Yerelde S3 uyumlu, Docker ile tek komutta ayaga kalkar |

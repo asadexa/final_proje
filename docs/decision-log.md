@@ -35,6 +35,15 @@
 | **Medya (MinIO/S3)** | Dosya yukleme + medya kutuphanesi (yeniden kullanim) | `media` modulu; @aws-sdk/client-s3; public-read bucket |
 | **Redis cache + invalidation** | Public icerik cache; icerik degisince temizlenir | `CacheService` (ioredis); delByPrefix('content:') |
 
+### Faz 4 — Frontend / public site (devam ediyor)
+| Karar | Neden | Nasil |
+|------|------|-------|
+| **Native Next 16 i18n** (next-intl yerine) | Sifir bagimlilik, seffaf, icerik zaten API'den locale bazli | `[locale]` segment + `proxy` + JSON sozluk; ADR 0001 i18n karari guncellendi |
+| **Blok registry (FE)** | Yeni blok tipi = tek bilesen (modulerlik) | `components/blocks.tsx`: BlockType -> React bileseni |
+| **Tasarim: krontech gercek paleti** | "Tasarim bire bir" istek | `style.css`'ten cikarildi: Roboto + #1563ff mavi, acik tema |
+| **SSR + ISR** | Performans + publish'te tazeleme | `fetch(next:{revalidate:60, tags})`; revalidateTag Faz 7'de |
+| **Next 16 ozellikleri** | Dogru API kullanimi | async `params`, `PageProps/LayoutProps`, `proxy` (eski middleware) |
+
 ## Kucuk ama anlatilmaya deger teknik kararlar
 
 - **Prisma 7 `prisma-client` generator + `moduleFormat=cjs`:** Yeni generator ESM uretiyordu;

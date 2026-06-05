@@ -1,0 +1,22 @@
+{
+  "nav": {
+    "products": "Ürünler",
+    "solutions": "Çözümler",
+    "resources": "Kaynaklar",
+    "blog": "Blog",
+    "contact": "İletişim"
+  },
+  "cta": {
+    "demo": "Demo Talep Et",
+    "contact": "Bize Ulaşın"
+  },
+  "blog": {
+    "title": "Blog",
+    "readMore": "Devamını oku",
+    "empty": "Henüz yazı yok."
+  },
+  "footer": {
+    "tagline": "Kurumsal siber güvenlik ve telekom çözümleri.",
+    "rights": "Tüm hakları saklıdır."
+  }
+}
