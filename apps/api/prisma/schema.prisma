@@ -76,10 +76,24 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  entries   Entry[]          @relation("EntryAuthor")
-  versions  ContentVersion[]
-  auditLogs AuditLog[]
-  media     Media[]
+  entries       Entry[]          @relation("EntryAuthor")
+  versions      ContentVersion[]
+  auditLogs     AuditLog[]
+  media         Media[]
+  refreshTokens RefreshToken[]
+}
+
+// Refresh token'lar DB'de hash'li tutulur (rotation + revocation icin).
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // ============================ COK DILLILIK ============================

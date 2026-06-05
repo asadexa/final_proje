@@ -74,7 +74,7 @@ services:
     image: kron-cms:dev
     restart: unless-stopped
     # Container acilisinda: client uret -> migration uygula -> seed -> dev sunucu
-    command: ["sh", "-c", "cd apps/api && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npm run start:dev"]
+    command: ["sh", "-c", "npm run build -w @kron/shared && cd apps/api && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npm run start:dev"]
     env_file: .env
     ports:
       - "${API_PORT:-4000}:${API_PORT:-4000}"
@@ -86,6 +86,7 @@ services:
       - /app/apps/api/node_modules
       - /app/apps/api/dist
       - /app/apps/api/src/generated
+      - /app/packages/shared/dist
     depends_on:
       postgres:
         condition: service_healthy

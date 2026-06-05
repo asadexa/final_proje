@@ -1,0 +1,62 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import type { AuthUser } from '../auth/types';
+import { ContentService } from './content.service';
+import { CreateEntryDto, ListQueryDto, UpdateEntryDto } from './dto/entry.dto';
+
+@ApiTags('content (admin)')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('admin/entries')
+export class AdminContentController {
+  constructor(private readonly content: ContentService) {}
+
+  @Post()
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Icerik olustur (bloklarla)' })
+  create(@Body() dto: CreateEntryDto, @CurrentUser() user: AuthUser) {
+    return this.content.create(dto, user.id);
+  }
+
+  @Get()
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Tum icerikleri listele (her durum)' })
+  findAll(@Query() query: ListQueryDto) {
+    return this.content.findAll(query);
+  }
+
+  @Get(':id')
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Tek icerik (bloklar + seo + detay)' })
+  findOne(@Param('id') id: string) {
+    return this.content.findOne(id);
+  }
+
+  @Patch(':id')
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Icerik guncelle (bloklar verildiyse degistirilir)' })
+  update(@Param('id') id: string, @Body() dto: UpdateEntryDto) {
+    return this.content.update(id, dto);
+  }
+
+  @Delete(':id')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Icerik sil (sadece ADMIN)' })
+  remove(@Param('id') id: string) {
+    return this.content.remove(id);
+  }
+}

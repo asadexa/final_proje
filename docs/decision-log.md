@@ -30,6 +30,8 @@
 | **Refresh DB'de (sha256) + rotation** | Iptal mumkun, Redis'siz, test edilebilir | `RefreshToken` modeli |
 | **RBAC (ADMIN/EDITOR)** | Basit rol yapisi | `JwtAuthGuard`+`RolesGuard`+`@Roles` |
 | **Global rate limit + ValidationPipe** | Guvenlik + girdi dogrulama (no any) | `@nestjs/throttler`, DTO + class-validator |
+| **Icerik API (public + admin)** | Flat-URL slug cozumleyici, blok CRUD, hreflang alternates | `content` modulu (public okuma + admin CRUD) |
+| **`@kron/shared` Zod blok semalari** | FE/BE tek kaynak tip + dogrulama; yeni blok = sema ekle | Built CJS paket; container'da build + dist container-local |
 
 ## Kucuk ama anlatilmaya deger teknik kararlar
 
