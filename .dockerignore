@@ -3,6 +3,7 @@
 **/.next
 **/out
 **/coverage
+**/*.tsbuildinfo
 **/.turbo
 .git
 .gitignore

@@ -81,7 +81,11 @@ services:
     volumes:
       - ./apps/api:/app/apps/api
       - ./packages:/app/packages
+      # Uretilen/derlenen ciktilar container-local kalir (Windows bind-mount
+      # sync sorunlarini onler: dist/generated host'a yazilmaz, container FS'inde durur)
       - /app/apps/api/node_modules
+      - /app/apps/api/dist
+      - /app/apps/api/src/generated
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,9 +95,7 @@ services:
         condition: service_healthy
 
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # api ile ayni imaji kullanir (tek build, paralel export yarisini onler)
     image: kron-cms:dev
     restart: unless-stopped
     command: npm run dev:web
