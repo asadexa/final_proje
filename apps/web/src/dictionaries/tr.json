@@ -2,13 +2,20 @@
   "nav": {
     "products": "Ürünler",
     "solutions": "Çözümler",
+    "partners": "İş Ortakları",
     "resources": "Kaynaklar",
-    "blog": "Blog",
-    "contact": "İletişim"
+    "about": "Hakkımızda",
+    "contact": "İletişim",
+    "blog": "Blog"
   },
   "cta": {
     "demo": "Demo Talep Et",
     "contact": "Bize Ulaşın"
+  },
+  "search": "Ara",
+  "announcement": {
+    "text": "Yeni: Kron Telemetry Pipeline webinarı — canlı demolar ve gerçek veri simülasyonları.",
+    "cta": "Kayıt Ol"
   },
   "blog": {
     "title": "Blog",

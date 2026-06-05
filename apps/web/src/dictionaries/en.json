@@ -2,13 +2,20 @@
   "nav": {
     "products": "Products",
     "solutions": "Solutions",
+    "partners": "Partners",
     "resources": "Resources",
-    "blog": "Blog",
-    "contact": "Contact"
+    "about": "About Us",
+    "contact": "Contact",
+    "blog": "Blog"
   },
   "cta": {
     "demo": "Request a Demo",
     "contact": "Contact Us"
+  },
+  "search": "Search",
+  "announcement": {
+    "text": "New: Kron Telemetry Pipeline webinar — live demos and real-data simulations.",
+    "cta": "Register Now"
   },
   "blog": {
     "title": "Blog",
