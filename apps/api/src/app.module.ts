@@ -7,7 +7,9 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ContentModule } from './content/content.module';
 import { HealthModule } from './health/health.module';
+import { MediaModule } from './media/media.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -19,10 +21,12 @@ import { PrismaModule } from './prisma/prisma.module';
         limit: Number(process.env.RATE_LIMIT_MAX ?? 100),
       },
     ]),
+    RedisModule,
     PrismaModule,
     HealthModule,
     AuthModule,
     ContentModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [

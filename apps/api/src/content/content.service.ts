@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { validateBlockData } from '@kron/shared';
 import { Prisma } from '../generated/prisma/client';
+import { CacheService } from '../redis/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type {
   BlockDto,
@@ -13,11 +14,16 @@ import type {
   UpdateEntryDto,
 } from './dto/entry.dto';
 
+// Public icerik cache anahtar oneki — invalidation icin tek noktadan temizlenir.
+const CACHE_PREFIX = 'content:';
+
 @Injectable()
 export class ContentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
-  // Bloklarin data'sini paylasilan Zod semasiyla dogrular (no any).
   private assertBlocksValid(blocks: BlockDto[] | undefined): void {
     for (const b of blocks ?? []) {
       const result = validateBlockData(b.type, b.data);
@@ -38,9 +44,17 @@ export class ContentService {
     }));
   }
 
-  // ----------------------------- PUBLIC -----------------------------
+  private async invalidatePublicCache(): Promise<void> {
+    await this.cache.delByPrefix(CACHE_PREFIX);
+  }
 
-  async resolve(locale: string, slug: string) {
+  // ----------------------------- PUBLIC (cache'li) -----------------------------
+
+  async resolve(locale: string, slug: string): Promise<unknown> {
+    const cacheKey = `${CACHE_PREFIX}resolve:${locale}:${slug}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
     const entry = await this.prisma.entry.findUnique({
       where: { localeCode_slug: { localeCode: locale, slug } },
       include: {
@@ -55,17 +69,22 @@ export class ContentService {
     if (!entry || entry.status !== 'PUBLISHED') {
       throw new NotFoundException('Icerik bulunamadi.');
     }
-    // hreflang icin ayni gruptaki diger dillerin slug'lari
     const alternates = await this.prisma.entry.findMany({
       where: { groupId: entry.groupId, status: 'PUBLISHED' },
       select: { localeCode: true, slug: true },
     });
-    return { ...entry, alternates };
+    const result = { ...entry, alternates };
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 
-  async listPublic(locale: string, q: ListQueryDto) {
+  async listPublic(locale: string, q: ListQueryDto): Promise<unknown> {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 12;
+    const cacheKey = `${CACHE_PREFIX}list:${locale}:${q.type ?? 'all'}:${page}:${pageSize}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
     const where: Prisma.EntryWhereInput = {
       localeCode: locale,
       status: 'PUBLISHED',
@@ -81,7 +100,9 @@ export class ContentService {
       }),
       this.prisma.entry.count({ where }),
     ]);
-    return { items, total, page, pageSize };
+    const result = { items, total, page, pageSize };
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 
   // ----------------------------- ADMIN ------------------------------
@@ -89,7 +110,7 @@ export class ContentService {
   async create(dto: CreateEntryDto, authorId?: string) {
     this.assertBlocksValid(dto.blocks);
     const status = dto.status ?? 'DRAFT';
-    return this.prisma.entry.create({
+    const entry = await this.prisma.entry.create({
       data: {
         type: dto.type,
         locale: { connect: { code: dto.localeCode } },
@@ -111,6 +132,8 @@ export class ContentService {
       },
       include: { blocks: { orderBy: { order: 'asc' } }, seo: true },
     });
+    await this.invalidatePublicCache();
+    return entry;
   }
 
   async findAll(q: ListQueryDto) {
@@ -165,22 +188,24 @@ export class ContentService {
       data.publishAt = dto.publishAt ? new Date(dto.publishAt) : null;
     }
     if (dto.blocks) {
-      // bloklar verildiyse tamamen degistir (sil + yeniden olustur)
       data.blocks = { deleteMany: {}, create: this.toBlockCreate(dto.blocks) };
     }
     if (dto.seo) {
       data.seo = { upsert: { create: dto.seo, update: dto.seo } };
     }
-    return this.prisma.entry.update({
+    const entry = await this.prisma.entry.update({
       where: { id },
       data,
       include: { blocks: { orderBy: { order: 'asc' } }, seo: true },
     });
+    await this.invalidatePublicCache();
+    return entry;
   }
 
   async remove(id: string) {
     await this.findOne(id);
     await this.prisma.entry.delete({ where: { id } });
+    await this.invalidatePublicCache();
     return { success: true };
   }
 }
