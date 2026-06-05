@@ -26,13 +26,17 @@ export function SiteHeader({ locale, dict }: { locale: Locale; dict: Dictionary 
 
   return (
     <>
-      {/* Ust duyuru bari */}
-      <div className="bg-[#0f1f43] text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-center gap-4 px-4 py-2 text-center text-sm sm:px-6">
-          <span className="hidden sm:inline">{dict.announcement.text}</span>
+      {/* Ust duyuru bari (krontech: mavi gradient + sagda Register) */}
+      <div
+        className="text-white"
+        style={{ background: "linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%), #1563FF" }}
+      >
+        <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:px-6">
+          <span className="mr-auto text-sm">{dict.announcement.text}</span>
           <Link
             href={`${base}/contact`}
-            className="shrink-0 rounded bg-primary px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-primary-600"
+            className="flex h-14 shrink-0 items-center px-6 text-sm font-medium text-white"
+            style={{ background: "rgba(0,40,120,0.6)" }}
           >
             {dict.announcement.cta}
           </Link>

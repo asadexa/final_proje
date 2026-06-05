@@ -20,18 +20,21 @@ type BlockProps = { data: Record<string, unknown> };
 function Hero({ data }: BlockProps): ReactElement {
   const cta = (data.cta ?? {}) as Cta;
   return (
-    <section className="bg-surface-muted">
-      <Container className="py-20 md:py-28">
+    <section
+      className="relative bg-[#0a1733] bg-cover bg-center text-white"
+      style={{ backgroundImage: "url('/hero-bg.png')" }}
+    >
+      <Container className="py-24 md:py-32">
         {str(data.eyebrow) && (
           <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">
             {str(data.eyebrow)}
           </p>
         )}
-        <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight text-dark md:text-5xl">
+        <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl">
           {str(data.title)}
         </h1>
         {str(data.subtitle) && (
-          <p className="mt-5 max-w-2xl text-lg text-ink-soft">{str(data.subtitle)}</p>
+          <p className="mt-5 max-w-2xl text-lg text-white/80">{str(data.subtitle)}</p>
         )}
         {cta.href && (
           <Link
