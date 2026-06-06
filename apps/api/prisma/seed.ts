@@ -64,6 +64,14 @@ async function main(): Promise<void> {
     },
   });
 
+  // 3b) Ornek yonlendirmeler (301) — idempotent
+  for (const r of [
+    { source: '/eski-pam', destination: '/tr/kron-pam', statusCode: 301 },
+    { source: '/old-blog', destination: '/en/blog', statusCode: 301 },
+  ]) {
+    await prisma.redirect.upsert({ where: { source: r.source }, update: {}, create: r });
+  }
+
   // 4) Ornek icerik (idempotent: tr ana sayfa yoksa olustur)
   const homeExists = await prisma.entry.findUnique({
     where: { localeCode_slug: { localeCode: 'tr', slug: 'anasayfa' } },

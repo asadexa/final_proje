@@ -11,6 +11,7 @@ import { FormsModule } from './forms/forms.module';
 import { HealthModule } from './health/health.module';
 import { MediaModule } from './media/media.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RedirectsModule } from './redirects/redirects.module';
 import { RedisModule } from './redis/redis.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { RedisModule } from './redis/redis.module';
     ContentModule,
     FormsModule,
     MediaModule,
+    RedirectsModule,
   ],
   controllers: [AppController],
   providers: [
