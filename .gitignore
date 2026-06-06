@@ -38,3 +38,4 @@ Thumbs.db
 
 # Docker volumes (yerel)
 .volumes/
+.gstack/
