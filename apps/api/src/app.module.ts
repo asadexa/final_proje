@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ContentModule } from './content/content.module';
+import { FormsModule } from './forms/forms.module';
 import { HealthModule } from './health/health.module';
 import { MediaModule } from './media/media.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -29,6 +30,7 @@ import { RedisModule } from './redis/redis.module';
     HealthModule,
     AuthModule,
     ContentModule,
+    FormsModule,
     MediaModule,
   ],
   controllers: [AppController],
