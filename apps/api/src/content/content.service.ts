@@ -48,6 +48,37 @@ export class ContentService {
     await this.cache.delByPrefix(CACHE_PREFIX);
   }
 
+  // --- Versiyonlama + audit (yayin akisi) ---
+
+  // Mevcut entry'nin (blok + seo dahil) anlik goruntusunu yeni bir versiyon olarak saklar.
+  private async snapshotVersion(entryId: string, userId?: string, note?: string): Promise<void> {
+    const full = await this.prisma.entry.findUnique({
+      where: { id: entryId },
+      include: { blocks: { orderBy: { order: 'asc' } }, seo: true, product: true, post: true },
+    });
+    if (!full) return;
+    const last = await this.prisma.contentVersion.findFirst({
+      where: { entryId },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    });
+    const snapshot = JSON.parse(JSON.stringify(full)) as Prisma.InputJsonValue;
+    await this.prisma.contentVersion.create({
+      data: { entryId, version: (last?.version ?? 0) + 1, snapshot, note, createdById: userId },
+    });
+  }
+
+  private async audit(
+    action: string,
+    entityId: string,
+    userId?: string,
+    meta?: Prisma.InputJsonValue,
+  ): Promise<void> {
+    await this.prisma.auditLog.create({
+      data: { action, entityType: 'Entry', entityId, userId, meta },
+    });
+  }
+
   // ----------------------------- PUBLIC (cache'li) -----------------------------
 
   async resolve(locale: string, slug: string): Promise<unknown> {
@@ -132,6 +163,12 @@ export class ContentService {
       },
       include: { blocks: { orderBy: { order: 'asc' } }, seo: true },
     });
+    await this.snapshotVersion(entry.id, authorId, 'created');
+    await this.audit('entry.create', entry.id, authorId, {
+      slug: entry.slug,
+      type: entry.type,
+      status: entry.status,
+    });
     await this.invalidatePublicCache();
     return entry;
   }
@@ -168,7 +205,7 @@ export class ContentService {
     return entry;
   }
 
-  async update(id: string, dto: UpdateEntryDto) {
+  async update(id: string, dto: UpdateEntryDto, userId?: string) {
     await this.findOne(id);
     this.assertBlocksValid(dto.blocks);
     const data: Prisma.EntryUpdateInput = {
@@ -198,14 +235,38 @@ export class ContentService {
       data,
       include: { blocks: { orderBy: { order: 'asc' } }, seo: true },
     });
+    await this.snapshotVersion(id, userId);
+    await this.audit(dto.status === 'PUBLISHED' ? 'entry.publish' : 'entry.update', id, userId, {
+      status: dto.status ?? null,
+    });
     await this.invalidatePublicCache();
     return entry;
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     await this.findOne(id);
+    await this.audit('entry.delete', id, userId);
     await this.prisma.entry.delete({ where: { id } });
     await this.invalidatePublicCache();
     return { success: true };
+  }
+
+  // --- Versiyon + audit okuma (admin) ---
+  listVersions(entryId: string) {
+    return this.prisma.contentVersion.findMany({
+      where: { entryId },
+      orderBy: { version: 'desc' },
+      select: { id: true, version: true, note: true, createdById: true, createdAt: true },
+    });
+  }
+
+  listAudit(q: ListQueryDto) {
+    const page = q.page ?? 1;
+    const pageSize = q.pageSize ?? 50;
+    return this.prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
   }
 }

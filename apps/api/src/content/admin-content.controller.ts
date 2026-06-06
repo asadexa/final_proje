@@ -49,14 +49,21 @@ export class AdminContentController {
   @Patch(':id')
   @Roles('ADMIN', 'EDITOR')
   @ApiOperation({ summary: 'Icerik guncelle (bloklar verildiyse degistirilir)' })
-  update(@Param('id') id: string, @Body() dto: UpdateEntryDto) {
-    return this.content.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateEntryDto, @CurrentUser() user: AuthUser) {
+    return this.content.update(id, dto, user.id);
+  }
+
+  @Get(':id/versions')
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Icerik versiyon gecmisi' })
+  versions(@Param('id') id: string) {
+    return this.content.listVersions(id);
   }
 
   @Delete(':id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Icerik sil (sadece ADMIN)' })
-  remove(@Param('id') id: string) {
-    return this.content.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.content.remove(id, user.id);
   }
 }
