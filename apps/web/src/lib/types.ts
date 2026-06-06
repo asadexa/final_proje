@@ -40,13 +40,18 @@ export interface PublicEntry {
   post?: { readingMin?: number | null; tags?: string[] } | null;
 }
 
+export type EntryStatus = "DRAFT" | "PUBLISHED" | "SCHEDULED" | "ARCHIVED";
+
 export interface EntryListItem {
   id: string;
   type: EntryType;
   title: string;
   slug: string;
   excerpt?: string | null;
+  status?: EntryStatus;
+  localeCode?: string;
   publishedAt?: string | null;
+  publishAt?: string | null;
   updatedAt?: string | null;
   groupId?: string;
   seo?: SeoData | null;

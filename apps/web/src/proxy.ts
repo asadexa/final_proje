@@ -26,6 +26,6 @@ export function proxy(req: NextRequest): NextResponse {
 }
 
 export const config = {
-  // _next, api, statik dosyalar haric her yol
-  matcher: ["/((?!_next|api|favicon.ico|.*\\..*).*)"],
+  // _next, api, admin (locale'siz arac), statik dosyalar haric her yol
+  matcher: ["/((?!_next|api|admin|favicon.ico|.*\\..*).*)"],
 };
