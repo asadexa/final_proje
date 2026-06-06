@@ -56,3 +56,22 @@ export async function adminFetch<T>(path: string, init?: RequestInit): Promise<T
   if (res.status === 204) return {} as T;
   return (await res.json()) as T;
 }
+
+// Multipart dosya yukleme (Content-Type'i tarayici ayarlar; JSON header EKLENMEZ).
+export async function adminUpload<T>(path: string, file: File): Promise<T | null> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API}/api${path}`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window !== "undefined") window.location.href = "/admin/login";
+    return null;
+  }
+  if (!res.ok) return null;
+  return (await res.json()) as T;
+}

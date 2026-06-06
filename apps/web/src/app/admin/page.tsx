@@ -34,7 +34,15 @@ export default function AdminEntriesPage(): ReactElement {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-dark">İçerikler</h1>
-        <span className="text-sm text-muted">{items.length} kayıt</span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-muted">{items.length} kayıt</span>
+          <Link
+            href="/admin/entries/new"
+            className="rounded bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
+          >
+            + Yeni içerik
+          </Link>
+        </div>
       </div>
       <div className="overflow-x-auto rounded-lg border border-line bg-surface">
         <table className="w-full text-sm">
