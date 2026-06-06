@@ -31,6 +31,8 @@ export interface PublicEntry {
   title: string;
   slug: string;
   excerpt?: string | null;
+  publishedAt?: string | null;
+  updatedAt?: string | null;
   blocks: BlockNode[];
   seo?: SeoData | null;
   alternates?: Alternate[];
@@ -45,6 +47,8 @@ export interface EntryListItem {
   slug: string;
   excerpt?: string | null;
   publishedAt?: string | null;
+  updatedAt?: string | null;
+  groupId?: string;
   seo?: SeoData | null;
 }
 

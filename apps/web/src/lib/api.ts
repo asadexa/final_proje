@@ -36,3 +36,11 @@ export function listEntries(
     `list:${locale}:${type}`,
   ]);
 }
+
+// Sitemap icin: tum yayindaki icerikler (tip filtresiz, tek sayfada).
+export function listAllEntries(locale: string, pageSize = 1000): Promise<EntryList | null> {
+  return apiGet<EntryList>(`/content/${locale}?pageSize=${pageSize}`, [
+    "content",
+    `list:${locale}:all`,
+  ]);
+}

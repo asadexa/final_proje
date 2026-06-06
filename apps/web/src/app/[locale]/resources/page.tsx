@@ -1,5 +1,24 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getDictionary, isLocale } from "@/lib/i18n";
+import { staticPageMetadata } from "@/lib/seo";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/resources">): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocale(locale)) return {};
+  const dict = getDictionary(locale);
+  return staticPageMetadata({
+    locale,
+    segment: "/resources",
+    title: dict.nav.resources,
+    description:
+      locale === "tr"
+        ? "Datasheet, vaka calismasi ve teknik dokumanlar."
+        : "Datasheets, case studies and technical documents.",
+  });
+}
 
 export default async function ResourcesPage({ params }: PageProps<"/[locale]/resources">) {
   const { locale } = await params;

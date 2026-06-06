@@ -44,6 +44,18 @@
 | **SSR + ISR** | Performans + publish'te tazeleme | `fetch(next:{revalidate:60, tags})`; revalidateTag Faz 7'de |
 | **Next 16 ozellikleri** | Dogru API kullanimi | async `params`, `PageProps/LayoutProps`, `proxy` (eski middleware) |
 
+### Faz 5 — SEO / GEO
+| Karar | Neden | Nasil |
+|------|------|-------|
+| **generateMetadata (per-page)** | Dinamik title/desc/canonical/OG/twitter | `lib/seo.ts` → entry.seo; Next 16 Metadata API |
+| **hreflang (tr/en/x-default)** | Cok dilli SEO, dogru dil esleme | `alternates.languages` (resolve endpoint ceviri grubu) |
+| **Dinamik sitemap.xml** | Tum yayindaki icerik + statik sayfa, hreflang ile | `app/sitemap.ts` (`MetadataRoute.Sitemap`) + `listAllEntries` |
+| **robots.txt** | Tarama yonergesi + sitemap referansi | `app/robots.ts` (/api, /admin disallow) |
+| **schema.org JSON-LD** | GEO: yapilandirilmis veri (botlar + LLM'ler) | Organization/WebSite/Product/Article/**FAQPage**/BreadcrumbList; `components/json-ld.tsx` |
+| **Bundled Next 16 dokuman okuma** | metadata/sitemap/robots API egitim verisinden yeni | `node_modules/next/dist/docs/...` okunup uygulandi (korlemesine degil) |
+
+> Kalan: **redirect yonetimi** (301) — `Redirect` tablosu mevcut; admin paneliyle birlikte baglanacak (runtime proxy + cache).
+
 ## Kucuk ama anlatilmaya deger teknik kararlar
 
 - **Prisma 7 `prisma-client` generator + `moduleFormat=cjs`:** Yeni generator ESM uretiyordu;
