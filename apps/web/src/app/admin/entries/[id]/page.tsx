@@ -86,6 +86,9 @@ export default function EntryEditorPage(): ReactElement {
   function patchEntry(p: Partial<AdminEntry>): void {
     setEntry((prev) => (prev ? { ...prev, ...p } : prev));
   }
+  function patchSeo(p: Partial<SeoData>): void {
+    setEntry((prev) => (prev ? { ...prev, seo: { ...(prev.seo ?? {}), ...p } } : prev));
+  }
   function setBlock(i: number, p: Partial<BlockEdit>): void {
     setBlocks((prev) => prev.map((b, j) => (j === i ? { ...b, ...p } : b)));
   }
@@ -129,9 +132,10 @@ export default function EntryEditorPage(): ReactElement {
       status: entry.status,
       publishAt: entry.publishAt ?? undefined,
       blocks: parsedBlocks,
-      seo: entry.seo
-        ? { metaTitle: entry.seo.metaTitle ?? undefined, metaDescription: entry.seo.metaDescription ?? undefined }
-        : undefined,
+      seo: {
+        metaTitle: entry.seo?.metaTitle ?? undefined,
+        metaDescription: entry.seo?.metaDescription ?? undefined,
+      },
     };
     const res = await adminFetch<AdminEntry>(`/admin/entries/${id}`, {
       method: "PATCH",
@@ -240,6 +244,28 @@ export default function EntryEditorPage(): ReactElement {
               />
             </div>
           ))}
+        </div>
+
+        {/* SEO */}
+        <div className="space-y-4 rounded-lg border border-line bg-surface p-5">
+          <h2 className="text-sm font-semibold text-dark">SEO</h2>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-soft">Meta Title</label>
+            <input
+              className={inputCls}
+              value={entry.seo?.metaTitle ?? ""}
+              onChange={(e) => patchSeo({ metaTitle: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-soft">Meta Description</label>
+            <textarea
+              className={inputCls}
+              rows={2}
+              value={entry.seo?.metaDescription ?? ""}
+              onChange={(e) => patchSeo({ metaDescription: e.target.value })}
+            />
+          </div>
         </div>
       </div>
 
