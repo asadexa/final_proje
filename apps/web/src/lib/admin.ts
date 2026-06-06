@@ -57,6 +57,22 @@ export async function adminFetch<T>(path: string, init?: RequestInit): Promise<T
   return (await res.json()) as T;
 }
 
+// Bearer'li dosya indirme (CSV export) -> blob -> tarayicida indir.
+export async function adminDownload(path: string, filename: string): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API}/api${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) return;
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // Multipart dosya yukleme (Content-Type'i tarayici ayarlar; JSON header EKLENMEZ).
 export async function adminUpload<T>(path: string, file: File): Promise<T | null> {
   const token = getToken();

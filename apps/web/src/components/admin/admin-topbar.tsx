@@ -38,6 +38,16 @@ export function AdminTopbar(): ReactElement {
               >
                 Medya
               </Link>
+              <Link
+                href="/admin/forms"
+                className={
+                  pathname.startsWith("/admin/forms")
+                    ? "font-medium text-primary"
+                    : "text-ink-soft hover:text-primary"
+                }
+              >
+                Formlar
+              </Link>
             </nav>
             <button
               type="button"
