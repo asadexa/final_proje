@@ -80,4 +80,12 @@ Tam gerekceler: [`docs/adr/0001-tech-stack.md`](docs/adr/0001-tech-stack.md)
 | `npm run lint` | Lint |
 | `docker compose up --build` | Tum sistem (tek komut) |
 
-> README her fazda guncellenir. Su an: **Faz 0 — temel kurulum**.
+## Durum
+
+Tum ana fazlar tamam: icerik modeli + headless API, **admin panel** (icerik CRUD + blok siralama + medya + SEO + formlar),
+**yayin akisi** (taslak/yayin/zamanlanmis/onizleme/versiyon+restore/audit), **SEO/GEO**
+(meta/canonical/hreflang/sitemap/robots/301 + schema.org JSON-LD/FAQPage), **cok dillilik** (TR/EN),
+**Redis cache + publish'te `revalidateTag`**, **formlar** (client+sunucu validasyon + KVKK + honeypot + CSV export),
+ve **testler** (Vitest + Supertest, birim + entegrasyon). Karsilastirma analizi: [`docs/comparison.md`](docs/comparison.md).
+
+Giris (admin): `admin@kron.local` / `Admin123!` → http://localhost:3000/admin
