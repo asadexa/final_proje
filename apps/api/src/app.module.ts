@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -21,6 +22,8 @@ import { RedisModule } from './redis/redis.module';
         limit: Number(process.env.RATE_LIMIT_MAX ?? 100),
       },
     ]),
+    // Zamanlanmis gorevler (zamanlanmis yayin worker'i)
+    ScheduleModule.forRoot(),
     RedisModule,
     PrismaModule,
     HealthModule,

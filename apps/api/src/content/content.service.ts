@@ -269,4 +269,24 @@ export class ContentService {
       take: pageSize,
     });
   }
+
+  // Zamanlanmis yayin: publishAt'i gelmis (lte now) SCHEDULED icerikleri yayinlar.
+  // Scheduler tarafindan periyodik cagrilir; her yayinda versiyon + audit yazar.
+  async runScheduledPublish(): Promise<number> {
+    const now = new Date();
+    const due = await this.prisma.entry.findMany({
+      where: { status: 'SCHEDULED', publishAt: { lte: now } },
+      select: { id: true },
+    });
+    for (const e of due) {
+      await this.prisma.entry.update({
+        where: { id: e.id },
+        data: { status: 'PUBLISHED', publishedAt: now },
+      });
+      await this.snapshotVersion(e.id, undefined, 'scheduled publish');
+      await this.audit('entry.publish.scheduled', e.id);
+    }
+    if (due.length > 0) await this.invalidatePublicCache();
+    return due.length;
+  }
 }
