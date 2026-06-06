@@ -60,6 +60,17 @@ export class AdminContentController {
     return this.content.listVersions(id);
   }
 
+  @Post(':id/versions/:version/restore')
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Bir versiyonu geri yukle (yeni versiyon olusur)' })
+  restore(
+    @Param('id') id: string,
+    @Param('version') version: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.content.restoreVersion(id, Number(version), user.id);
+  }
+
   @Delete(':id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Icerik sil (sadece ADMIN)' })

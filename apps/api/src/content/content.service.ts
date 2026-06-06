@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { validateBlockData } from '@kron/shared';
-import { Prisma } from '../generated/prisma/client';
+import { BlockType, Prisma } from '../generated/prisma/client';
 import { CacheService } from '../redis/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type {
@@ -288,5 +288,67 @@ export class ContentService {
     }
     if (due.length > 0) await this.invalidatePublicCache();
     return due.length;
+  }
+
+  // Bir versiyonun snapshot'indan entry'yi geri yukler (baslik+ozet+bloklar+seo).
+  async restoreVersion(entryId: string, version: number, userId?: string) {
+    const v = await this.prisma.contentVersion.findUnique({
+      where: { entryId_version: { entryId, version } },
+    });
+    if (!v) throw new NotFoundException('Versiyon bulunamadi.');
+
+    type SnapBlock = { type: string; order: number; enabled?: boolean; data: unknown };
+    type SnapSeo = {
+      metaTitle?: string | null;
+      metaDescription?: string | null;
+      canonicalUrl?: string | null;
+      robotsIndex?: boolean;
+      robotsFollow?: boolean;
+      ogTitle?: string | null;
+      ogDescription?: string | null;
+      keywords?: string[];
+    };
+    const snap = v.snapshot as unknown as {
+      title?: string;
+      excerpt?: string | null;
+      blocks?: SnapBlock[];
+      seo?: SnapSeo | null;
+    };
+
+    const seoData = snap.seo
+      ? {
+          metaTitle: snap.seo.metaTitle ?? null,
+          metaDescription: snap.seo.metaDescription ?? null,
+          canonicalUrl: snap.seo.canonicalUrl ?? null,
+          robotsIndex: snap.seo.robotsIndex ?? true,
+          robotsFollow: snap.seo.robotsFollow ?? true,
+          ogTitle: snap.seo.ogTitle ?? null,
+          ogDescription: snap.seo.ogDescription ?? null,
+          keywords: snap.seo.keywords ?? [],
+        }
+      : undefined;
+
+    await this.prisma.entry.update({
+      where: { id: entryId },
+      data: {
+        title: snap.title,
+        excerpt: snap.excerpt ?? null,
+        blocks: {
+          deleteMany: {},
+          create: (snap.blocks ?? []).map((b) => ({
+            type: b.type as BlockType,
+            order: b.order,
+            enabled: b.enabled ?? true,
+            data: b.data as Prisma.InputJsonValue,
+          })),
+        },
+        ...(seoData ? { seo: { upsert: { create: seoData, update: seoData } } } : {}),
+      },
+    });
+
+    await this.snapshotVersion(entryId, userId, `restored from v${version}`);
+    await this.audit('entry.restore', entryId, userId, { fromVersion: version });
+    await this.invalidatePublicCache();
+    return this.findOne(entryId);
   }
 }
