@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, SubmissionStatus } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { SubmitFormDto } from './dto/form.dto';
@@ -17,6 +17,8 @@ function asFields(v: Prisma.JsonValue): FieldDef[] {
 
 @Injectable()
 export class FormsService {
+  private readonly logger = new Logger(FormsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   // --------------------------- PUBLIC ---------------------------
@@ -61,7 +63,25 @@ export class FormsService {
         status: isSpam ? SubmissionStatus.SPAM : SubmissionStatus.NEW,
       },
     });
+    // Spam degilse opsiyonel webhook'u tetikle (fire-and-forget).
+    if (!isSpam) void this.fireWebhook(key, dto.data ?? {});
     return { success: true };
+  }
+
+  // Opsiyonel: FORM_WEBHOOK_URL tanimliysa gonderimi dis sisteme iletir (CRM, Slack vb.).
+  private async fireWebhook(formKey: string, data: unknown): Promise<void> {
+    const url = process.env.FORM_WEBHOOK_URL;
+    if (!url) return;
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ form: formKey, data, at: new Date().toISOString() }),
+      });
+      this.logger.log(`Form webhook gonderildi: ${formKey}`);
+    } catch {
+      this.logger.warn(`Form webhook basarisiz: ${formKey}`);
+    }
   }
 
   // --------------------------- ADMIN ---------------------------
