@@ -15,6 +15,30 @@
   --font-sans: var(--font-roboto), "Roboto", system-ui, sans-serif;
 }
 
+/* Hero carousel (Swiper) — koyu hero uzerinde beyaz ok/nokta */
+.hero-carousel {
+  --swiper-theme-color: #ffffff;
+  --swiper-navigation-size: 26px;
+}
+.hero-carousel .swiper-pagination {
+  bottom: 22px;
+}
+.hero-carousel .swiper-pagination-bullet {
+  background: #ffffff;
+  opacity: 0.5;
+}
+.hero-carousel .swiper-pagination-bullet-active {
+  opacity: 1;
+}
+
+/* Blog carousel (acik tema uzerinde mavi nokta) */
+.blog-carousel {
+  --swiper-theme-color: #1563ff;
+}
+.blog-carousel .swiper-pagination {
+  bottom: 0;
+}
+
 html {
   background-color: #ffffff;
 }

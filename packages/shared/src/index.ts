@@ -53,6 +53,19 @@ export const blockSchemas = {
     subtitle: z.string().optional(),
     cta: linkSchema.optional(),
     image: imageRefSchema.optional(),
+    // Cok-slide hero (krontech main-slider). Doluysa carousel render edilir,
+    // bossa tekli hero. Migration gerekmez: ayni HERO tipinin data'si genisliyor.
+    slides: z
+      .array(
+        z.object({
+          eyebrow: z.string().optional(),
+          title: z.string(), // <b>...</b> => mavi vurgu (krontech .bgblueb b)
+          subtitle: z.string().optional(),
+          cta: linkSchema.optional(),
+          image: imageRefSchema.optional(),
+        }),
+      )
+      .optional(),
   }),
   SECTION_HEADING: z.object({
     title: z.string(),

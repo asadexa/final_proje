@@ -19,7 +19,7 @@ export default async function EntryPage({ params }: PageProps<"/[locale]/[slug]"
           </div>
         </header>
       )}
-      <Blocks blocks={entry.blocks} />
+      <Blocks blocks={entry.blocks} locale={locale} />
     </article>
   );
 }

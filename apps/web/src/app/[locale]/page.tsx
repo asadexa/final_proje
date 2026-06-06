@@ -9,5 +9,5 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const slug = isLocale(locale) ? HOME_SLUGS[locale] : "home";
   const entry = await getEntry(locale, slug);
   if (!entry) notFound();
-  return <Blocks blocks={entry.blocks} />;
+  return <Blocks blocks={entry.blocks} locale={locale} />;
 }

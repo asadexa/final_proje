@@ -1,6 +1,10 @@
 import Link from "next/link";
 import type { ReactElement, ReactNode } from "react";
+import { listEntries } from "@/lib/api";
 import type { BlockNode } from "@/lib/types";
+import { BlogCarouselClient } from "./blog-carousel";
+import { HeroCarousel } from "./hero-carousel";
+import { HeroSlide, type HeroSlideData } from "./hero-slide";
 
 // --- guvenli okuyucular (no any) ---
 function str(v: unknown): string {
@@ -8,6 +12,9 @@ function str(v: unknown): string {
 }
 function arr<T>(v: unknown): T[] {
   return Array.isArray(v) ? (v as T[]) : [];
+}
+function num(v: unknown): number {
+  return typeof v === "number" ? v : 0;
 }
 type Cta = { label?: string; href?: string };
 
@@ -31,33 +38,24 @@ function Container({
 type BlockProps = { data: Record<string, unknown> };
 
 function Hero({ data }: BlockProps): ReactElement {
-  const cta = (data.cta ?? {}) as Cta;
+  // Slides doluysa krontech main-slider gibi carousel; bossa tekli hero.
+  const slides = arr<HeroSlideData>(data.slides);
+  if (slides.length > 0) return <HeroCarousel slides={slides} />;
+
+  // Tekli hero (urun/blog sayfa basligi) — ayni tipografiyi paylasir.
+  const single: HeroSlideData = {
+    eyebrow: str(data.eyebrow) || undefined,
+    title: str(data.title),
+    subtitle: str(data.subtitle) || undefined,
+    cta: data.cta as Cta | undefined,
+    image: data.image as { url?: string } | undefined,
+  };
   return (
     <section
       className="relative bg-[#0a1733] bg-cover bg-center text-white"
       style={{ backgroundImage: "url('/hero-bg.png')" }}
     >
-      <Container wide className="py-24 md:py-32">
-        {str(data.eyebrow) && (
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">
-            {str(data.eyebrow)}
-          </p>
-        )}
-        <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl">
-          {str(data.title)}
-        </h1>
-        {str(data.subtitle) && (
-          <p className="mt-5 max-w-2xl text-lg text-white/80">{str(data.subtitle)}</p>
-        )}
-        {cta.href && (
-          <Link
-            href={cta.href}
-            className="mt-8 inline-block rounded-md bg-primary px-6 py-3 text-base font-medium text-white transition-colors hover:bg-primary-600"
-          >
-            {cta.label ?? ""}
-          </Link>
-        )}
-      </Container>
+      <HeroSlide slide={single} />
     </section>
   );
 }
@@ -151,20 +149,158 @@ function RichText({ data }: BlockProps): ReactElement {
   );
 }
 
+function ProductShowcase({ data }: BlockProps): ReactElement {
+  const products = arr<{
+    name?: string;
+    description?: string;
+    href?: string;
+    features?: string[];
+  }>(data.products);
+  return (
+    <section className="bg-surface">
+      <Container className="py-16">
+        {str(data.title) && (
+          <h2 className="mb-10 text-center text-2xl font-bold text-dark">{str(data.title)}</h2>
+        )}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {products.map((p, i) => {
+            const inner = (
+              <>
+                <h3 className="text-lg font-semibold text-dark">{p.name}</h3>
+                {p.description && <p className="mt-2 text-sm text-ink-soft">{p.description}</p>}
+                {arr<string>(p.features).length > 0 && (
+                  <ul className="mt-4 space-y-2">
+                    {arr<string>(p.features).map((f, j) => (
+                      <li key={j} className="flex items-start gap-2 text-sm text-ink-soft">
+                        <span className="mt-0.5 font-bold text-primary">✓</span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            );
+            const cls =
+              "flex h-full flex-col rounded-lg border border-line bg-surface p-6 transition hover:border-primary hover:shadow-sm";
+            return p.href ? (
+              <Link key={i} href={p.href} className={cls}>
+                {inner}
+              </Link>
+            ) : (
+              <div key={i} className={cls}>
+                {inner}
+              </div>
+            );
+          })}
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+function ValueProp({ data }: BlockProps): ReactElement {
+  const cta = data.cta as Cta | undefined;
+  return (
+    <section className="bg-dark text-white">
+      <Container className="py-16 text-center">
+        <h2 className="text-2xl font-bold md:text-3xl">{str(data.title)}</h2>
+        {str(data.body) && (
+          <p className="mx-auto mt-4 max-w-2xl text-white/80">{str(data.body)}</p>
+        )}
+        {cta?.href && (
+          <Link
+            href={cta.href}
+            className="mt-8 inline-block rounded-none bg-primary px-[50px] py-3 text-[18px] font-normal leading-[34px] text-white transition-colors hover:bg-primary-600"
+          >
+            {cta.label ?? ""}
+          </Link>
+        )}
+      </Container>
+    </section>
+  );
+}
+
+function CaseStudy({ data }: BlockProps): ReactElement {
+  const cta = data.cta as Cta | undefined;
+  const img = (data.image as { url?: string } | undefined)?.url;
+  return (
+    <section className="bg-surface-muted">
+      <Container className="py-16">
+        <div className="grid items-center gap-8 md:grid-cols-2">
+          <div className="order-2 md:order-1">
+            <p className="text-sm font-semibold uppercase tracking-wide text-primary">Case Study</p>
+            <h2 className="mt-2 text-2xl font-bold text-dark">{str(data.title)}</h2>
+            {str(data.excerpt) && <p className="mt-3 text-ink-soft">{str(data.excerpt)}</p>}
+            {cta?.href && (
+              <Link
+                href={cta.href}
+                className="mt-6 inline-block rounded-none bg-primary px-[50px] py-3 text-[18px] font-normal leading-[34px] text-white transition-colors hover:bg-primary-600"
+              >
+                {cta.label ?? ""}
+              </Link>
+            )}
+          </div>
+          <div className="order-1 md:order-2">
+            {img ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={img} alt="" className="w-full rounded-lg object-cover" />
+            ) : (
+              <div className="aspect-[4/3] w-full rounded-lg bg-gradient-to-br from-primary/20 to-dark/10" />
+            )}
+          </div>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+// BLOG_CAROUSEL: son yazilari API'den ceker (locale gerektirir) -> istemci carousel.
+async function BlogCarousel({
+  data,
+  locale,
+}: {
+  data: Record<string, unknown>;
+  locale: string;
+}): Promise<ReactElement | null> {
+  const limit = num(data.limit) || 6;
+  const list = await listEntries(locale, "POST", 1);
+  const posts = (list?.items ?? []).slice(0, limit).map((p) => ({
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    excerpt: p.excerpt ?? null,
+  }));
+  if (posts.length === 0) return null;
+  return <BlogCarouselClient title={str(data.title)} posts={posts} locale={locale} />;
+}
+
 // Registry: yeni blok tipi = buraya bir bilesen ekle (modulerlik).
 const REGISTRY: Record<string, (props: BlockProps) => ReactElement> = {
   HERO: Hero,
   SECTION_HEADING: SectionHeading,
   STATS: Stats,
   FEATURE_GRID: FeatureGrid,
+  PRODUCT_SHOWCASE: ProductShowcase,
+  VALUE_PROP: ValueProp,
+  CASE_STUDY: CaseStudy,
   FAQ: Faq,
   RICH_TEXT: RichText,
 };
 
-export function Blocks({ blocks }: { blocks: BlockNode[] }): ReactElement {
+export function Blocks({
+  blocks,
+  locale,
+}: {
+  blocks: BlockNode[];
+  locale: string;
+}): ReactElement {
   return (
     <>
       {blocks.map((b) => {
+        // BLOG_CAROUSEL async (yazilari ceker); ayrica ele alinir.
+        if (b.type === "BLOG_CAROUSEL") {
+          return <BlogCarousel key={b.id} data={b.data} locale={locale} />;
+        }
         const Component = REGISTRY[b.type];
         return Component ? <Component key={b.id} data={b.data} /> : null;
       })}
