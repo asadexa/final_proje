@@ -16,6 +16,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 403 });
   }
   const tags = Array.isArray(body.tags) && body.tags.length > 0 ? body.tags : ["content"];
-  for (const t of tags) revalidateTag(t);
+  // Next 16: ikinci arg zorunlu. Harici webhook (API) anlik tazeleme istedigi icin { expire: 0 }.
+  for (const t of tags) revalidateTag(t, { expire: 0 });
   return NextResponse.json({ revalidated: true, tags });
 }
