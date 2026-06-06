@@ -48,6 +48,22 @@ export class ContentService {
 
   private async invalidatePublicCache(): Promise<void> {
     await this.cache.delByPrefix(CACHE_PREFIX);
+    await this.revalidateWeb(['content']);
+  }
+
+  // Next ISR cache'ini tag bazli temizler (publish'te anlik tazeleme). Best-effort.
+  private async revalidateWeb(tags: string[]): Promise<void> {
+    const url = process.env.WEB_INTERNAL_URL ?? 'http://web:3000';
+    const secret = process.env.REVALIDATE_SECRET ?? 'change-me-revalidate-secret';
+    try {
+      await fetch(`${url}/api/revalidate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, tags }),
+      });
+    } catch {
+      // web erisilemezse publish bloklanmaz (best-effort revalidation)
+    }
   }
 
   // --- Versiyonlama + audit (yayin akisi) ---
