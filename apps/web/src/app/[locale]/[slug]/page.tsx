@@ -41,6 +41,10 @@ export default async function EntryPage({ params }: PageProps<"/[locale]/[slug]"
     { name: locale === "tr" ? "Ana Sayfa" : "Home", url: absoluteUrl(`/${locale}`) },
     { name: entry.title, url: absoluteUrl(path) },
   ]);
+  // POST: icerikteki HERO blogu [slug] makale basligiyla cakisir -> render'dan cikar.
+  const rendered =
+    entry.type === "POST" ? entry.blocks.filter((b) => b.type !== "HERO") : entry.blocks;
+  const readingMin = entry.post?.readingMin;
 
   return (
     <article>
@@ -53,10 +57,15 @@ export default async function EntryPage({ params }: PageProps<"/[locale]/[slug]"
             <p className="text-sm font-semibold uppercase tracking-wide text-primary">Blog</p>
             <h1 className="mt-2 text-3xl font-bold text-dark md:text-4xl">{entry.title}</h1>
             {entry.excerpt && <p className="mt-3 text-lg text-ink-soft">{entry.excerpt}</p>}
+            {readingMin ? (
+              <p className="mt-4 text-sm text-muted">
+                {readingMin} {locale === "tr" ? "dk okuma" : "min read"}
+              </p>
+            ) : null}
           </div>
         </header>
       )}
-      <Blocks blocks={entry.blocks} locale={locale} />
+      <Blocks blocks={rendered} locale={locale} />
     </article>
   );
 }

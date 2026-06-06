@@ -141,7 +141,7 @@ function RichText({ data }: BlockProps): ReactElement {
     <section className="bg-surface">
       <Container className="py-12">
         <div
-          className="max-w-3xl text-ink-soft [&_a]:text-primary [&_p]:mb-4"
+          className="mx-auto max-w-3xl text-base leading-7 text-ink [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-line [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-soft [&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-dark [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-dark [&_li]:mb-1 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6"
           dangerouslySetInnerHTML={{ __html: str(data.html) }}
         />
       </Container>
