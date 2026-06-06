@@ -26,6 +26,27 @@ export function getEntry(locale: string, slug: string): Promise<PublicEntry | nu
   ]);
 }
 
+// Onizleme: cache'siz (taslak icerik anlik gorulmeli).
+async function apiGetNoStore<T>(path: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api${path}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+export function getPreviewEntry(
+  locale: string,
+  slug: string,
+  token: string,
+): Promise<PublicEntry | null> {
+  return apiGetNoStore<PublicEntry>(
+    `/content/preview/${locale}/${slug}?token=${encodeURIComponent(token)}`,
+  );
+}
+
 export function listEntries(
   locale: string,
   type: string,

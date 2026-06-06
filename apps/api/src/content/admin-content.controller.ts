@@ -71,6 +71,13 @@ export class AdminContentController {
     return this.content.restoreVersion(id, Number(version), user.id);
   }
 
+  @Get(':id/preview')
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Icerik icin imzali onizleme linki uret' })
+  previewLink(@Param('id') id: string) {
+    return this.content.previewLink(id);
+  }
+
   @Delete(':id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Icerik sil (sadece ADMIN)' })

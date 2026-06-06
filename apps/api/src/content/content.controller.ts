@@ -8,6 +8,16 @@ import { ListQueryDto } from './dto/entry.dto';
 export class ContentController {
   constructor(private readonly content: ContentService) {}
 
+  @Get('preview/:locale/:slug')
+  @ApiOperation({ summary: 'Onizleme: imzali jetonla taslak dahil icerik (cache yok)' })
+  preview(
+    @Param('locale') locale: string,
+    @Param('slug') slug: string,
+    @Query('token') token: string,
+  ) {
+    return this.content.resolvePreview(locale, slug, token);
+  }
+
   @Get(':locale')
   @ApiOperation({ summary: 'Yayindaki icerikleri listele (tip filtreli: blog/urun)' })
   list(@Param('locale') locale: string, @Query() query: ListQueryDto) {

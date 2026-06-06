@@ -1,5 +1,7 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -350,5 +352,48 @@ export class ContentService {
     await this.audit('entry.restore', entryId, userId, { fromVersion: version });
     await this.invalidatePublicCache();
     return this.findOne(entryId);
+  }
+
+  // ----------------------------- PREVIEW (imzali jeton) -----------------------------
+
+  previewToken(locale: string, slug: string): string {
+    const secret = process.env.PREVIEW_SECRET ?? 'change-me-preview-secret';
+    return createHmac('sha256', secret).update(`${locale}:${slug}`).digest('hex');
+  }
+
+  private verifyPreviewToken(locale: string, slug: string, token: string): boolean {
+    const expected = Buffer.from(this.previewToken(locale, slug));
+    const got = Buffer.from(token ?? '');
+    return expected.length === got.length && timingSafeEqual(expected, got);
+  }
+
+  // Imzali jetonla taslak dahil icerigi cozer (status filtresi YOK, cache YOK).
+  async resolvePreview(locale: string, slug: string, token: string): Promise<unknown> {
+    if (!this.verifyPreviewToken(locale, slug, token)) {
+      throw new ForbiddenException('Gecersiz onizleme jetonu.');
+    }
+    const entry = await this.prisma.entry.findUnique({
+      where: { localeCode_slug: { localeCode: locale, slug } },
+      include: {
+        blocks: { where: { enabled: true }, orderBy: { order: 'asc' } },
+        seo: true,
+        product: true,
+        post: true,
+        coverImage: true,
+      },
+    });
+    if (!entry) throw new NotFoundException('Icerik bulunamadi.');
+    const alternates = await this.prisma.entry.findMany({
+      where: { groupId: entry.groupId },
+      select: { localeCode: true, slug: true },
+    });
+    return { ...entry, alternates, preview: true };
+  }
+
+  // Admin: bir icerik icin imzali onizleme yolu uretir.
+  async previewLink(id: string): Promise<{ token: string; path: string }> {
+    const entry = await this.findOne(id);
+    const token = this.previewToken(entry.localeCode, entry.slug);
+    return { token, path: `/${entry.localeCode}/preview/${entry.slug}?token=${token}` };
   }
 }
