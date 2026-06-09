@@ -86,6 +86,45 @@
   opacity: 1;
 }
 
+/* krontech .gradient-img: gorsel altina mavi gradyan bindirme (opacity .8) */
+.kron-gradient-img {
+  position: relative;
+  overflow: hidden;
+}
+.kron-gradient-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0.8;
+  background-image: linear-gradient(180deg, rgba(47, 156, 255, 0) 0%, rgba(21, 99, 255, 0.75) 100%);
+}
+
+/* krontech .notch: kart orta hizasinda iki yan kertik (zemin #f5f6f8 ucgenler) */
+.kron-notch {
+  position: relative;
+}
+.kron-notch::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  margin-top: 50px;
+  border-style: solid;
+  border-width: 15px 15px 15px 0;
+  border-color: transparent #f5f6f8 transparent transparent;
+}
+.kron-notch::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  margin-top: 50px;
+  border-style: solid;
+  border-width: 15px 0 15px 15px;
+  border-color: transparent transparent transparent #f5f6f8;
+}
+
 html {
   background-color: #ffffff;
 }

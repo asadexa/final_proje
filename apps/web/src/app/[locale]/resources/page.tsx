@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageBanner } from "@/components/page-banner";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { staticPageMetadata } from "@/lib/seo";
 
@@ -16,82 +17,119 @@ export async function generateMetadata({
     title: dict.nav.resources,
     description:
       locale === "tr"
-        ? "Datasheet, vaka çalışması, blog ve podcast — Kron siber güvenlik kaynakları."
-        : "Datasheets, case studies, blog and podcast — Kron cybersecurity resources.",
+        ? "Datasheet, vaka çalışması ve blog — Kron siber güvenlik kaynakları."
+        : "Datasheets, case studies and blog — Kron cybersecurity resources.",
   });
 }
 
+// Kaynaklar — krontech /resources birebir: 226px banner + breadcrumb + ortali
+// h2/intro + 3 kart (350x170 gorsel + mavi gradyan, h4 bold link, outline buton).
+// Icerik krontech'ten birebir (TR = krontech'in kendi yerellestirmesi; yalniz
+// h2 "RESOURCES" -> "Kaynaklar" — tam-yerellestirme kararinin uzantisi).
+// Case Studies / Datasheets hedef sayfalari kapsam disi -> kart tiklanamaz
+// (urun sekme cubugu karariyla tutarli; bkz. docs/decision-log.md).
 export default async function ResourcesPage({ params }: PageProps<"/[locale]/resources">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const dict = getDictionary(locale);
   const tr = locale === "tr";
-  const base = `/${locale}`;
+
+  const intro = tr
+    ? {
+        h2: "Kaynaklar",
+        p: "Kron'un üst düzey telekom ve siber güvenlik teknolojileri hakkında daha fazla bilgi edinmek için case study'lerimizi, blog'larımızı ve datasheet'lerimizi inceleyin.",
+      }
+    : {
+        h2: "Cybersecurity Resources",
+        p: "Explore our cybersecurity library of webinars, case studies, and datasheets to learn more about Kron's high-end Privileged Access Management solutions.",
+      };
 
   const cards = [
     {
-      title: tr ? "Datasheet'ler" : "Datasheets",
+      img: "/kron/pages/resources/card-case-studies.jpg",
+      title: tr ? "CASE STUDY'LER" : "CASE STUDIES",
       desc: tr
-        ? "Ürünlerin teknik özet ve özellik dökümanları."
-        : "Technical briefs and feature sheets for the products.",
-      href: `${base}/kron-pam-resources`,
+        ? "Kron'un Ayrıcalıklı Erişim Yönetimi case study'leri ile hassas verilerinizi ve kritik sistemlerinize erişen ayrıcalıklı hesapları nasıl koruyacağınızı öğrenin."
+        : "Find out how to protect your sensitive data and critical systems with Kron's Privileged Access Management case studies.",
+      href: null, // kapsam disi alt sayfa
     },
     {
-      title: tr ? "Vaka Çalışmaları" : "Case Studies",
+      img: "/kron/pages/resources/card-datasheets.jpg",
+      title: tr ? "DATASHEET'LER" : "DATASHEETS",
       desc: tr
-        ? "Gerçek kurumlarda PAM ve veri güvenliği başarı hikâyeleri."
-        : "Real-world PAM and data security success stories.",
-      href: `${base}/case-studies`,
+        ? "Kron'un dünyanın önde gelen Ayrıcalıklı Erişim Yönetimi ürünü hakkında daha fazla bilgi almak için şimdi datasheet'leri inceleyin."
+        : "Uncover the datasheets of Kron's world-leading Privileged Access Management suite.",
+      href: null,
     },
     {
-      title: "Blog",
+      img: "/kron/pages/resources/card-blog.jpg",
+      title: "BLOG",
       desc: tr
-        ? "Erişim ve siber güvenlik üzerine güncel yazılar."
-        : "Latest articles on access and cybersecurity.",
-      href: `${base}/blog`,
-    },
-    {
-      title: "Podcast",
-      desc: tr
-        ? "Ayrıcalıklı erişim yönetimi üzerine sohbetler."
-        : "Conversations on privileged access management.",
-      href: `${base}/podcast`,
+        ? "Bilişim teknolojilerindeki gelişmeler, siber güvenlik alanındaki trendler, erişim ve veri güvenliği hakkında detaylar en güncel haliyle Kron Blog'da."
+        : "Details on latest news in information technologies, trends in cyber security, access and data security are on the Kron Blog in its most up-to-date form.",
+      href: `/${locale}/blog`,
     },
   ];
+  const more = tr ? "Detaylı Bilgi" : "Discover More";
 
   return (
     <div>
-      <section className="bg-[#0a1733] text-white">
-        <div className="mx-auto max-w-[1140px] px-4 py-16 sm:px-6">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">
-            {tr ? "Kaynaklar" : "Resources"}
-          </p>
-          <h1 className="text-4xl font-bold md:text-5xl">{dict.nav.resources}</h1>
-          <p className="mt-4 max-w-2xl text-lg text-white/80">
-            {tr
-              ? "Kron'un siber güvenlik, veri güvenliği ve altyapı çözümleri hakkında datasheet, vaka çalışması, blog ve podcast içeriklerini keşfedin."
-              : "Explore datasheets, case studies, blog posts and podcasts about Kron's cybersecurity, data security and infrastructure solutions."}
-          </p>
+      <PageBanner
+        title={dict.nav.resources}
+        image="/kron/pages/resources/banner.jpg"
+        crumbs={[tr ? "Ana Sayfa" : "Home", dict.nav.resources]}
+      />
+
+      <section className="mt-10 text-center">
+        <div className="mx-auto max-w-[1140px] px-4 sm:px-6">
+          <h2 className="mb-3 text-[2rem] font-medium text-dark">{intro.h2}</h2>
+          <p className="mx-auto max-w-3xl text-ink-soft">{intro.p}</p>
         </div>
       </section>
 
-      <div className="mx-auto max-w-[1140px] px-4 py-16 sm:px-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          {cards.map((c) => (
-            <Link
-              key={c.title}
-              href={c.href}
-              className="group rounded-lg border border-line bg-surface p-8 transition hover:border-primary hover:shadow-sm"
-            >
-              <h2 className="text-xl font-semibold text-dark group-hover:text-primary">{c.title}</h2>
-              <p className="mt-2 text-ink-soft">{c.desc}</p>
-              <span className="mt-4 inline-block text-sm font-medium text-primary">
-                {tr ? "İncele" : "Explore"} →
-              </span>
-            </Link>
-          ))}
+      <section className="pb-16">
+        <div className="mx-auto max-w-[1140px] px-4 sm:px-6">
+          <div className="grid gap-8 px-4 md:grid-cols-3">
+            {cards.map((c) => (
+              <div
+                key={c.title}
+                className="kron-notch mt-4 bg-surface p-5 shadow-[0_6px_12px_-4px_rgba(37,38,41,0.12)]"
+              >
+                {/* gorsel kart kenarina tasar (krontech -20px margin + gradyan) */}
+                <div className="kron-gradient-img -mx-5 -mt-5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={c.img} alt={c.title} className="w-full" />
+                </div>
+                {/* krontech h4 baslik = link rengi (mavi), bold */}
+                <h4 className="mt-5 text-2xl font-bold text-primary">
+                  {c.href ? (
+                    <Link href={c.href} className="hover:underline">
+                      {c.title}
+                    </Link>
+                  ) : (
+                    c.title
+                  )}
+                </h4>
+                <p className="mt-3 text-ink-soft">{c.desc}</p>
+                <div className="mt-5">
+                  {c.href ? (
+                    <Link
+                      href={c.href}
+                      className="inline-block rounded-none border-2 border-primary px-[30px] py-2.5 text-[15px] font-medium text-primary transition-colors hover:bg-primary hover:text-white"
+                    >
+                      {more}
+                    </Link>
+                  ) : (
+                    <span className="inline-block cursor-default rounded-none border-2 border-primary px-[30px] py-2.5 text-[15px] font-medium text-primary">
+                      {more}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

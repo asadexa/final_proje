@@ -21,6 +21,7 @@ Tek seferlik yardimcilardir; tekrarlanabilirlik + sunum kaniti icin repoda tutul
 | `extract-product-pages.py` | Urun detay | krontech urun HTML'lerinden hero/breadcrumb/sekme/bolum/testimonial cikarir -> JSON. **Cikti dosyaya yazilir** (PowerShell `>` yonlendirmesi konsol codepage'iyle UTF-8'i bozar) |
 | `fetch-product-images.mjs` | Urun detay | `kron-products.json`'daki tum gorselleri indirir; role gore optimize: hero 1920px jpg, bolum 735px jpg (krontech'in kendi boyutu), sekme ikonlari seffaf png palette. Cikti: `apps/web/public/kron/products/` + url->yerel-yol eslemesi |
 | `fetch-product-extras.mjs` | Urun detay | PAM ek gorselleri: testimonial logolari (seffaf png) + Sekerbank video bolumu gorseli |
+| `fetch-page-images.mjs` | Kaynaklar+Iletisim | Banner (1440), kaynak kartlari (700) ve ofis gorselleri (735) — rol bazli optimize |
 | `scrape-blog.mjs` | Blog | krontech blog liste sayfalarindan yazi meta'lari (baslik/tarih/slug/kapak) -> JSON (seed `BLOG_ARCHIVE` icin) |
 | `fetch-blog-images.mjs` | Blog | Blog kapak gorsellerini 730px mozjpeg optimize indirir -> `public/kron/blog/` |
 | `fetch-blog-banner.mjs` | Blog | Blog liste banner'i + footer form zemini |
