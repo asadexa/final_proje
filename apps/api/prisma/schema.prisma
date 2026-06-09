@@ -136,6 +136,7 @@ model Entry {
   slug         String
   title        String
   excerpt      String?
+  featured     Boolean @default(false) // blog "Highlights" sidebar'i icin editoryal secim
   coverImageId String?
   coverImage   Media?  @relation("EntryCover", fields: [coverImageId], references: [id])
 

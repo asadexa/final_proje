@@ -130,7 +130,7 @@ export class ContentService {
   async listPublic(locale: string, q: ListQueryDto): Promise<unknown> {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 12;
-    const cacheKey = `${CACHE_PREFIX}list:${locale}:${q.type ?? 'all'}:${page}:${pageSize}`;
+    const cacheKey = `${CACHE_PREFIX}list:${locale}:${q.type ?? 'all'}:${page}:${pageSize}:${q.featured ? 'f' : 'all'}`;
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
@@ -138,6 +138,7 @@ export class ContentService {
       localeCode: locale,
       status: 'PUBLISHED',
       ...(q.type ? { type: q.type } : {}),
+      ...(q.featured ? { featured: true } : {}),
     };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.entry.findMany({
@@ -166,6 +167,7 @@ export class ContentService {
         slug: dto.slug,
         title: dto.title,
         excerpt: dto.excerpt,
+        featured: dto.featured ?? false,
         status,
         publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
         publishedAt: status === 'PUBLISHED' ? new Date() : null,
@@ -231,6 +233,7 @@ export class ContentService {
       slug: dto.slug,
       title: dto.title,
       excerpt: dto.excerpt,
+      featured: dto.featured,
     };
     if (dto.localeCode) {
       data.locale = { connect: { code: dto.localeCode } };

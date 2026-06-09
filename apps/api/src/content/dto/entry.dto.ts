@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -77,6 +77,11 @@ export class CreateEntryDto {
   @IsString()
   excerpt?: string;
 
+  @ApiPropertyOptional({ description: 'Blog Highlights sidebar secimi' })
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean;
+
   @ApiPropertyOptional({ enum: ENTRY_STATUSES })
   @IsOptional()
   @IsIn(ENTRY_STATUSES)
@@ -133,4 +138,10 @@ export class ListQueryDto {
   @IsInt()
   @Min(1)
   pageSize?: number;
+
+  @ApiPropertyOptional({ description: 'Sadece featured (Highlights) icerikler' })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @IsBoolean()
+  featured?: boolean;
 }
