@@ -23,6 +23,12 @@ export interface Alternate {
   slug: string;
 }
 
+// Kapak/medya gorseli (Media iliskisinden — API coverImage olarak doner).
+export interface ImageRef {
+  url: string;
+  alt?: string | null;
+}
+
 export type EntryType = "PAGE" | "PRODUCT" | "POST";
 
 export interface PublicEntry {
@@ -36,6 +42,7 @@ export interface PublicEntry {
   blocks: BlockNode[];
   seo?: SeoData | null;
   alternates?: Alternate[];
+  coverImage?: ImageRef | null;
   product?: { tagline?: string | null } | null;
   post?: { readingMin?: number | null; tags?: string[] } | null;
 }
@@ -55,6 +62,7 @@ export interface EntryListItem {
   updatedAt?: string | null;
   groupId?: string;
   seo?: SeoData | null;
+  coverImage?: ImageRef | null;
 }
 
 export interface EntryList {

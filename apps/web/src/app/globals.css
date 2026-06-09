@@ -31,12 +31,34 @@
   opacity: 1;
 }
 
-/* Blog carousel (acik tema uzerinde mavi nokta) */
-.blog-carousel {
+/* Acik-tema carousel'ler (urun + blog): mavi nokta + beyaz daire icinde yuzen oklar */
+.blog-carousel,
+.product-carousel {
   --swiper-theme-color: #1563ff;
+  --swiper-navigation-size: 18px;
 }
-.blog-carousel .swiper-pagination {
+.blog-carousel .swiper-pagination,
+.product-carousel .swiper-pagination {
   bottom: 0;
+}
+.blog-carousel .swiper-button-prev,
+.blog-carousel .swiper-button-next,
+.product-carousel .swiper-button-prev,
+.product-carousel .swiper-button-next {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  color: #1563ff;
+}
+.blog-carousel .swiper-button-prev,
+.product-carousel .swiper-button-prev {
+  left: 0;
+}
+.blog-carousel .swiper-button-next,
+.product-carousel .swiper-button-next {
+  right: 0;
 }
 
 html {

@@ -85,19 +85,31 @@ export const blockSchemas = {
   }),
   PRODUCT_SHOWCASE: z.object({
     title: z.string().optional(),
+    subtitle: z.string().optional(),
+    moreLabel: z.string().optional(), // kart CTA metni ("Learn More" / "Daha Fazla") — icerik, kodda degil
     products: z.array(
       z.object({
         name: z.string(),
         description: z.string().optional(),
         href: z.string().optional(),
         features: z.array(z.string()).optional(),
+        image: imageRefSchema.optional(),
       }),
     ),
   }),
-  VALUE_PROP: z.object({ title: z.string(), body: z.string(), cta: linkSchema.optional() }),
+  // VALUE_PROP ("Why Kron?"): solda metin + buton, sagda gorsel (iki kolon).
+  VALUE_PROP: z.object({
+    title: z.string(), // <b>...</b> => mavi vurgu
+    body: z.string(),
+    cta: linkSchema.optional(),
+    image: imageRefSchema.optional(),
+  }),
   STATS: z.object({
     title: z.string().optional(),
-    items: z.array(z.object({ value: z.string(), label: z.string() })),
+    subtitle: z.string().optional(),
+    items: z.array(
+      z.object({ value: z.string(), label: z.string(), icon: imageRefSchema.optional() }),
+    ),
   }),
   CASE_STUDY: z.object({
     title: z.string(),

@@ -6,15 +6,19 @@ import { Autoplay, Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/pagination";
+import "swiper/css/navigation";
 
 export interface BlogCardItem {
   id: string;
   title: string;
   slug: string;
   excerpt?: string | null;
+  image?: string | null;
+  date?: string | null;
 }
 
-// "Keep up to Date" — son yazilar carousel'i (krontech blog karuseli birebir).
+// "Keep up to Date" — son yazilar carousel'i (krontech blog_swiper birebir):
+// "Blog" rozeti + kapak gorseli + baslik + tarih / Read More.
 export function BlogCarouselClient({
   title,
   posts,
@@ -24,16 +28,20 @@ export function BlogCarouselClient({
   posts: BlogCardItem[];
   locale: string;
 }): ReactElement {
+  const readMore = locale === "tr" ? "Devamını Oku" : "Read More";
   return (
     <section className="bg-surface-muted">
-      <div className="mx-auto max-w-[1140px] px-4 py-16 sm:px-6">
-        {title && <h2 className="mb-10 text-2xl font-bold text-dark">{title}</h2>}
+      <div className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6">
+        {title && (
+          <h2 className="mb-10 text-[2rem] font-light text-dark md:text-[2.5rem]">{title}</h2>
+        )}
         <Swiper
           modules={[Pagination, Navigation, Autoplay]}
           spaceBetween={24}
           slidesPerView={1}
           breakpoints={{ 640: { slidesPerView: 2 }, 1024: { slidesPerView: 3 } }}
           pagination={{ clickable: true }}
+          navigation
           autoplay={{ delay: 7000, disableOnInteraction: false }}
           className="blog-carousel pb-12"
         >
@@ -41,13 +49,35 @@ export function BlogCarouselClient({
             <SwiperSlide key={p.id} className="h-auto">
               <Link
                 href={`/${locale}/${p.slug}`}
-                className="flex h-full flex-col rounded-lg border border-line bg-surface p-6 transition hover:border-primary hover:shadow-sm"
+                className="group flex h-full flex-col overflow-hidden border border-line bg-surface transition hover:shadow-md"
               >
-                <h3 className="text-lg font-semibold text-dark">{p.title}</h3>
-                {p.excerpt && (
-                  <p className="mt-2 line-clamp-3 text-sm text-ink-soft">{p.excerpt}</p>
-                )}
-                <span className="mt-auto pt-4 text-sm font-medium text-primary">→</span>
+                <div className="relative overflow-hidden">
+                  {p.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.image}
+                      alt={p.title}
+                      className="aspect-[16/9] w-full object-cover transition duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="aspect-[16/9] w-full bg-gradient-to-br from-primary/15 to-dark/10" />
+                  )}
+                  <span className="absolute left-3 top-3 bg-primary px-2 py-0.5 text-xs font-medium text-white">
+                    Blog
+                  </span>
+                </div>
+                <div className="flex flex-1 flex-col p-5">
+                  <h3 className="line-clamp-3 text-base font-semibold leading-snug text-dark transition-colors group-hover:text-primary">
+                    {p.title}
+                  </h3>
+                  {p.excerpt && (
+                    <p className="mt-2 line-clamp-2 text-sm text-ink-soft">{p.excerpt}</p>
+                  )}
+                  <div className="mt-auto flex items-center justify-between pt-4 text-sm">
+                    {p.date && <span className="text-muted">{p.date}</span>}
+                    <span className="font-medium text-primary">{readMore} →</span>
+                  </div>
+                </div>
               </Link>
             </SwiperSlide>
           ))}
