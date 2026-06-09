@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '../src/generated/prisma/client';
+import { PrismaClient, type Prisma } from '../src/generated/prisma/client';
 
 // Idempotent seed: tekrar calistirilabilir (upsert). docker compose up sirasinda otomatik calisir.
 const connectionString = process.env.DATABASE_URL;
@@ -167,52 +167,224 @@ async function main(): Promise<void> {
       },
     });
 
-    // --- Urunler (PRODUCT) — her biri tr + en; ana sayfa "Kron Products" kartlariyla eslesir ---
-    const products = [
+    // --- Urunler (PRODUCT) — krontech urun sayfalari 1:1 ---
+    // Icerik scripts/extract-product-pages.py ile krontech HTML'lerinden cikarildi.
+    // EN metinler krontech'ten BIREBIR. TR = Turkce ceviri (BILINCLI SAPMA: krontech
+    // kendi TR sayfalarinda govdeyi Ingilizce birakmis; biz CMS'in i18n modelinin
+    // calistigini gostermek icin tam yerellestirdik — bkz. docs/decision-log.md).
+    // Sekme cubugu gorsel 1:1; alt sayfalar (how-it-works vb.) kapsam disi -> yalniz
+    // ilk sekme aktif/tiklanabilir (ikinci bilincli sapma).
+    const TAB_DEFS = {
+      solution: { en: 'SOLUTION', tr: 'ÇÖZÜM', icon: '/kron/products/tabs/tetris3x.png' },
+      how: { en: 'HOW IT WORKS?', tr: 'NASIL ÇALIŞIR?', icon: '/kron/products/tabs/seo-and-web-13x.png' },
+      benefits: { en: 'KEY BENEFITS', tr: 'TEMEL FAYDALAR', icon: '/kron/products/tabs/business-and-finance-13x.png' },
+      family: { en: 'PRODUCT FAMILY', tr: 'ÜRÜN AİLESİ', icon: '/kron/products/tabs/duplicate3x.png' },
+      resources: { en: 'RESOURCES', tr: 'KAYNAKLAR', icon: '/kron/products/tabs/ui-53x.png' },
+      videos: { en: 'VIDEOS', tr: 'VİDEOLAR', icon: '/kron/products/tabs/shape3x.png' },
+    } as const;
+    type TabKey = keyof typeof TAB_DEFS;
+    type ProductSection = { title: string; body: string; side: 'left' | 'right' };
+    type ProductTestimonial = { title: string; quote: string; author: string; img: string; logo?: string };
+    type ProductCase = { title: string; body: string; img: string; ctaLabel: string; ctaHref: string };
+    type ProductLocaleData = {
+      title: string; tagline: string; excerpt: string; lead: string;
+      category: string; sections: ProductSection[]; testimonials?: ProductTestimonial[];
+      videoCase?: ProductCase; // krontech product-success-story (Sekerbank)
+    };
+    const products: Array<{ slug: string; tabs: TabKey[]; tr: ProductLocaleData; en: ProductLocaleData }> = [
       {
         slug: 'kron-pam',
-        tr: { title: 'Kron PAM', tagline: 'Tek platformda ayricalikli erisim', excerpt: 'Ayricalikli Erisim Yonetimi', heroSub: 'Ayricalikli hesaplari ve oturumlari tek platformdan kaydedin, izleyin ve yonetin.', features: [{ title: 'Oturum Yonetimi', description: 'Sifir Guven ilkeleriyle kayit ve gercek zamanli izleme.' }, { title: 'Sifre Kasasi', description: 'Merkezi kimlik bilgisi yonetimi ve rotasyon.' }, { title: 'Cok Faktorlu Dogrulama', description: 'Kritik erisimlerde ek dogrulama katmani.' }] },
-        en: { title: 'Kron PAM', tagline: 'Privileged access in one platform', excerpt: 'Privileged Access Management', heroSub: 'Record, monitor and govern privileged accounts and sessions from a single platform.', features: [{ title: 'Session Management', description: 'Recording and real-time monitoring with Zero Trust principles.' }, { title: 'Password Vault', description: 'Centralized credential management and rotation.' }, { title: 'Multi-Factor Authentication', description: 'An extra verification layer for critical access.' }] },
+        tabs: ['solution', 'how', 'benefits', 'family', 'resources', 'videos'],
+        en: {
+          title: 'Kron PAM', tagline: 'Privileged access in one platform', excerpt: 'Privileged Access Management',
+          category: 'Identity & Access Management',
+          lead: "Establish a flexible, centrally managed and layered defense security architecture against insider threats with the world's leading Privileged Access Management platform.",
+          sections: [
+            { side: 'right', title: 'Protect What You <b>Connect™</b>', body: 'The Kron PAM™ Privileged Access Management Suite is known as the fastest to deploy and the most secure PAM solution in the marketplace, delivering IT operational security and efficiency to Enterprises and Telcos globally.' },
+            { side: 'left', title: 'Unified Management of <b>Privileged Access Control</b>', body: 'Kron PAM enables IT managers and network admins to efficiently secure the access, control configurations and indisputably record all activities in the data center or network infrastructure, in which any breach in privileged accounts access might have material impact on business continuity.' },
+            { side: 'right', title: 'Regulatory <b>Compliance</b>', body: 'Kron PAM provides tools, capabilities, indisputable log records and audit trails to help organizations comply with regulations including ISO 27001, ISO 31000: 2009, KVKK, PCI DSS, EPDK, SOX, HIPAA, GDPR in highly regulated industries like finance, energy, health, and telecommunications.' },
+            { side: 'left', title: 'Stronger, Simpler and <b>More Secure</b>', body: 'Cloud-native and designed to support Software Defined Networks today and in the future, Kron PAM prevents and detects breaches, maintains individual accountability, and increases operational efficiency significantly by managing credentials and delegating privileged actions.' },
+          ],
+          testimonials: [
+            { img: '/kron/products/kron-pam/testimonial-1.jpg', logo: '/kron/products/kron-pam/logo-efes.png', title: "Anadolu Efes Ensures Data and Access Security with Kron's Cybersecurity Solutions", quote: 'With Kron PAM, system and application experts started managing their authorized servers more easily and with visually enriched screens. This has led to increased convenience, speed, and motivation.', author: 'Mehmet Temiz - Information Security Manager' },
+            { img: '/kron/products/kron-pam/testimonial-2.jpg', logo: '/kron/products/kron-pam/logo-turkcell.png', title: 'Turkcell <b>Secures Hundreds of Thousands of Devices</b> and Privileged Accounts <b>with Kron PAM</b>', quote: 'The most significant advantage Kron PAM provided us was the management of privileged accounts accessing a large number of devices, as well as the use and recording of passwords in all of them, without sharing passwords with anyone else.', author: 'Alper Eryılmaz - Identity Access Management Associate Director' },
+          ],
+          videoCase: { img: '/kron/products/kron-pam/case-sekerbank.jpg', title: 'How Sekerbank Assures Data and Access Security?', body: "Sekerbank, one of Turkey's leading banks with a long history, secures and manages privileged account password information with Kron PAM in order to maximize data and access security.", ctaLabel: 'Watch the Customer Story', ctaHref: 'https://youtu.be/wnBRv_CVAQQ' },
+        },
+        tr: {
+          title: 'Kron PAM', tagline: 'Tek platformda ayricalikli erisim', excerpt: 'Ayrıcalıklı Erişim Yönetimi',
+          category: 'Kimlik ve Erişim Yönetimi',
+          lead: 'Dünyanın önde gelen Ayrıcalıklı Erişim Yönetimi platformu ile iç tehditlere karşı esnek, merkezi olarak yönetilen ve katmanlı bir savunma güvenlik mimarisi kurun.',
+          sections: [
+            { side: 'right', title: 'Bağladığınızı <b>Koruyun™</b>', body: 'Kron PAM™ Ayrıcalıklı Erişim Yönetimi Paketi, pazardaki en hızlı devreye alınan ve en güvenli PAM çözümü olarak bilinir; dünya genelinde kurumlara ve telekom operatörlerine BT operasyonel güvenliği ve verimlilik sunar.' },
+            { side: 'left', title: 'Ayrıcalıklı Erişim Kontrolünde <b>Birleşik Yönetim</b>', body: 'Kron PAM; ayrıcalıklı hesap erişimindeki herhangi bir ihlalin iş sürekliliğini önemli ölçüde etkileyebileceği veri merkezi ve ağ altyapısında, BT yöneticilerinin ve ağ yöneticilerinin erişimi güvence altına almasını, yapılandırmaları kontrol etmesini ve tüm etkinlikleri inkâr edilemez biçimde kayıt altına almasını sağlar.' },
+            { side: 'right', title: 'Mevzuat <b>Uyumluluğu</b>', body: 'Kron PAM; finans, enerji, sağlık ve telekomünikasyon gibi yoğun düzenlemeye tabi sektörlerde ISO 27001, ISO 31000: 2009, KVKK, PCI DSS, EPDK, SOX, HIPAA ve GDPR dahil düzenlemelere uyum için araçlar, yetenekler, inkâr edilemez log kayıtları ve denetim izleri sunar.' },
+            { side: 'left', title: 'Daha Güçlü, Daha Basit ve <b>Daha Güvenli</b>', body: 'Bulut-yerel mimarisi ve bugünün ve yarının Yazılım Tanımlı Ağlarını destekleyen tasarımıyla Kron PAM; ihlalleri önler ve tespit eder, bireysel hesap verebilirliği korur, kimlik bilgilerini yöneterek ve ayrıcalıklı işlemleri delege ederek operasyonel verimliliği önemli ölçüde artırır.' },
+          ],
+          testimonials: [
+            { img: '/kron/products/kron-pam/testimonial-1.jpg', logo: '/kron/products/kron-pam/logo-efes.png', title: "Anadolu Efes, Kron'un Siber Güvenlik Çözümleriyle Veri ve Erişim Güvenliğini Sağlıyor", quote: 'Kron PAM ile sistem ve uygulama uzmanlarımız yetkili oldukları sunucuları daha kolay ve görsel olarak zenginleştirilmiş ekranlarla yönetmeye başladı. Bu da kolaylık, hız ve motivasyon artışı sağladı.', author: 'Mehmet Temiz - Bilgi Güvenliği Müdürü' },
+            { img: '/kron/products/kron-pam/testimonial-2.jpg', logo: '/kron/products/kron-pam/logo-turkcell.png', title: 'Turkcell, <b>Yüz Binlerce Cihazı</b> ve Ayrıcalıklı Hesabı <b>Kron PAM ile Güvence Altına Alıyor</b>', quote: "Kron PAM'in bize sağladığı en önemli avantaj, çok sayıda cihaza erişen ayrıcalıklı hesapların yönetimi ile parolaların kimseyle paylaşılmadan tümünde kullanılması ve kaydedilmesi oldu.", author: 'Alper Eryılmaz - Kimlik Erişim Yönetimi Direktör Yardımcısı' },
+          ],
+          videoCase: { img: '/kron/products/kron-pam/case-sekerbank.jpg', title: 'Şekerbank Veri ve Erişim Güvenliğini Nasıl Sağlıyor?', body: "Türkiye'nin köklü bankalarından Şekerbank, veri ve erişim güvenliğini en üst düzeye çıkarmak için ayrıcalıklı hesap parola bilgilerini Kron PAM ile güvence altına alıyor ve yönetiyor.", ctaLabel: 'Müşteri Hikayesini İzleyin', ctaHref: 'https://youtu.be/wnBRv_CVAQQ' },
+        },
       },
       {
         slug: 'dynamic-data-masking',
-        tr: { title: 'Dinamik Veri Maskeleme', tagline: 'Hassas veriyi kaynaginda koruyun', excerpt: 'Dinamik Veri Maskeleme', heroSub: 'Hassas veriyi uygulama katmaninda gercek zamanli maskeleyin; veritabani degismeden korunur.', features: [{ title: 'Gercek Zamanli Maskeleme', description: 'Veriyi sorgu aninda maskeleyin.' }, { title: 'Veritabani Degismez', description: 'Kaynak veriye dokunmadan koruma.' }] },
-        en: { title: 'Dynamic Data Masking', tagline: 'Protect sensitive data at the source', excerpt: 'Dynamic Data Masking', heroSub: 'Mask sensitive data in real time at the application layer, without changing the database.', features: [{ title: 'Real-Time Masking', description: 'Mask data at query time.' }, { title: 'No Database Changes', description: 'Protect without touching source data.' }] },
+        tabs: ['solution', 'how', 'benefits', 'resources'],
+        en: {
+          title: 'Dynamic Data Masking', tagline: 'Protect sensitive data at the source', excerpt: 'Dynamic Data Masking',
+          category: 'Data Security & Data Management',
+          lead: "Secure, monitor, and centrally manage access to your databases with Kron's Database Access Manager (DAM). Leverage advanced role-based access control, dynamic data masking, and comprehensive database activity monitoring to ensure sensitive data protection and real-time oversight of database actions.",
+          sections: [
+            { side: 'right', title: 'Centralized Database <b>Access Control & Security</b>', body: 'Kron DAM&DDM provides robust access control by monitoring and logging database activities while enforcing role-based policies for enhanced data protection. Kron Database Access Manager adds an extra layer of security by reserving connections and requiring managerial approval for sensitive actions.' },
+            { side: 'left', title: 'Protect Your <b>Sensitive Data</b>', body: 'Using role-based rules, Kron DAM&DDM determines who can access real data and who sees masked or fictional versions, ensuring secure, customized access. Privileged users can safely view data without exposing sensitive information. With flexible masking techniques, including regular expressions, Kron DAM&DDM offers tailored data protection to meet your business needs.' },
+            { side: 'right', title: 'Sensitive <b>Data Discovery</b>', body: 'Sensitive Data Discovery helps you locate and manage sensitive data across your databases. Kron DAM&DDM uses dictionary types, which are predefined data patterns, and regular expressions, to accurately identify sensitive information. Ensure your sensitive data is securely identified, managed, and protected with ease.' },
+          ],
+        },
+        tr: {
+          title: 'Dinamik Veri Maskeleme', tagline: 'Hassas veriyi kaynaginda koruyun', excerpt: 'Dinamik Veri Maskeleme',
+          category: 'Veri Güvenliği ve Veri Yönetimi',
+          lead: "Kron'un Veritabanı Erişim Yöneticisi (DAM) ile veritabanlarınıza erişimi güvence altına alın, izleyin ve merkezi olarak yönetin. Hassas verilerin korunması ve veritabanı işlemlerinin gerçek zamanlı gözetimi için gelişmiş rol tabanlı erişim kontrolü, dinamik veri maskeleme ve kapsamlı veritabanı etkinlik izlemeden yararlanın.",
+          sections: [
+            { side: 'right', title: 'Merkezi Veritabanı <b>Erişim Kontrolü ve Güvenliği</b>', body: 'Kron DAM&DDM, veritabanı etkinliklerini izleyip kayıt altına alırken rol tabanlı politikaları uygulayarak güçlü bir erişim kontrolü sağlar. Kron Veritabanı Erişim Yöneticisi, bağlantıları rezerve ederek ve hassas işlemler için yönetici onayı gerektirerek ek bir güvenlik katmanı ekler.' },
+            { side: 'left', title: 'Hassas Verilerinizi <b>Koruyun</b>', body: 'Kron DAM&DDM, rol tabanlı kurallarla kimin gerçek veriye erişeceğini, kimin maskelenmiş veya kurgusal sürümleri göreceğini belirleyerek güvenli ve özelleştirilmiş erişim sağlar. Ayrıcalıklı kullanıcılar hassas bilgileri ifşa etmeden veriyi güvenle görüntüleyebilir. Düzenli ifadeler dahil esnek maskeleme teknikleriyle Kron DAM&DDM, iş ihtiyaçlarınıza uygun veri koruması sunar.' },
+            { side: 'right', title: 'Hassas <b>Veri Keşfi</b>', body: 'Hassas Veri Keşfi, veritabanlarınızdaki hassas verileri bulmanıza ve yönetmenize yardımcı olur. Kron DAM&DDM, hassas bilgileri doğru şekilde tanımlamak için önceden tanımlı veri kalıpları olan sözlük tipleri ile düzenli ifadeler kullanır. Hassas verilerinizin güvenle tanımlandığından, yönetildiğinden ve korunduğundan kolayca emin olun.' },
+          ],
+        },
       },
       {
         slug: 'database-access-manager',
-        tr: { title: 'Veritabani Erisim Yoneticisi', tagline: 'Veritabani erisimini merkezilestirin', excerpt: 'Veritabani Erisim Yonetimi', heroSub: 'Veritabani erisimini merkezi olarak yonetin, yetkilendirin ve denetleyin.', features: [{ title: 'Erisim Denetimi', description: 'Kim, neye, ne zaman erisiyor.' }, { title: 'Sorgu Izleme', description: 'Tum sorgular kayit altinda.' }] },
-        en: { title: 'Database Access Manager', tagline: 'Centralize database access', excerpt: 'Database Access Management', heroSub: 'Centrally manage, authorize and audit database access.', features: [{ title: 'Access Control', description: 'Who accesses what, and when.' }, { title: 'Query Monitoring', description: 'Every query is logged.' }] },
+        tabs: ['solution', 'how', 'benefits', 'family', 'resources'],
+        en: {
+          title: 'Database Access Manager', tagline: 'Centralize database access', excerpt: 'Database Access Management',
+          category: 'Identity & Access Management',
+          lead: "Empower your data security with Kron PAM's stronger and simpler Database Access Manager.",
+          sections: [
+            { side: 'right', title: 'Utmost Security for <b>Database Access</b>', body: 'The Database Access Manager is the single point of access control management for the database layer and secures data access with logging and policy enforcement.' },
+            { side: 'left', title: 'Enhanced Policy <b>Control</b>', body: 'The Database Access Manager’s advanced rule engine makes it simple to create restrictions for accessing sensitive data.' },
+            { side: 'right', title: 'Full Visibility with <b>Data Access Logging</b>', body: "Kron PAM's DAM provides session logging functionality to database admins (DBAs)." },
+          ],
+        },
+        tr: {
+          title: 'Veritabanı Erişim Yöneticisi', tagline: 'Veritabani erisimini merkezilestirin', excerpt: 'Veritabanı Erişim Yönetimi',
+          category: 'Kimlik ve Erişim Yönetimi',
+          lead: "Kron PAM'in daha güçlü ve daha basit Veritabanı Erişim Yöneticisi ile veri güvenliğinizi güçlendirin.",
+          sections: [
+            { side: 'right', title: 'Veritabanı Erişiminde <b>En Üst Düzey Güvenlik</b>', body: 'Veritabanı Erişim Yöneticisi, veritabanı katmanı için tek noktadan erişim kontrolü yönetimi sağlar; veri erişimini loglama ve politika uygulamayla güvence altına alır.' },
+            { side: 'left', title: 'Gelişmiş Politika <b>Kontrolü</b>', body: "Veritabanı Erişim Yöneticisi'nin gelişmiş kural motoru, hassas verilere erişim için kısıtlamalar oluşturmayı kolaylaştırır." },
+            { side: 'right', title: 'Veri Erişim Loglarıyla <b>Tam Görünürlük</b>', body: "Kron PAM'in DAM'i, veritabanı yöneticilerine (DBA) oturum loglama işlevi sağlar." },
+          ],
+        },
       },
       {
         slug: 'aaa',
-        tr: { title: 'Kron AAA', tagline: 'Telekom icin kimlik dogrulama', excerpt: 'Kimlik Dogrulama, Yetkilendirme, Loglama', heroSub: 'Telekom operatorleri icin kimlik dogrulama, yetkilendirme ve IPDR loglama.', features: [{ title: 'RADIUS / TACACS+', description: 'Standart protokollerle kimlik dogrulama.' }, { title: 'IPDR Loglama', description: 'Detayli kullanim kayitlari.' }] },
-        en: { title: 'Kron AAA', tagline: 'Authentication for telecom', excerpt: 'Authentication, Authorization, Accounting', heroSub: 'Authentication, authorization and IPDR logging for telecom operators.', features: [{ title: 'RADIUS / TACACS+', description: 'Authentication via standard protocols.' }, { title: 'IPDR Logging', description: 'Detailed usage records.' }] },
+        tabs: ['solution', 'how', 'benefits', 'resources'],
+        en: {
+          title: 'AAA Server & Subscriber Management', tagline: 'Authentication for telecom', excerpt: 'Authentication, Authorization, Accounting',
+          category: 'Identity & Access Management',
+          lead: 'Authorization, authentication and accounting platform with advanced profiling features',
+          sections: [
+            { side: 'right', title: 'Top-Notch <b>AAA & Provisioning Platform</b>', body: 'Kron’s AAA is an authorization, authentication and accounting platform with advanced profiling and provisioning features that provides complex capabilities to enable campaign differentiation in addition to network access control functions.' },
+            { side: 'left', title: 'Flawless <b>Compatibility</b>', body: 'With its Telco cloud NFVI state of the art design, Kron’s AAA is compatible with fixed and mobile networks at service providers and both wired and wireless 802.1X solutions in enterprise networks. Kron’s AAA offers both software and hardware high availability to ensure system reliability.' },
+            { side: 'right', title: 'Authenticating <b>Millions</b>', body: 'With its powerful and sustainable infrastructure, Kron’s AAA authenticates millions of subscribers concurrently tracking accounting data for millions over multiple transport mediums, e.g. xDSL, fiber, mobile and Wi-Fi.' },
+            { side: 'left', title: 'Safely Manages Thousands of <b>Endpoint Devices</b>', body: 'The Kron AAA solution safely manages thousands of endpoint devices of banking, telecommunications and service providers in device verification with advanced device authorization, authentication and charging/accounting capabilities.' },
+          ],
+        },
+        tr: {
+          title: 'AAA Sunucusu ve Abone Yönetimi', tagline: 'Telekom icin kimlik dogrulama', excerpt: 'Kimlik Doğrulama, Yetkilendirme, Ücretlendirme',
+          category: 'Kimlik ve Erişim Yönetimi',
+          lead: 'Gelişmiş profilleme özellikleriyle yetkilendirme, kimlik doğrulama ve ücretlendirme platformu',
+          sections: [
+            { side: 'right', title: 'Birinci Sınıf <b>AAA ve Provizyon Platformu</b>', body: 'Kron AAA; ağ erişim kontrolü işlevlerine ek olarak kampanya farklılaştırmaya imkân veren karmaşık yeteneklere sahip, gelişmiş profilleme ve provizyon özellikleri sunan bir yetkilendirme, kimlik doğrulama ve ücretlendirme platformudur.' },
+            { side: 'left', title: 'Kusursuz <b>Uyumluluk</b>', body: 'Telco bulut NFVI son teknoloji tasarımıyla Kron AAA; servis sağlayıcılardaki sabit ve mobil ağlarla ve kurumsal ağlardaki kablolu ve kablosuz 802.1X çözümleriyle uyumludur. Kron AAA, sistem güvenilirliği için hem yazılım hem donanım yüksek erişilebilirliği sunar.' },
+            { side: 'right', title: 'Milyonlara <b>Kimlik Doğrulama</b>', body: 'Güçlü ve sürdürülebilir altyapısıyla Kron AAA, milyonlarca abonenin kimliğini eşzamanlı doğrular; xDSL, fiber, mobil ve Wi-Fi gibi birden çok iletim ortamında milyonlarca abonenin ücretlendirme verisini takip eder.' },
+            { side: 'left', title: 'Binlerce <b>Uç Cihazı</b> Güvenle Yönetir', body: 'Kron AAA çözümü; bankacılık, telekomünikasyon ve servis sağlayıcıların binlerce uç cihazını, gelişmiş cihaz yetkilendirme, kimlik doğrulama ve ücretlendirme yetenekleriyle cihaz doğrulamada güvenle yönetir.' },
+          ],
+        },
       },
       {
         slug: 'kron-telemetry-pipeline',
-        tr: { title: 'Kron Telemetri Pipeline', tagline: 'Log ve telemetriyi guvenle yonetin', excerpt: 'Telemetri Pipeline', heroSub: 'Log ve telemetri verisini toplayin, zenginlestirin, filtreleyin ve hedeflere yonlendirin.', features: [{ title: 'Log Yonlendirme', description: 'Verileri dogru hedeflere iletin.' }, { title: 'Hacim Azaltma', description: 'Gurultuyu filtreleyerek maliyeti dusurun.' }] },
-        en: { title: 'Kron Telemetry Pipeline', tagline: 'Manage logs and telemetry securely', excerpt: 'Telemetry Pipeline', heroSub: 'Collect, enrich, filter and route log and telemetry data to any destination.', features: [{ title: 'Log Routing', description: 'Deliver data to the right destinations.' }, { title: 'Volume Reduction', description: 'Cut cost by filtering noise.' }] },
+        tabs: ['solution', 'how', 'benefits', 'resources'],
+        en: {
+          title: 'Telemetry Pipeline', tagline: 'Manage logs and telemetry securely', excerpt: 'Telemetry Pipeline',
+          category: 'Data Security & Data Management',
+          lead: 'Kron Telemetry Pipeline enables organizations to manage their observability and security data streams, mitigates vendor lock-in, and assists in breaking down data silos.',
+          sections: [
+            { side: 'right', title: '<b>Simplifying</b> Log Management and <b>Enhancing</b> Observability', body: 'Large enterprises are struggling to manage increasing volumes of logs as they modernize their IT environments with technologies like containerization, necessitating enhanced observability. Kron Telemetry Pipeline is a purpose-built telemetry pipeline solution covering on-prem and cloud platforms prioritizing cost-efficiency and performance.' },
+            { side: 'left', title: '<b>Break down data silos</b> by Decoupling Sources from Destinations', body: 'Forward multiple data sources to various destinations without the need for additional agents. Efficiently send transformed, noise-free data to the appropriate destinations while routing raw data to cost-effective long-term storage solutions such as S3. Retain a full-fidelity copy in a low-cost data lake for later rehydration when needed.' },
+            { side: 'right', title: '<b>Control Your Cost</b> by Eliminating Low Value Data', body: 'Reduce up to 50% of streaming log volume for cost control and performance improvement purposes. Remove duplicate fields, null values, and other insignificant elements using a low-code interface. Apply sampling to discard repetitive events, or deduplicate logs to reduce ingested volume' },
+            { side: 'left', title: '<b>Enrich your log data</b> with Context Information', body: 'Improve the visibility of your streaming logs by adding contextual data, enhancing observability platforms. Adding threat intelligence information helps SIEM tools for root-cause analysis or threat hunting. Data-in-motion enrichment reduces the post-processing overhead for destination tools.' },
+            { side: 'right', title: '<b>Rehydration</b> from S3 Compatible Object Storages', body: 'Utilize the Kron Telemetry Pipeline to ingest complete datasets into object storages and enable time-based ad-hoc object rehydration for analysis tools. Optimize the system for cost-effectiveness and data integrity, reducing retention periods on analysis tools while ensuring accessibility for investigations.' },
+          ],
+        },
+        tr: {
+          title: 'Telemetri Pipeline', tagline: 'Log ve telemetriyi guvenle yonetin', excerpt: 'Telemetri Pipeline',
+          category: 'Veri Güvenliği ve Veri Yönetimi',
+          lead: 'Kron Telemetri Pipeline; kurumların gözlemlenebilirlik ve güvenlik veri akışlarını yönetmesini sağlar, tedarikçiye bağımlılığı azaltır ve veri silolarının kırılmasına yardımcı olur.',
+          sections: [
+            { side: 'right', title: 'Log Yönetimini <b>Basitleştirin</b>, Gözlemlenebilirliği <b>Artırın</b>', body: 'Büyük kurumlar, BT ortamlarını konteynerleştirme gibi teknolojilerle modernleştirirken artan log hacimlerini yönetmekte zorlanıyor; bu da gelişmiş gözlemlenebilirlik gerektiriyor. Kron Telemetri Pipeline, maliyet verimliliğini ve performansı önceliklendiren, kurum içi ve bulut platformlarını kapsayan, amaca özel bir telemetri pipeline çözümüdür.' },
+            { side: 'left', title: 'Kaynakları Hedeflerden Ayırarak <b>Veri Silolarını Kırın</b>', body: 'Ek ajanlara ihtiyaç duymadan birden çok veri kaynağını çeşitli hedeflere yönlendirin. Dönüştürülmüş, gürültüden arındırılmış veriyi doğru hedeflere verimli şekilde gönderirken ham veriyi S3 gibi maliyet-etkin uzun süreli depolama çözümlerine yönlendirin. Gerektiğinde yeniden beslemek üzere tam doğruluklu bir kopyayı düşük maliyetli bir veri gölünde saklayın.' },
+            { side: 'right', title: 'Düşük Değerli Veriyi Eleyerek <b>Maliyetinizi Kontrol Edin</b>', body: 'Maliyet kontrolü ve performans iyileştirmesi için akan log hacmini %50’ye varan oranda azaltın. Yinelenen alanları, boş değerleri ve diğer önemsiz öğeleri düşük kodlu bir arayüzle kaldırın. Tekrarlayan olayları elemek için örnekleme uygulayın veya alınan hacmi azaltmak için logları tekilleştirin.' },
+            { side: 'left', title: 'Log Verinizi Bağlam Bilgisiyle <b>Zenginleştirin</b>', body: 'Bağlamsal veri ekleyerek akan loglarınızın görünürlüğünü artırın, gözlemlenebilirlik platformlarını güçlendirin. Tehdit istihbaratı bilgisi eklemek, SIEM araçlarına kök neden analizinde ve tehdit avcılığında yardımcı olur. Hareket halindeki veri zenginleştirme, hedef araçlardaki son işleme yükünü azaltır.' },
+            { side: 'right', title: 'S3 Uyumlu Nesne Depolamadan <b>Yeniden Besleme</b>', body: 'Kron Telemetri Pipeline ile veri kümelerinin tamamını nesne depolamaya alın ve analiz araçları için zamana dayalı, isteğe bağlı nesne yeniden beslemeyi etkinleştirin. İncelemeler için erişilebilirliği korurken analiz araçlarındaki saklama sürelerini kısaltarak sistemi maliyet etkinliği ve veri bütünlüğü için optimize edin.' },
+          ],
+        },
       },
     ];
     for (const p of products) {
       const group = await prisma.translationGroup.create({ data: { type: 'PRODUCT' } });
       for (const code of ['tr', 'en'] as const) {
         const d = p[code];
+        const home = code === 'tr' ? 'Ana Sayfa' : 'Home';
+        const blocks: Prisma.BlockCreateWithoutEntryInput[] = [
+          {
+            type: 'HERO', order: 0,
+            data: {
+              variant: 'product', title: d.title, subtitle: d.lead,
+              image: { url: `/kron/products/${p.slug}/hero.jpg`, alt: d.title },
+              // Datasheet krontech'te modal acar (kapsam disi) -> href bos = tiklanamaz
+              buttons: [
+                { label: code === 'tr' ? 'Doküman İndir' : 'Download Datasheet', href: '' },
+                { label: code === 'tr' ? 'Demo Talep Et' : 'Request a Demo', href: `/${code}/contact` },
+              ],
+            },
+          },
+          {
+            type: 'PRODUCT_TABS', order: 1,
+            data: {
+              breadcrumb: [home, d.category, d.title],
+              tabs: p.tabs.map((key, i) => ({
+                label: TAB_DEFS[key][code], icon: TAB_DEFS[key].icon,
+                active: i === 0, ...(i === 0 ? { href: `/${code}/${p.slug}` } : {}),
+              })),
+            },
+          },
+          ...d.sections.map((s, i) => ({
+            type: 'MEDIA_TEXT', order: 2 + i,
+            data: { title: s.title, body: s.body, imageSide: s.side, image: { url: `/kron/products/${p.slug}/section-${i + 1}.jpg`, alt: s.title.replace(/<[^>]+>/g, '') } },
+          })),
+        ];
+        if (d.testimonials) {
+          blocks.push({
+            type: 'TESTIMONIAL', order: blocks.length,
+            data: { items: d.testimonials.map((t) => ({ title: t.title, quote: t.quote, author: t.author, image: { url: t.img, alt: t.title.replace(/<[^>]+>/g, '') }, ...(t.logo ? { logo: { url: t.logo } } : {}) })) },
+          });
+        }
+        // Sekerbank tipi video basari hikayesi (krontech product-success-story) = MEDIA_TEXT + cta
+        if (d.videoCase) {
+          blocks.push({
+            type: 'MEDIA_TEXT', order: blocks.length,
+            data: { title: d.videoCase.title, body: d.videoCase.body, imageSide: 'left', image: { url: d.videoCase.img, alt: d.videoCase.title }, cta: { label: d.videoCase.ctaLabel, href: d.videoCase.ctaHref } },
+          });
+        }
         await prisma.entry.create({
           data: {
             type: 'PRODUCT', slug: p.slug, title: d.title, excerpt: d.excerpt,
             status: 'PUBLISHED', publishedAt: new Date(),
             locale: { connect: { code } }, group: { connect: { id: group.id } },
             product: { create: { tagline: d.tagline } },
-            seo: { create: { metaTitle: d.title, metaDescription: d.excerpt } },
-            blocks: {
-              create: [
-                { type: 'HERO', order: 0, data: { eyebrow: code === 'tr' ? 'Urun' : 'Product', title: d.title, subtitle: d.heroSub, cta: { label: code === 'tr' ? 'Demo Talep Et' : 'Request a Demo', href: `/${code}/contact` } } },
-                { type: 'FEATURE_GRID', order: 1, data: { title: code === 'tr' ? 'One Cikan Ozellikler' : 'Key Features', items: d.features } },
-                { type: 'CTA_BANNER', order: 2, data: { title: code === 'tr' ? `${d.title} ile tanisin` : `See ${d.title} in action`, cta: { label: code === 'tr' ? 'Demo Talep Et' : 'Request a Demo', href: `/${code}/contact` } } },
-              ],
-            },
+            seo: { create: { metaTitle: d.title, metaDescription: d.lead } },
+            blocks: { create: blocks },
           },
         });
       }

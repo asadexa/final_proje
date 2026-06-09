@@ -51,6 +51,8 @@ enum BlockType {
   CTA_BANNER
   CONTACT_FORM
   FAQ
+  PRODUCT_TABS
+  TESTIMONIAL
 }
 
 enum CategoryKind {

@@ -33,6 +33,8 @@ export const BLOCK_TYPES = [
   'CTA_BANNER',
   'CONTACT_FORM',
   'FAQ',
+  'PRODUCT_TABS',
+  'TESTIMONIAL',
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -53,6 +55,10 @@ export const blockSchemas = {
     subtitle: z.string().optional(),
     cta: linkSchema.optional(),
     image: imageRefSchema.optional(),
+    // Urun sayfasi banner'i (krontech .product-banner): bg gorseli (image),
+    // lead (subtitle) + birden fazla outline buton. variant='product' ile secilir.
+    variant: z.enum(['product']).optional(),
+    buttons: z.array(linkSchema).optional(),
     // Cok-slide hero (krontech main-slider). Doluysa carousel render edilir,
     // bossa tekli hero. Migration gerekmez: ayni HERO tipinin data'si genisliyor.
     slides: z
@@ -128,6 +134,7 @@ export const blockSchemas = {
     body: z.string(),
     image: imageRefSchema,
     imageSide: z.enum(['left', 'right']).default('left'),
+    cta: linkSchema.optional(), // outline buton (krontech Sekerbank video bolumu)
   }),
   LOGO_CLOUD: z.object({ title: z.string().optional(), logos: z.array(imageRefSchema) }),
   CTA_BANNER: z.object({ title: z.string(), cta: linkSchema }),
@@ -139,6 +146,31 @@ export const blockSchemas = {
   FAQ: z.object({
     title: z.string().optional(),
     items: z.array(z.object({ question: z.string(), answer: z.string() })),
+  }),
+  // Urun sayfasi: banner alti breadcrumb + ikonlu sekme cubugu (krontech #nav-tabs-wrapper).
+  // Sekmeler gorsel 1:1; alt sayfalar kapsam disi -> href'i olmayan sekme tiklanamaz (bilincli sapma).
+  PRODUCT_TABS: z.object({
+    breadcrumb: z.array(z.string()).optional(),
+    tabs: z.array(
+      z.object({
+        label: z.string(),
+        href: z.string().optional(),
+        icon: z.string().optional(), // /kron/products/tabs/*.png
+        active: z.boolean().optional(),
+      }),
+    ),
+  }),
+  // Musteri referans slider'i (krontech .blue-bg-slider, mavi gradyan zemin).
+  TESTIMONIAL: z.object({
+    items: z.array(
+      z.object({
+        title: z.string(), // <b>...</b> => beyaz kutu vurgu (krontech .bgwhiteb b)
+        quote: z.string(),
+        author: z.string().optional(),
+        image: imageRefSchema.optional(),
+        logo: imageRefSchema.optional(), // musteri logosu (krontech .slider-logo, max 160x60)
+      }),
+    ),
   }),
 } satisfies Record<BlockType, z.ZodType>;
 
