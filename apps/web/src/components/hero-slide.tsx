@@ -26,11 +26,11 @@ export function HeroSlide({ slide }: { slide: HeroSlideData }): ReactElement {
       )}
       {/* krontech .display-3 (4.5rem / weight 300) + .bgblueb b (mavi vurgu) */}
       <h1
-        className="text-4xl font-light leading-[1.1] tracking-tight text-white md:text-5xl lg:text-[3.5rem] [&_b]:bg-primary [&_b]:px-[3px] [&_b]:font-bold [&_b]:text-white"
+        className="text-4xl font-light leading-[1.1] tracking-tight text-white md:text-5xl lg:text-[4rem] [&_b]:bg-primary [&_b]:px-[3px] [&_b]:font-bold [&_b]:text-white"
         dangerouslySetInnerHTML={{ __html: slide.title }}
       />
       {slide.subtitle && (
-        <p className="mt-5 max-w-lg text-lg leading-7 text-white/80">{slide.subtitle}</p>
+        <p className="mt-5 max-w-lg text-xl leading-8 text-white/80">{slide.subtitle}</p>
       )}
       {cta?.href && (
         <Link
@@ -43,15 +43,16 @@ export function HeroSlide({ slide }: { slide: HeroSlideData }): ReactElement {
     </div>
   );
 
-  // krontech hero yuksek: min-h ile uzun, icerik dikey ortali.
+  // krontech hero tam-ekran: header (~7.5rem) dusulmus viewport yuksekligi =>
+  // sayfa acildiginda hero ekrani tam doldurur, altinda yarim beyaz bolum kalmaz.
   return (
-    <div className="mx-auto flex min-h-[560px] max-w-[1200px] items-center px-4 py-20 sm:px-6 md:min-h-[660px]">
+    <div className="mx-auto flex min-h-[520px] max-w-[1200px] items-center px-4 py-16 sm:px-6 md:min-h-[calc(100svh_-_7.5rem)]">
       {graphic?.url ? (
         <div className="grid w-full items-center gap-8 md:grid-cols-2">
           {text}
           <div className="hidden justify-center md:flex">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={graphic.url} alt="" className="w-full max-w-[500px]" />
+            <img src={graphic.url} alt="" className="w-full max-w-[600px]" />
           </div>
         </div>
       ) : (

@@ -42,7 +42,7 @@ export function BlogCarouselClient({
           breakpoints={{ 640: { slidesPerView: 2 }, 1024: { slidesPerView: 3 } }}
           pagination={{ clickable: true }}
           navigation
-          autoplay={{ delay: 7000, disableOnInteraction: false }}
+          autoplay={{ delay: 3000, disableOnInteraction: false }} /* krontech olcum: 3000ms */
           className="blog-carousel pb-12"
         >
           {posts.map((p) => (

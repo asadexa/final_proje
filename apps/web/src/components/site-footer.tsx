@@ -57,7 +57,7 @@ export function SiteFooter({ locale, dict }: { locale: Locale; dict: Dictionary 
       <div className="h-1.5 w-full bg-primary" />
 
       <div className="bg-[#0a1733] text-white">
-        <div className="mx-auto max-w-[1140px] px-4 py-14 sm:px-6">
+        <div className="mx-auto max-w-[1140px] px-4 py-20 sm:px-6">
           <div className="grid gap-10 md:grid-cols-5">
             <div>
               {/* eslint-disable-next-line @next/next/no-img-element */}

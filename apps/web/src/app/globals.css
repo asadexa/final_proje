@@ -60,6 +60,15 @@
 .product-carousel .swiper-button-next {
   right: 0;
 }
+/* Esit yukseklikli kartlar: slide'lar en uzun karta gore esitlenir (flex stretch) */
+.product-carousel .swiper-wrapper,
+.blog-carousel .swiper-wrapper {
+  align-items: stretch;
+}
+.product-carousel .swiper-slide,
+.blog-carousel .swiper-slide {
+  height: auto;
+}
 
 html {
   background-color: #ffffff;

@@ -33,7 +33,7 @@ export function ProductCarousel({
       breakpoints={{ 640: { slidesPerView: 2 }, 1024: { slidesPerView: 3 } }}
       pagination={{ clickable: true }}
       navigation
-      autoplay={{ delay: 7000, disableOnInteraction: false }}
+      autoplay={{ delay: 3000, disableOnInteraction: false }} /* krontech olcum: 3000ms */
       className="product-carousel pb-12"
     >
       {products.map((p, i) => {
@@ -52,9 +52,23 @@ export function ProductCarousel({
             <h4 className="pt-5 text-2xl font-bold leading-tight text-[#212529]">{p.name}</h4>
             {p.description && <p className="mt-3 text-sm leading-6">{p.description}</p>}
             {features.length > 0 && (
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
+              <ul className="mt-3 space-y-1.5 text-sm">
                 {features.map((f, j) => (
-                  <li key={j}>{f}</li>
+                  <li key={j} className="flex items-start gap-2">
+                    <svg
+                      className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.8 6.79-6.8a1 1 0 011.42 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>{f}</span>
+                  </li>
                 ))}
               </ul>
             )}
