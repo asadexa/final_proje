@@ -88,9 +88,9 @@ async function main(): Promise<void> {
         blocks: {
           create: [
             { type: 'HERO', order: 0, data: { eyebrow: 'KuppingerCole Lideri', title: 'Ayricalikli Erisimi Guvenle Yonetin', subtitle: 'Kron PAM ile kimlik, erisim ve veri guvenligi tek platformda.', cta: { label: 'Demo Talep Et', href: '/tr/contact' }, slides: [
-              { eyebrow: 'KuppingerCole Lideri', title: 'Kurumsal <b>Ayricalikli Erisimi</b> guvenle yonetin', subtitle: 'Kron PAM ile kimlik, erisim ve veri guvenligi tek platformda.', cta: { label: 'Demo Talep Et', href: '/tr/contact' } },
+              { eyebrow: 'KuppingerCole Lideri', image: { url: '/kron/hero/slider-kc.png' }, title: 'Kurumsal <b>Ayricalikli Erisimi</b> guvenle yonetin', subtitle: 'Kron PAM ile kimlik, erisim ve veri guvenligi tek platformda.', cta: { label: 'Demo Talep Et', href: '/tr/contact' } },
               { eyebrow: 'Ayricalikli Erisim Yonetimi', title: 'Her <b>ayricalikli oturumu</b> denetleyin', subtitle: 'Ayricalikli hesaplari tek platformdan kaydedin, izleyin ve yonetin.', cta: { label: "Kron PAM'i Kesfet", href: '/tr/kron-pam' } },
-              { eyebrow: 'Icgoruler', title: 'Siber tehditlerin <b>onunde olun</b>', subtitle: 'Erisim guvenligi, Sifir Guven ve veri koruma uzerine rehberler ve analizler.', cta: { label: "Blog'u Oku", href: '/tr/blog' } },
+              { eyebrow: 'Icgoruler', image: { url: '/kron/hero/slider-kc.png' }, title: 'Siber tehditlerin <b>onunde olun</b>', subtitle: 'Erisim guvenligi, Sifir Guven ve veri koruma uzerine rehberler ve analizler.', cta: { label: "Blog'u Oku", href: '/tr/blog' } },
             ] } },
             { type: 'PRODUCT_SHOWCASE', order: 1, data: { title: 'Kron Urunleri', subtitle: "Kron'un yenilikci teknoloji ve siber guvenlik yazilim urunleri.", moreLabel: 'Daha Fazla', products: [
               { name: 'Kron PAM', description: 'Ayricalikli kullanicilari ve oturumlari yoneterek verinizi ve kritik altyapinizi koruyun.', href: '/tr/kron-pam', image: { url: '/kron/products/pam.jpg', alt: 'Kron PAM' }, features: ['Sifre yonetimi', 'Sifir Guven oturum yonetimi', 'Mevzuat ve denetim uyumu'] },
@@ -121,9 +121,9 @@ async function main(): Promise<void> {
         blocks: {
           create: [
             { type: 'HERO', order: 0, data: { eyebrow: 'KuppingerCole Leader', title: 'Secure Privileged Access', subtitle: 'Identity, access and data security in one platform with Kron PAM.', cta: { label: 'Request a Demo', href: '/en/contact' }, slides: [
-              { eyebrow: 'KuppingerCole Leader', title: 'Secure <b>Privileged Access</b> across the enterprise', subtitle: 'Identity, access and data security in one platform with Kron PAM.', cta: { label: 'Request a Demo', href: '/en/contact' } },
+              { eyebrow: 'KuppingerCole Leader', image: { url: '/kron/hero/slider-kc.png' }, title: 'Secure <b>Privileged Access</b> across the enterprise', subtitle: 'Identity, access and data security in one platform with Kron PAM.', cta: { label: 'Request a Demo', href: '/en/contact' } },
               { eyebrow: 'Privileged Access Management', title: 'Control every <b>privileged session</b>', subtitle: 'Record, monitor and govern privileged accounts from a single platform.', cta: { label: 'Explore Kron PAM', href: '/en/kron-pam' } },
-              { eyebrow: 'Insights', title: 'Stay ahead of <b>cyber threats</b>', subtitle: 'Guides and analysis on access security, Zero Trust and data protection.', cta: { label: 'Read the Blog', href: '/en/blog' } },
+              { eyebrow: 'Insights', image: { url: '/kron/hero/slider-kc.png' }, title: 'Stay ahead of <b>cyber threats</b>', subtitle: 'Guides and analysis on access security, Zero Trust and data protection.', cta: { label: 'Read the Blog', href: '/en/blog' } },
             ] } },
             { type: 'PRODUCT_SHOWCASE', order: 1, data: { title: 'Kron Products', subtitle: "Kron's cutting edge technology and cyber security software products.", moreLabel: 'Learn More', products: [
               { name: 'Privileged Access Management', description: 'Protect your data and critical infrastructure by managing privileged users and sessions.', href: '/en/kron-pam', image: { url: '/kron/products/pam.jpg', alt: 'Privileged Access Management' }, features: ['Password management', 'Zero-trust session management', 'Regulation & audit compliance'] },
