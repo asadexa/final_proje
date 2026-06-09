@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import { notFound } from "next/navigation";
+import { FooterContactForm } from "@/components/footer-contact-form";
 import { JsonLd } from "@/components/json-ld";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -43,6 +44,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
       <body className="flex min-h-full flex-col bg-surface font-sans text-ink antialiased">
         <SiteHeader locale={locale} dict={dict} />
         <main className="flex-1">{children}</main>
+        {/* krontech paritesi: her sayfada footer ustu koyu iletisim formu */}
+        <FooterContactForm locale={locale} />
         <SiteFooter locale={locale} dict={dict} />
         <JsonLd data={organizationJsonLd()} />
       </body>

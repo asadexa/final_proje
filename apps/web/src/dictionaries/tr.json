@@ -19,8 +19,11 @@
   },
   "blog": {
     "title": "Blog",
-    "readMore": "Devamını oku",
-    "empty": "Henüz yazı yok."
+    "readMore": "Devamını Oku",
+    "empty": "Henüz yazı yok.",
+    "home": "Anasayfa",
+    "highlights": "Öne",
+    "highlightsAccent": "Çıkanlar"
   },
   "footer": {
     "tagline": "Kurumsal siber güvenlik ve telekom çözümleri.",

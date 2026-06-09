@@ -19,8 +19,11 @@
   },
   "blog": {
     "title": "Blog",
-    "readMore": "Read more",
-    "empty": "No posts yet."
+    "readMore": "Read More",
+    "empty": "No posts yet.",
+    "home": "Home",
+    "highlights": "Highlights",
+    "highlightsAccent": ""
   },
   "footer": {
     "tagline": "Enterprise cybersecurity and telecom solutions.",

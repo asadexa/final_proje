@@ -30,6 +30,7 @@ interface AdminEntry {
   title: string;
   slug: string;
   excerpt?: string | null;
+  featured?: boolean;
   status: EntryStatus;
   publishAt?: string | null;
   localeCode: string;
@@ -129,6 +130,7 @@ export default function EntryEditorPage(): ReactElement {
       title: entry.title,
       slug: entry.slug,
       excerpt: entry.excerpt ?? undefined,
+      featured: entry.featured ?? false,
       status: entry.status,
       publishAt: entry.publishAt ?? undefined,
       blocks: parsedBlocks,
@@ -200,6 +202,16 @@ export default function EntryEditorPage(): ReactElement {
               />
             </div>
           </div>
+          {entry.type === "POST" && (
+            <label className="flex items-center gap-2 text-sm text-ink-soft">
+              <input
+                type="checkbox"
+                checked={entry.featured ?? false}
+                onChange={(e) => patchEntry({ featured: e.target.checked })}
+              />
+              Highlights (blog sidebar&apos;ında göster)
+            </label>
+          )}
         </div>
 
         {/* Bloklar */}

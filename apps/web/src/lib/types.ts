@@ -55,6 +55,7 @@ export interface EntryListItem {
   title: string;
   slug: string;
   excerpt?: string | null;
+  featured?: boolean;
   status?: EntryStatus;
   localeCode?: string;
   publishedAt?: string | null;

@@ -51,8 +51,12 @@ export function listEntries(
   locale: string,
   type: string,
   page = 1,
+  opts?: { pageSize?: number; featured?: boolean },
 ): Promise<EntryList | null> {
-  return apiGet<EntryList>(`/content/${locale}?type=${type}&page=${page}`, [
+  const params = new URLSearchParams({ type, page: String(page) });
+  if (opts?.pageSize) params.set("pageSize", String(opts.pageSize));
+  if (opts?.featured) params.set("featured", "true");
+  return apiGet<EntryList>(`/content/${locale}?${params.toString()}`, [
     "content",
     `list:${locale}:${type}`,
   ]);
