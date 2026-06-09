@@ -47,7 +47,8 @@ Durum: ✅ Eslesti · 🟡 Kismi · ⬜ Bekliyor. Kanit = krontech'ten **cikaril
 | Blog karuseli | "Keep up to Date" badge + **kapak** + tarih | `BLOG_CAROUSEL` + `Entry.coverImage` (Media) | ✅ |
 | Footer | `footer{bg #000; pt 50px}` + `.subfooter #0f1010`; 4 kolon; baslik 16px/600; link beyaz/.5 hover `#1563ff` | `site-footer.tsx` + `footer.ts` | ✅ |
 | Urun/blog **detay** sayfasi | urun hero/ozellik/CTA; makale: kapak+meta | `[slug]/page.tsx`: breadcrumb + POST kapak/tarih + PRODUCT hero+FEATURE_GRID+CTA_BANNER | ✅ |
-| Iletisim/demo formu (koyu `footer-top`) | reCAPTCHA + intlTelInput + KVKK | Faz 6 kapsaminda | ⬜ |
+| **Blog liste** sayfasi | banner 226px (overlay `.41`, h1 32/600) + breadcrumb 11px + **col-8/col-4**; kart: kapak **411px**, seffaf kart, `blog-terms` (bold tarih + Read More→ 14/600), ayirici `#dedede`/42px; **5 yazi/sayfa + pagination** (`/blog/2`); sticky **Highlights** (150x87 `mix-blend-luminosity`, 14px baslik, `bgblueb` cipli h3) | `blog-list-view.tsx` + `blog/[page]` route; Highlights = `Entry.featured` (admin checkbox + `?featured=true` API) | ✅ |
+| Iletisim/demo formu (koyu `footer-top`) | `.footer-top.dark-form`: zemin gorsel + `rgba(0,0,0,.83)` overlay, py 110px, baslik 32/bold; seffaf input h-46; KVKK 12px/.51; btn-block | `footer-contact-form.tsx` (sitewide, `[locale]/layout.tsx`); `footer-contact` FormDefinition + KVKK + honeypot (reCAPTCHA yerine — bkz. Notlar) | ✅ |
 
 **Onemli ayrim — "tasarim sistemi" parity'si, piksel klonu degil.** Renk, tipografi,
 spacing, bilesen anatomisi ve yerlesim birebir esitlenir; icerik/gorseller temsilidir.
@@ -75,10 +76,17 @@ http://localhost:3000/en. Sol: krontech (referans), sag: rebuild.
 |---|---|
 | ![krontech full](img/comparison/full-krontech.png) | ![rebuild full](img/comparison/full-ours.png) |
 
+**Blog listesi** — banner + breadcrumb + 2 kolon (liste 411px kapaklar + pagination / sticky Highlights) + footer-ustu koyu form:
+
+| krontech.com/tr/blog | Rebuild /tr/blog |
+|---|---|
+| ![krontech blog](img/comparison/blog-krontech.png) | ![rebuild blog](img/comparison/blog-ours.png) |
+
 > Footer neredeyse **piksel-esit** (ayni kolonlar/linkler/sosyal ikonlar/yasal bar). **Bolum sirasi
-> da artik krontech ile ayni** (Hero → Products → Why Kron → Numbers → Case Study → Blog). Tek yapisal
-> fark (durust): krontech'in footer-ustu koyu inline **"Contact Us" formu**; bizde ayri `/contact`
-> sayfasi (Faz 6 formlar). Anasayfa bolumleri **gercek krontech asset'leriyle** birebir esitlendi.
+> da artik krontech ile ayni** (Hero → Products → Why Kron → Numbers → Case Study → Blog).
+> Onceki tek yapisal fark olan footer-ustu koyu **"Contact Us / Bize Ulasin" formu da kapatildi**
+> (`footer-contact-form.tsx`, tum sayfalarda). Anasayfa bolumleri ve blog listesi
+> **gercek krontech asset'leriyle** birebir esitlendi.
 
 ---
 

@@ -76,3 +76,16 @@
 - **Hata ayiklama:** Docker'daki `dist/main` bulunamadi sorunu adim adim koke indirildi
   (bind-mount → EBUSY → stale tsbuildinfo) ve kalici cozuldu.
 - **Tutarlilik:** Kararlar ADR + bu gunluk ile kayit altinda; kod modulerligi korunarak yazildi.
+
+## Blog liste sayfasi 1:1 + footer formu (2026-06-09)
+
+| Karar | Neden | Nasil |
+|------|------|-------|
+| **`Entry.featured` alani (Highlights)** | krontech sidebar'i editoryal secim; "en yeni 10" degil. CMS hikayesi: admin'den yonetilir | Prisma migration `entry_featured`; `?featured=true` public filtre (Transform ile guvenli bool parse); admin editorde POST'a ozel checkbox |
+| **Sayfalama route'u `/blog/[page]`** | krontech URL deseni (`/blog/2`); query string yerine SEO-dostu yol | `blog/[page]/page.tsx`; sayfa 1 `/blog`a 307 redirect (tek kanonik URL); gecersiz sayfa 404 |
+| **5 yazi/sayfa** | krontech'in olculen liste boyutu | `BLOG_PAGE_SIZE=5`, API `pageSize` parametresi zaten vardi |
+| **Blog arsivi seed'i data-driven** | 12 cift (tr+en) el yazimi tekrar yerine dizi+dongu; canli düzenlemede tek satir ekleyerek yeni yazi | `BLOG_ARCHIVE[]` + for; ozet/govde metinleri ozgun yazildi, basliklar/tarihler/gorseller krontech referansi |
+| **TR seed metinleri gercek Turkce** | Liste basligi sayfanin en gorunur metni; ASCII ("Guvenlik") parity'yi bozuyor | Dictionary'ler zaten UTF-8 Turkce ve sorunsuz; blog metinleri de cevrildi |
+| **Footer-ustu form ayri FormDefinition (`footer-contact`)** | Alanlari farkli (Isim/Soyisim/Sirket/Ulke/Telefon); mevcut `contact` formunu bukmek yerine form sisteminin esnekligini gosterir | Seed'e yeni tanim; `footer-contact-form.tsx` ("use client") ayni KVKK+honeypot altyapisi; `[locale]/layout.tsx` ile her sayfada |
+| **Gorsel optimizasyon ayni boru hatti** | Onceki turlarla tutarli (sharp, display-aware resize) | `scripts/fetch-blog-images.mjs`: 15 kapak 730px mozjpeg (~420KB toplam); banner+form zemini ayri |
+| **Olculen CSS degerleri** | Tahmin degil introspection (sunum hikayesi) | banner 226px + overlay .41; kapak 411px; ayirici `#dedede`/42px; widget gorseli 150x87 `mix-blend-luminosity` (hover'da renk); `bgblueb` cipli "One **Cikanlar**" |
