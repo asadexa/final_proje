@@ -39,7 +39,7 @@ Durum: ✅ Eslesti · 🟡 Kismi · ⬜ Bekliyor. Kanit = krontech'ten **cikaril
 | Mavi vurgu | `.bgblueb b { background:#1563ff; color:#fff; padding:0 3px }` | `[&_b]:bg-primary [&_b]:text-white [&_b]:px-[3px]` `hero-slide.tsx` | ✅ |
 | Butonlar | `.btn` **border-radius:0** + 50px yatay padding | `rounded-none px-[50px]` `hero-slide.tsx` | ✅ |
 | Header | duyuru bari + sticky + nav(dropdown) + arama + dil | `site-header.tsx` + `nav.ts` | ✅ |
-| Hero | `#main-slider` Swiper, 2 zemin (sliderbg / slider_bg_kc) | `hero-carousel.tsx` 3 slide, **per-slide zemin** (slider-kc + hero-bg) | ✅ |
+| Hero | `#main-slider` Swiper; 2 zemin + per-slide **seffaf urun cemberi** (slaytimagesmobil) | `hero-carousel.tsx` **5 slide**, 2 kolon (metin + urun grafigi), per-slide zemin, yuksek | ✅ |
 | Urun showcase | "Kron Products" **gorselli** kart slider (productslider) | `PRODUCT_SHOWCASE` → `product-carousel.tsx` (5 gercek urun + gorsel) | ✅ |
 | Deger onermesi | "Why Kron?" **iki kolon** (metin + gorsel + outline btn) | `VALUE_PROP` iki kolon + `why-kron.png` | ✅ |
 | Istatistik | "6 kita / 35+ / 200+ / 1500+" **ikonlu** | `STATS` + ikon gorselleri | ✅ |

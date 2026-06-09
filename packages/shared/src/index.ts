@@ -62,7 +62,8 @@ export const blockSchemas = {
           title: z.string(), // <b>...</b> => mavi vurgu (krontech .bgblueb b)
           subtitle: z.string().optional(),
           cta: linkSchema.optional(),
-          image: imageRefSchema.optional(),
+          image: imageRefSchema.optional(), // slide arka plani
+          graphic: imageRefSchema.optional(), // sag taraf seffaf urun cemberi (krontech)
         }),
       )
       .optional(),

@@ -6,15 +6,19 @@ export interface HeroSlideData {
   title: string; // <b>...</b> => mavi vurgu (krontech .bgblueb b)
   subtitle?: string;
   cta?: { label?: string; href?: string };
-  image?: { url?: string };
+  image?: { url?: string }; // slide arka plani (krontech slider bg)
+  graphic?: { url?: string }; // sag taraf seffaf urun cemberi (krontech slaytimagesmobil)
 }
 
-// Tek hero slide icerigi — carousel ve tekli hero ortak kullanir (DRY).
+// Tek hero slide — carousel ve tekli hero ortak kullanir (DRY).
+// graphic varsa iki kolon (sol metin, sag krontech urun cemberi); yoksa tam genislik.
 // Sunum amacli: hook yok, hem sunucu hem istemci bileseninden render edilebilir.
 export function HeroSlide({ slide }: { slide: HeroSlideData }): ReactElement {
   const cta = slide.cta;
-  return (
-    <div className="mx-auto max-w-[1200px] px-4 py-24 sm:px-6 md:py-32">
+  const graphic = slide.graphic;
+
+  const text = (
+    <div className="max-w-xl text-left">
       {slide.eyebrow && (
         <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">
           {slide.eyebrow}
@@ -22,11 +26,11 @@ export function HeroSlide({ slide }: { slide: HeroSlideData }): ReactElement {
       )}
       {/* krontech .display-3 (4.5rem / weight 300) + .bgblueb b (mavi vurgu) */}
       <h1
-        className="max-w-3xl text-4xl font-light leading-[1.1] tracking-tight text-white md:text-5xl lg:text-[4.5rem] [&_b]:bg-primary [&_b]:px-[3px] [&_b]:font-bold [&_b]:text-white"
+        className="text-4xl font-light leading-[1.1] tracking-tight text-white md:text-5xl lg:text-[3.5rem] [&_b]:bg-primary [&_b]:px-[3px] [&_b]:font-bold [&_b]:text-white"
         dangerouslySetInnerHTML={{ __html: slide.title }}
       />
       {slide.subtitle && (
-        <p className="mt-5 max-w-2xl text-lg leading-7 text-white/80">{slide.subtitle}</p>
+        <p className="mt-5 max-w-lg text-lg leading-7 text-white/80">{slide.subtitle}</p>
       )}
       {cta?.href && (
         <Link
@@ -35,6 +39,23 @@ export function HeroSlide({ slide }: { slide: HeroSlideData }): ReactElement {
         >
           {cta.label ?? ""}
         </Link>
+      )}
+    </div>
+  );
+
+  // krontech hero yuksek: min-h ile uzun, icerik dikey ortali.
+  return (
+    <div className="mx-auto flex min-h-[560px] max-w-[1200px] items-center px-4 py-20 sm:px-6 md:min-h-[660px]">
+      {graphic?.url ? (
+        <div className="grid w-full items-center gap-8 md:grid-cols-2">
+          {text}
+          <div className="hidden justify-center md:flex">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={graphic.url} alt="" className="w-full max-w-[500px]" />
+          </div>
+        </div>
+      ) : (
+        <div className="w-full">{text}</div>
       )}
     </div>
   );
