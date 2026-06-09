@@ -16,8 +16,8 @@ export async function generateMetadata({
     title: dict.nav.resources,
     description:
       locale === "tr"
-        ? "Datasheet, vaka calismasi ve teknik dokumanlar."
-        : "Datasheets, case studies and technical documents.",
+        ? "Datasheet, vaka çalışması, blog ve podcast — Kron siber güvenlik kaynakları."
+        : "Datasheets, case studies, blog and podcast — Kron cybersecurity resources.",
   });
 }
 
@@ -25,41 +25,72 @@ export default async function ResourcesPage({ params }: PageProps<"/[locale]/res
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const dict = getDictionary(locale);
-
   const tr = locale === "tr";
-  const intro = tr
-    ? "Erişim güvenliği, veri koruma ve telekom üzerine kaynaklar — blog, veri sayfaları, vaka çalışmaları ve daha fazlası."
-    : "Resources on access security, data protection and telecom — blog, datasheets, case studies and more.";
-  const cards = tr
-    ? [
-        { title: "Blog & İçgörüler", desc: "Sıfır Güven, PAM ve veri güvenliği yazıları.", href: `/${locale}/blog` },
-        { title: "Veri Sayfaları", desc: "Ürün datasheet'leri için bizimle iletişime geçin.", href: `/${locale}/contact` },
-        { title: "Vaka Çalışmaları", desc: "Bankacılık ve telekom başarı hikayeleri.", href: `/${locale}/contact` },
-        { title: "Webinar & Podcast", desc: "Kron CyberPulse ve canlı oturumlar.", href: `/${locale}/blog` },
-      ]
-    : [
-        { title: "Blog & Insights", desc: "Articles on Zero Trust, PAM and data security.", href: `/${locale}/blog` },
-        { title: "Datasheets", desc: "Get in touch for product datasheets.", href: `/${locale}/contact` },
-        { title: "Case Studies", desc: "Banking and telecom success stories.", href: `/${locale}/contact` },
-        { title: "Webinars & Podcast", desc: "Kron CyberPulse and live sessions.", href: `/${locale}/blog` },
-      ];
+  const base = `/${locale}`;
+
+  const cards = [
+    {
+      title: tr ? "Datasheet'ler" : "Datasheets",
+      desc: tr
+        ? "Ürünlerin teknik özet ve özellik dökümanları."
+        : "Technical briefs and feature sheets for the products.",
+      href: `${base}/kron-pam-resources`,
+    },
+    {
+      title: tr ? "Vaka Çalışmaları" : "Case Studies",
+      desc: tr
+        ? "Gerçek kurumlarda PAM ve veri güvenliği başarı hikâyeleri."
+        : "Real-world PAM and data security success stories.",
+      href: `${base}/case-studies`,
+    },
+    {
+      title: "Blog",
+      desc: tr
+        ? "Erişim ve siber güvenlik üzerine güncel yazılar."
+        : "Latest articles on access and cybersecurity.",
+      href: `${base}/blog`,
+    },
+    {
+      title: "Podcast",
+      desc: tr
+        ? "Ayrıcalıklı erişim yönetimi üzerine sohbetler."
+        : "Conversations on privileged access management.",
+      href: `${base}/podcast`,
+    },
+  ];
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-16 sm:px-6">
-      <h1 className="text-3xl font-bold text-dark">{dict.nav.resources}</h1>
-      <p className="mb-10 mt-3 max-w-2xl text-ink-soft">{intro}</p>
-      <div className="grid gap-6 sm:grid-cols-2">
-        {cards.map((c) => (
-          <Link
-            key={c.title}
-            href={c.href}
-            className="rounded-lg border border-line bg-surface p-6 transition hover:border-primary hover:shadow-sm"
-          >
-            <h2 className="text-lg font-semibold text-dark">{c.title}</h2>
-            <p className="mt-2 text-sm text-ink-soft">{c.desc}</p>
-            <span className="mt-4 inline-block text-sm font-medium text-primary">→</span>
-          </Link>
-        ))}
+    <div>
+      <section className="bg-[#0a1733] text-white">
+        <div className="mx-auto max-w-[1140px] px-4 py-16 sm:px-6">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">
+            {tr ? "Kaynaklar" : "Resources"}
+          </p>
+          <h1 className="text-4xl font-bold md:text-5xl">{dict.nav.resources}</h1>
+          <p className="mt-4 max-w-2xl text-lg text-white/80">
+            {tr
+              ? "Kron'un siber güvenlik, veri güvenliği ve altyapı çözümleri hakkında datasheet, vaka çalışması, blog ve podcast içeriklerini keşfedin."
+              : "Explore datasheets, case studies, blog posts and podcasts about Kron's cybersecurity, data security and infrastructure solutions."}
+          </p>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-[1140px] px-4 py-16 sm:px-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          {cards.map((c) => (
+            <Link
+              key={c.title}
+              href={c.href}
+              className="group rounded-lg border border-line bg-surface p-8 transition hover:border-primary hover:shadow-sm"
+            >
+              <h2 className="text-xl font-semibold text-dark group-hover:text-primary">{c.title}</h2>
+              <p className="mt-2 text-ink-soft">{c.desc}</p>
+              <span className="mt-4 inline-block text-sm font-medium text-primary">
+                {tr ? "İncele" : "Explore"} →
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
