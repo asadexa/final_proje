@@ -49,18 +49,27 @@ async function main(): Promise<void> {
       ],
     },
   });
+  // krontech contactPageForm birebir alan seti (departman/arama-istegi select dahil)
+  const contactFields = [
+    { name: 'firstName', label: 'Isim', type: 'text', required: true },
+    { name: 'lastName', label: 'Soyisim', type: 'text', required: true },
+    { name: 'email', label: 'E-posta', type: 'email', required: true },
+    { name: 'jobtitle', label: 'Unvan', type: 'text', required: true },
+    { name: 'department', label: 'Departman', type: 'select', required: true },
+    { name: 'company', label: 'Sirket', type: 'text', required: true },
+    { name: 'country', label: 'Ulke', type: 'text', required: false },
+    { name: 'phone', label: 'Telefon', type: 'tel', required: false },
+    { name: 'call', label: 'Arama istegi', type: 'select', required: false },
+    { name: 'subject', label: 'Konu', type: 'text', required: true },
+    { name: 'message', label: 'Mesaj', type: 'textarea', required: true },
+  ];
   await prisma.formDefinition.upsert({
     where: { key: 'contact' },
-    update: {},
+    update: { fields: contactFields },
     create: {
       key: 'contact',
       name: 'Iletisim',
-      fields: [
-        { name: 'fullName', label: 'Ad Soyad', type: 'text', required: true },
-        { name: 'email', label: 'E-posta', type: 'email', required: true },
-        { name: 'subject', label: 'Konu', type: 'text', required: true },
-        { name: 'message', label: 'Mesaj', type: 'textarea', required: true },
-      ],
+      fields: contactFields,
     },
   });
   // Footer ustu "Bize Ulasin" formu (krontech footer-top paritesi)
