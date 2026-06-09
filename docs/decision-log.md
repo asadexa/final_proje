@@ -89,3 +89,17 @@
 | **Footer-ustu form ayri FormDefinition (`footer-contact`)** | Alanlari farkli (Isim/Soyisim/Sirket/Ulke/Telefon); mevcut `contact` formunu bukmek yerine form sisteminin esnekligini gosterir | Seed'e yeni tanim; `footer-contact-form.tsx` ("use client") ayni KVKK+honeypot altyapisi; `[locale]/layout.tsx` ile her sayfada |
 | **Gorsel optimizasyon ayni boru hatti** | Onceki turlarla tutarli (sharp, display-aware resize) | `scripts/fetch-blog-images.mjs`: 15 kapak 730px mozjpeg (~420KB toplam); banner+form zemini ayri |
 | **Olculen CSS degerleri** | Tahmin degil introspection (sunum hikayesi) | banner 226px + overlay .41; kapak 411px; ayirici `#dedede`/42px; widget gorseli 150x87 `mix-blend-luminosity` (hover'da renk); `bgblueb` cipli "One **Cikanlar**" |
+
+## Urun detay sayfalari 1:1 (2026-06-09)
+
+| Karar | Neden | Nasil |
+|------|------|-------|
+| **Icerik cikarimi script ile** | 5 urun x 2 dil x ~15 alan elle kopyalanamaz; tekrarlanabilir + sunumda kanit | `scripts/extract-product-pages.py`: krontech HTML -> JSON (hero/breadcrumb/tab/bolum/testimonial); cikti dosyaya yazilir (PS stdout yonlendirmesi UTF-8 bozuyor — ogrenilen gotcha) |
+| **TR sayfalarda Turkce ceviri (BILINCLI SAPMA)** | krontech kendi TR urun sayfalarinda govdeyi INGILIZCE birakmis (yalniz nav/breadcrumb TR — 5 urunde de olculdu). Birebir kopya i18n hikayesini oldururdu; tam yerellestirme CMS'in TranslationGroup modelinin gercekten calistigini gosterir | EN metinler krontech'ten birebir; TR ceviriler ozgun (gercek Turkce karakterli); sapma burada belgelendi |
+| **Tab bar gorsel 1:1, tek aktif sekme (BILINCLI SAPMA)** | Sekmeler krontech'te alt sayfalara gider (kron-pam-how-it-works vb. ~20 sayfa). Icerik cogaltmasi mimariye yeni sey katmaz; gorsel parity korunur | `PRODUCT_TABS` blogu: ikonlu sekmeler (64px, aktif mavi alt cizgi + renkli ikon, pasif `grayscale` — olculen `.tabmenuicon` filtresi); pasif sekme tiklanamaz `span` |
+| **2 yeni blok tipi: `PRODUCT_TABS` + `TESTIMONIAL`** | Mevcut bloklara bukulemez (sekme cubugu + mavi gradyan musteri slider'i ayri anatomiler); blok modeli tam da boyle genisler | `@kron/shared` Zod + Prisma enum migration `product_tabs_testimonial_blocks`; registry'ye 2 bilesen |
+| **Urun banner'i = HERO `variant='product'`** | Ayri blok tipi yerine ayni HERO'nun varyanti: migration gerektirmez, admin'de tek HERO kalem | `hero.variant + buttons[]` sema genislemesi; `ProductBanner` dali (`blocks.tsx`) |
+| **Sekerbank video hikayesi = MEDIA_TEXT + `cta`** | Yeni blok tipi acmak yerine mevcut blogu kucuk genisletme (outline buton); blok yeniden kullanim hikayesi | `MEDIA_TEXT.cta` opsiyonel alan; krontech `product-success-story` birebir |
+| **Breadcrumb PRODUCT_TABS icinde** | krontech DOM sirasi banner -> breadcrumb -> sekmeler; sayfa-ustu breadcrumb'i urunlerde gizleyip blok icinde render etmek CMS-driven kalir | `[slug]/page.tsx` `isProduct` dali; JSON-LD breadcrumb degismedi |
+| **Olculen CSS degerleri** | Tahmin degil introspection | `.nav-pills .nav-link` 64px/14px/500/`#a7a7a8` aktif `#1563ff` alt cizgi; `.blue-bg-slider` gradyan `#1596FF->#1563FF` pt-100/pb-144, p 15px/27px, yazar 12px/.8, pagination -80px; `.bgwhiteb b` beyaz kutu + mavi metin; `.slider-logo` 160x60; breadcrumb 11px son oge bold |
+| **Gorseller ayni sharp boru hatti** | Onceki turlarla tutarli | `scripts/fetch-product-images.mjs` + `fetch-product-extras.mjs`: 35 dosya (~3.9MB -> ~1.0MB); hero 1920 jpg, bolum 735 jpg, ikon/logo seffaf png palette |

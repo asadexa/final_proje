@@ -46,7 +46,8 @@ Durum: ✅ Eslesti · 🟡 Kismi · ⬜ Bekliyor. Kanit = krontech'ten **cikaril
 | Vaka calismasi | banka **gorseli** + `bgblueb` 28px baslik | `CASE_STUDY` + `case-bank.png` | ✅ |
 | Blog karuseli | "Keep up to Date" badge + **kapak** + tarih | `BLOG_CAROUSEL` + `Entry.coverImage` (Media) | ✅ |
 | Footer | `footer{bg #000; pt 50px}` + `.subfooter #0f1010`; 4 kolon; baslik 16px/600; link beyaz/.5 hover `#1563ff` | `site-footer.tsx` + `footer.ts` | ✅ |
-| Urun/blog **detay** sayfasi | urun hero/ozellik/CTA; makale: kapak+meta | `[slug]/page.tsx`: breadcrumb + POST kapak/tarih + PRODUCT hero+FEATURE_GRID+CTA_BANNER | ✅ |
+| Blog **detay** sayfasi | makale: kapak+meta | `[slug]/page.tsx`: breadcrumb + POST kapak/tarih + article-prose RICH_TEXT | ✅ |
+| **Urun detay** sayfasi | `.product-banner` (bg gorseli + `.display-3` + `.lead` + 2 outline btn) → breadcrumb 11px → `#nav-tabs-wrapper` **ikonlu sekmeler** (64px, 14px/500, `#a7a7a8`, aktif: mavi alt cizgi + renkli ikon, pasif ikon `grayscale`) → **donusumlu 50/50 metin+gorsel** bolumler (h3 `bgblueb`, p `.lead`) → PAM: `.blue-bg-slider` **musteri referans slider'i** (gradyan `#1596FF→#1563FF`, pt-100/pb-144, `.slider-logo` 160x60, `bgwhiteb b` beyaz kutu vurgu, yazar 12px/.8) + Sekerbank **video basari hikayesi** | `HERO variant='product'` + `PRODUCT_TABS` + `MEDIA_TEXT` (×3-5, `cta`'li Sekerbank dahil) + `TESTIMONIAL` (`testimonial-slider.tsx`); icerik `scripts/extract-product-pages.py` ile cikarildi, gorseller sharp-optimize (`public/kron/products/`, 35 dosya ~1MB) | ✅ |
 | **Blog liste** sayfasi | banner 226px (overlay `.41`, h1 32/600) + breadcrumb 11px + **col-8/col-4**; kart: kapak **411px**, seffaf kart, `blog-terms` (bold tarih + Read More→ 14/600), ayirici `#dedede`/42px; **5 yazi/sayfa + pagination** (`/blog/2`); sticky **Highlights** (150x87 `mix-blend-luminosity`, 14px baslik, `bgblueb` cipli h3) | `blog-list-view.tsx` + `blog/[page]` route; Highlights = `Entry.featured` (admin checkbox + `?featured=true` API) | ✅ |
 | Iletisim/demo formu (koyu `footer-top`) | `.footer-top.dark-form`: zemin gorsel + `rgba(0,0,0,.83)` overlay, py 110px, baslik 32/bold; seffaf input h-46; KVKK 12px/.51; btn-block | `footer-contact-form.tsx` (sitewide, `[locale]/layout.tsx`); `footer-contact` FormDefinition + KVKK + honeypot (reCAPTCHA yerine — bkz. Notlar) | ✅ |
 
@@ -81,6 +82,12 @@ http://localhost:3000/en. Sol: krontech (referans), sag: rebuild.
 | krontech.com/tr/blog | Rebuild /tr/blog |
 |---|---|
 | ![krontech blog](img/comparison/blog-krontech.png) | ![rebuild blog](img/comparison/blog-ours.png) |
+
+**Urun detay (Kron PAM)** — banner + ikonlu sekmeler + donusumlu bolumler + mavi referans slider'i + Sekerbank video hikayesi:
+
+| krontech.com/kron-pam | Rebuild /en/kron-pam |
+|---|---|
+| ![krontech product](img/comparison/product-krontech.png) | ![rebuild product](img/comparison/product-ours.png) |
 
 > Footer neredeyse **piksel-esit** (ayni kolonlar/linkler/sosyal ikonlar/yasal bar). **Bolum sirasi
 > da artik krontech ile ayni** (Hero → Products → Why Kron → Numbers → Case Study → Blog).
