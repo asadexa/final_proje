@@ -39,14 +39,14 @@ Durum: ✅ Eslesti · 🟡 Kismi · ⬜ Bekliyor. Kanit = krontech'ten **cikaril
 | Mavi vurgu | `.bgblueb b { background:#1563ff; color:#fff; padding:0 3px }` | `[&_b]:bg-primary [&_b]:text-white [&_b]:px-[3px]` `hero-slide.tsx` | ✅ |
 | Butonlar | `.btn` **border-radius:0** + 50px yatay padding | `rounded-none px-[50px]` `hero-slide.tsx` | ✅ |
 | Header | duyuru bari + sticky + nav(dropdown) + arama + dil | `site-header.tsx` + `nav.ts` | ✅ |
-| Hero | `#main-slider` Swiper, ~9 slide | `hero-carousel.tsx` (swiper/react), 3 slide | ✅ |
-| Urun showcase | "Globally Recognized Portfolio" kart grid | `PRODUCT_SHOWCASE` `blocks.tsx` | ✅ |
-| Deger onermesi | "Why Kron?" | `VALUE_PROP` (koyu bant) | ✅ |
-| Istatistik | "6 kita / 35+ / 200+ / 1500+" | `STATS` | ✅ |
-| Vaka calismasi | banka vaka vurgusu | `CASE_STUDY` | ✅ |
-| Blog karuseli | "Keep up to Date" | `BLOG_CAROUSEL` (async + swiper) | ✅ |
+| Hero | `#main-slider` Swiper, 2 zemin (sliderbg / slider_bg_kc) | `hero-carousel.tsx` 3 slide, **per-slide zemin** (slider-kc + hero-bg) | ✅ |
+| Urun showcase | "Kron Products" **gorselli** kart slider (productslider) | `PRODUCT_SHOWCASE` → `product-carousel.tsx` (5 gercek urun + gorsel) | ✅ |
+| Deger onermesi | "Why Kron?" **iki kolon** (metin + gorsel + outline btn) | `VALUE_PROP` iki kolon + `why-kron.png` | ✅ |
+| Istatistik | "6 kita / 35+ / 200+ / 1500+" **ikonlu** | `STATS` + ikon gorselleri | ✅ |
+| Vaka calismasi | banka **gorseli** + `bgblueb` 28px baslik | `CASE_STUDY` + `case-bank.png` | ✅ |
+| Blog karuseli | "Keep up to Date" badge + **kapak** + tarih | `BLOG_CAROUSEL` + `Entry.coverImage` (Media) | ✅ |
 | Footer | `footer{bg #000; pt 50px}` + `.subfooter #0f1010`; 4 kolon; baslik 16px/600; link beyaz/.5 hover `#1563ff` | `site-footer.tsx` + `footer.ts` | ✅ |
-| Urun/blog **detay** sayfasi | urun hero/ozellik bloklari; makale tipografisi | `[slug]/page.tsx` + bloklar (temel) | 🟡 |
+| Urun/blog **detay** sayfasi | urun hero/ozellik/CTA; makale: kapak+meta | `[slug]/page.tsx`: breadcrumb + POST kapak/tarih + PRODUCT hero+FEATURE_GRID+CTA_BANNER | ✅ |
 | Iletisim/demo formu (koyu `footer-top`) | reCAPTCHA + intlTelInput + KVKK | Faz 6 kapsaminda | ⬜ |
 
 **Onemli ayrim — "tasarim sistemi" parity'si, piksel klonu degil.** Renk, tipografi,
@@ -75,9 +75,10 @@ http://localhost:3000/en. Sol: krontech (referans), sag: rebuild.
 |---|---|
 | ![krontech full](img/comparison/full-krontech.png) | ![rebuild full](img/comparison/full-ours.png) |
 
-> Footer neredeyse **piksel-esit** (ayni kolonlar/linkler/sosyal ikonlar/yasal bar). Yapisal
-> farklar (durust): krontech'in footer-ustu koyu **"Contact Us" formu** (bizde Faz 6 — formlar)
-> ve minik **bolum sirasi** farki (krontech: Why Kron > Numbers; bizde Numbers > Why Kron).
+> Footer neredeyse **piksel-esit** (ayni kolonlar/linkler/sosyal ikonlar/yasal bar). **Bolum sirasi
+> da artik krontech ile ayni** (Hero → Products → Why Kron → Numbers → Case Study → Blog). Tek yapisal
+> fark (durust): krontech'in footer-ustu koyu inline **"Contact Us" formu**; bizde ayri `/contact`
+> sayfasi (Faz 6 formlar). Anasayfa bolumleri **gercek krontech asset'leriyle** birebir esitlendi.
 
 ---
 
@@ -123,8 +124,10 @@ auth, yayin akisi, cache) — bizim insa ettigimiz tam da bu.
 - **SSR + ISR** (`fetch(revalidate, tags)`) + **Redis** → tekrar eden istekte DB'ye gitmez.
 - **Tek** carousel kutuphanesi; bilesenler tipli ve gerektiginde yuklenen ("use client" yalniz
   carousel'larda).
-- Next/font ile Roboto (yalniz kullanilan agirliklar), gorsel pipeline S3 + ileride
-  `next/image`.
+- Next/font ile Roboto (yalniz kullanilan agirliklar). **Public gorseller `sharp` ile optimize**
+  (display-aware resize + PNG palette / JPG mozjpeg). **Ayni kaynak gorseller, optimize edilmis:**
+  `GroupZ9` (banka vaka) 1 MB→**170 KB**, `slider_bg_kc` 635 KB→**124 KB**, ikonlar ~100 KB→**~10 KB**;
+  `public/kron` toplam ~3.5 MB→**0.9 MB**. (Yuklenen medya icin S3 pipeline + ileride `next/image`.)
 - Pazarlama/izleme **kapsam disi** (eklenirse GTM ile tek noktadan, KVKK/OneTrust ile).
 
 > Adil olalim: ucuncu-parti agirligin cogu **pazarlama kararidir**, muhendislik kusuru
@@ -149,6 +152,7 @@ auth, yayin akisi, cache) — bizim insa ettigimiz tam da bu.
 
 - **Gorsel kanit cekildi** (Bolum 1) — headless tarayici (gstack/browse) ile, manuel mudahale
   yok; krontech cookie banner'i otomatik temizlendi. Yeniden uretim: `docs/img/comparison/README.md`.
-- **Bekleyen parity** (durust): urun/blog **detay sayfalari** stillemesi (🟡) ve koyu
-  **iletisim/demo formu** (⬜, Faz 6). Anasayfa parity'si tamam.
+- **Bekleyen parity** (durust): yalnizca krontech'in koyu **footer-ustu inline iletisim formu**
+  (bizde ayri `/contact` sayfasi). Anasayfa + urun/blog **detay** parity'si tamam — gercek krontech
+  asset'leriyle (productslider gorselleri, banka vaka, Why-Kron, ikonlar, hero zemini, blog kapaklari).
 - **Olcum kaynagi:** krontech.com ana sayfa (2026-06), 145 HTTP islemi (network log) + `style.css`.
