@@ -50,6 +50,8 @@ Durum: ✅ Eslesti · 🟡 Kismi · ⬜ Bekliyor. Kanit = krontech'ten **cikaril
 | **Urun detay** sayfasi | `.product-banner` (bg gorseli + `.display-3` + `.lead` + 2 outline btn) → breadcrumb 11px → `#nav-tabs-wrapper` **ikonlu sekmeler** (64px, 14px/500, `#a7a7a8`, aktif: mavi alt cizgi + renkli ikon, pasif ikon `grayscale`) → **donusumlu 50/50 metin+gorsel** bolumler (h3 `bgblueb`, p `.lead`) → PAM: `.blue-bg-slider` **musteri referans slider'i** (gradyan `#1596FF→#1563FF`, pt-100/pb-144, `.slider-logo` 160x60, `bgwhiteb b` beyaz kutu vurgu, yazar 12px/.8) + Sekerbank **video basari hikayesi** | `HERO variant='product'` + `PRODUCT_TABS` + `MEDIA_TEXT` (×3-5, `cta`'li Sekerbank dahil) + `TESTIMONIAL` (`testimonial-slider.tsx`); icerik `scripts/extract-product-pages.py` ile cikarildi, gorseller sharp-optimize (`public/kron/products/`, 35 dosya ~1MB) | ✅ |
 | **Blog liste** sayfasi | banner 226px (overlay `.41`, h1 32/600) + breadcrumb 11px + **col-8/col-4**; kart: kapak **411px**, seffaf kart, `blog-terms` (bold tarih + Read More→ 14/600), ayirici `#dedede`/42px; **5 yazi/sayfa + pagination** (`/blog/2`); sticky **Highlights** (150x87 `mix-blend-luminosity`, 14px baslik, `bgblueb` cipli h3) | `blog-list-view.tsx` + `blog/[page]` route; Highlights = `Entry.featured` (admin checkbox + `?featured=true` API) | ✅ |
 | Iletisim/demo formu (koyu `footer-top`) | `.footer-top.dark-form`: zemin gorsel + `rgba(0,0,0,.83)` overlay, py 110px, baslik 32/bold; seffaf input h-46; KVKK 12px/.51; btn-block | `footer-contact-form.tsx` (sitewide, `[locale]/layout.tsx`); `footer-contact` FormDefinition + KVKK + honeypot (reCAPTCHA yerine — bkz. Notlar) | ✅ |
+| **Kaynaklar** sayfasi | `pages-top-image` 226px gorsel bant (h1 `display-3 invisible`) + breadcrumb 11px + ortali h2/intro + **3 kart** (`carouselContainer`: p-20, golge `0 6px 12px -4px`, gorsel tasmali + **mavi gradyan** `.gradient-img`, **yan kertik** `.notch`, mavi bold h4 link, outline "Discover More") | `resources/page.tsx` + `page-banner.tsx`; `.kron-notch`/`.kron-gradient-img` (globals.css, olculen degerler); icerik krontech'ten birebir (TR = krontech'in kendi yerellestirmesi) | ✅ |
+| **Iletisim** sayfasi | 226px banner + breadcrumb + `big-from` form karti (card p-5, input **h-50 / #a7a7a8**; 11 alan: isim/soyisim/e-posta/unvan/**departman select**/sirket/ulke/telefon/**arama-istegi select**/konu/mesaj + KVKK) + `contact-list` **4 ofis** (gorsel + bilgi karti, donusumlu yon, ikonlu satirlar, deger sutunu 230px) | `contact/page.tsx` + `contact-form.tsx` (FormDefinition `contact` 11 alana cikti, sunucu validasyonu E2E dogrulandi); ofis verileri krontech'ten birebir (cf-email decode) | ✅ |
 
 **Onemli ayrim — "tasarim sistemi" parity'si, piksel klonu degil.** Renk, tipografi,
 spacing, bilesen anatomisi ve yerlesim birebir esitlenir; icerik/gorseller temsilidir.
@@ -88,6 +90,18 @@ http://localhost:3000/en. Sol: krontech (referans), sag: rebuild.
 | krontech.com/kron-pam | Rebuild /en/kron-pam |
 |---|---|
 | ![krontech product](img/comparison/product-krontech.png) | ![rebuild product](img/comparison/product-ours.png) |
+
+**Kaynaklar** — gorsel banner + ortali baslik + 3 gradyanli kart:
+
+| krontech.com/resources | Rebuild /en/resources |
+|---|---|
+| ![krontech resources](img/comparison/resources-krontech.png) | ![rebuild resources](img/comparison/resources-ours.png) |
+
+**Iletisim** — banner + buyuk form karti + 4 ofis (donusumlu):
+
+| krontech.com/tr/iletisim | Rebuild /tr/contact |
+|---|---|
+| ![krontech contact](img/comparison/contact-krontech.png) | ![rebuild contact](img/comparison/contact-ours.png) |
 
 > Footer neredeyse **piksel-esit** (ayni kolonlar/linkler/sosyal ikonlar/yasal bar). **Bolum sirasi
 > da artik krontech ile ayni** (Hero → Products → Why Kron → Numbers → Case Study → Blog).

@@ -103,3 +103,15 @@
 | **Breadcrumb PRODUCT_TABS icinde** | krontech DOM sirasi banner -> breadcrumb -> sekmeler; sayfa-ustu breadcrumb'i urunlerde gizleyip blok icinde render etmek CMS-driven kalir | `[slug]/page.tsx` `isProduct` dali; JSON-LD breadcrumb degismedi |
 | **Olculen CSS degerleri** | Tahmin degil introspection | `.nav-pills .nav-link` 64px/14px/500/`#a7a7a8` aktif `#1563ff` alt cizgi; `.blue-bg-slider` gradyan `#1596FF->#1563FF` pt-100/pb-144, p 15px/27px, yazar 12px/.8, pagination -80px; `.bgwhiteb b` beyaz kutu + mavi metin; `.slider-logo` 160x60; breadcrumb 11px son oge bold |
 | **Gorseller ayni sharp boru hatti** | Onceki turlarla tutarli | `scripts/fetch-product-images.mjs` + `fetch-product-extras.mjs`: 35 dosya (~3.9MB -> ~1.0MB); hero 1920 jpg, bolum 735 jpg, ikon/logo seffaf png palette |
+
+## Kaynaklar + Iletisim sayfalari 1:1 (2026-06-09)
+
+| Karar | Neden | Nasil |
+|------|------|-------|
+| **TR icerik krontech'ten birebir** | Urun sayfalarinin aksine krontech bu iki sayfayi TR'de GERCEKTEN yerellestirmis (form etiketleri, ofis bilgileri, kart metinleri Turkce) -> ceviri gerekmedi; yalniz TR h2 "RESOURCES" -> "Kaynaklar" (tam-yerellestirme kararinin uzantisi) | `scripts`teki extraction kalibi; cf-email korumali e-postalar decode edildi (XOR) |
+| **Olu kart linkleri tiklanamaz** | Case Studies / Datasheets hedef sayfalari kapsam disi; urun sekme cubugu karariyla tutarli (gorsel 1:1, islevsel sapma belgelendi) | Resources kartlarinda yalniz BLOG gercek link (`/blog`); digerleri buton gorunumlu `span` |
+| **`contact` FormDefinition 11 alana cikti** | krontech contactPageForm'un gercek alan seti (departman + arama-istegi select'leri dahil); form sistemi field-driven oldugundan SEMA DEGISIKLIGI GEREKMEDI — sadece seed verisi | upsert `update: { fields }`; sunucu validasyonu tanim uzerinden calisir; E2E: gecerli 201 + eksik alan 400 dogrulandi |
+| **Ofis verileri statik sayfada** | Nadiren degisen, yapisal olarak sayfaya ozgu veri; Entry/blok modeline zorlamak yapay olurdu (icerik yonetimi gereksinimini formlar + entry'ler zaten karsiliyor) | `contact/page.tsx` icinde locale'e gore dizi; krontech TR/EN ofis sira farki korundu (TR: Ist/Ank/Izm/ABD, EN: Ist/USA/Ank/Izm) |
+| **Paylasilan `page-banner.tsx`** | Iki sayfa ayni krontech kalibini kullaniyor (`pages-top-image` 226px + `breadcrumb-desktop`); h1 gorunmez ama erisilebilir (`sr-only` = krontech `display-3 invisible` karsiligi) | Olculen: `.gray-bg-top` 226px/bg-#000/cover, `no-overlay`; breadcrumb 11px son oge bold |
+| **Olculen kart detaylari** | Tahmin degil introspection | `.carouselContainer` p-20 + golge `0 6px 12px -4px rgba(37,38,41,.12)` + gorsel -20px tasma; `.gradient-img::after` mavi gradyan op .8; `.notch` yan kertikler (#f5f6f8 ucgen, top 50% + 50px); `.big-from .form-control` h-50 / `#a7a7a8`; `.contactinfo` deger sutunu 230px, ikonlar #1563ff |
+| **Telefon ulke-bayragi secici atlandi** | krontech intlTelInput 3rd-party'si; form degerine katkisi yok, agirlik ekler (performans notumuzla celisirdi) | Duz `tel` input; sapma burada belgelendi |
