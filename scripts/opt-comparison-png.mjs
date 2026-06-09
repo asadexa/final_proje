@@ -1,0 +1,1 @@
+﻿import fs from "node:fs"; import sharp from "sharp"; for (const f of process.argv.slice(2)) { const p = "docs/img/comparison/" + f; const buf = fs.readFileSync(p); const out = await sharp(buf).png({ palette: true, quality: 80 }).toBuffer(); fs.writeFileSync(p, out); console.log(f, Math.round(buf.length/1024) + "KB ->", Math.round(out.length/1024) + "KB"); }

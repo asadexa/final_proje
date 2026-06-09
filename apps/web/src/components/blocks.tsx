@@ -6,6 +6,7 @@ import { BlogCarouselClient } from "./blog-carousel";
 import { HeroCarousel } from "./hero-carousel";
 import { HeroSlide, type HeroSlideData } from "./hero-slide";
 import { ProductCarousel } from "./product-carousel";
+import { TestimonialSlider, type TestimonialItem } from "./testimonial-slider";
 
 type ImageData = { url?: string; alt?: string };
 
@@ -40,7 +41,55 @@ function Container({
 
 type BlockProps = { data: Record<string, unknown> };
 
+// Urun sayfasi banner'i — krontech .product-banner birebir: bg gorseli (cover),
+// .display-3 .bgblueb h1 + .lead + outline butonlar (mavi cerceve, beyaz metin).
+function ProductBanner({ data }: BlockProps): ReactElement {
+  const img = data.image as ImageData | undefined;
+  const buttons = arr<Cta>(data.buttons);
+  return (
+    <section
+      className="bg-[#0a1733] bg-cover bg-center text-white"
+      style={img?.url ? { backgroundImage: `url('${img.url}')` } : undefined}
+    >
+      <Container className="py-16">
+        <h1
+          className="text-4xl font-light leading-[1.1] md:text-5xl lg:text-[4.5rem] [&_b]:bg-primary [&_b]:px-[3px] [&_b]:font-light [&_b]:text-white"
+          dangerouslySetInnerHTML={{ __html: str(data.title) }}
+        />
+        {str(data.subtitle) && (
+          <p className="mt-6 max-w-3xl text-[1.25rem] leading-8">{str(data.subtitle)}</p>
+        )}
+        {buttons.length > 0 && (
+          <div className="mt-12 flex flex-wrap gap-3">
+            {buttons.map((b, i) =>
+              b.href ? (
+                <Link
+                  key={i}
+                  href={b.href}
+                  className="inline-block rounded-none border-2 border-primary px-[30px] py-2.5 text-[15px] font-medium text-white transition-colors hover:bg-primary"
+                >
+                  {b.label ?? ""}
+                </Link>
+              ) : (
+                // krontech'te datasheet butonu modal acar; alt kapsam disi -> tiklanamaz
+                <span
+                  key={i}
+                  className="inline-block cursor-default rounded-none border-2 border-primary px-[30px] py-2.5 text-[15px] font-medium text-white"
+                >
+                  {b.label ?? ""}
+                </span>
+              ),
+            )}
+          </div>
+        )}
+      </Container>
+    </section>
+  );
+}
+
 function Hero({ data }: BlockProps): ReactElement {
+  // variant='product' => urun banner'i (bg gorseli + lead + butonlar).
+  if (data.variant === "product") return <ProductBanner data={data} />;
   // Slides doluysa krontech main-slider gibi carousel; bossa tekli hero.
   const slides = arr<HeroSlideData>(data.slides);
   if (slides.length > 0) return <HeroCarousel slides={slides} />;
@@ -292,6 +341,118 @@ async function BlogCarousel({
   return <BlogCarouselClient title={str(data.title)} posts={posts} locale={locale} />;
 }
 
+// Urun sayfasi: banner alti breadcrumb (11px, son oge bold) + ikonlu sekme cubugu
+// (krontech #nav-tabs-wrapper: 64px, 14px/500, #a7a7a8, aktifte mavi alt cizgi + renkli ikon).
+// Alt sayfalar kapsam disi -> href'i olmayan sekme tiklanamaz (bilincli sapma, decision-log).
+function ProductTabs({ data }: BlockProps): ReactElement {
+  const crumbs = arr<string>(data.breadcrumb);
+  const tabs = arr<{ label?: string; href?: string; icon?: string; active?: boolean }>(data.tabs);
+  return (
+    <section className="bg-surface">
+      <Container>
+        {crumbs.length > 0 && (
+          <ol className="flex flex-wrap items-center gap-1 pt-3 text-[11px] text-[#333]">
+            {crumbs.map((c, i) => (
+              <li key={i} className={i === crumbs.length - 1 ? "font-semibold" : ""}>
+                {i > 0 && <span className="mx-1 font-normal text-[#999]">/</span>}
+                {c}
+              </li>
+            ))}
+          </ol>
+        )}
+        <ul className="mt-3 flex flex-wrap justify-between">
+          {tabs.map((t, i) => {
+            const base =
+              "flex h-16 w-full items-center justify-center border-b-[3px] px-3 text-[14px] font-medium uppercase";
+            const icon = t.icon && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={t.icon}
+                alt=""
+                className={`mr-[7px] max-h-[20px] max-w-[20px] ${t.active ? "" : "grayscale"}`}
+              />
+            );
+            return (
+              <li key={i} className="grow">
+                {t.active && t.href ? (
+                  <Link href={t.href} className={`${base} border-primary bg-surface text-[#333]`}>
+                    {icon}
+                    {t.label}
+                  </Link>
+                ) : (
+                  <span className={`${base} cursor-default border-transparent text-[#a7a7a8]`}>
+                    {icon}
+                    {t.label}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </Container>
+    </section>
+  );
+}
+
+// Donusumlu gorsel+metin bolumu — krontech urun sayfasi icerik satiri birebir:
+// 50/50 kolon, metin tarafi beyaz zemin + ortali dikey, h3 .bgblueb (mavi vurgu),
+// paragraflar .lead (1.25rem). body "\n\n" ile coklu paragraf tasir.
+function MediaText({ data }: BlockProps): ReactElement {
+  const img = data.image as ImageData | undefined;
+  const cta = data.cta as Cta | undefined;
+  const right = data.imageSide === "right";
+  const paras = str(data.body)
+    .split("\n\n")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return (
+    <section>
+      <Container className="!px-0">
+        <div className="grid md:grid-cols-2">
+          <div className={`overflow-hidden ${right ? "order-1 md:order-2" : "order-1"}`}>
+            {img?.url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={img.url} alt={img.alt ?? str(data.title)} className="h-full w-full object-cover" />
+            )}
+          </div>
+          <div
+            className={`flex flex-col items-start justify-center bg-surface px-8 py-10 lg:px-12 ${right ? "order-2 md:order-1" : "order-2"}`}
+          >
+            {str(data.title) && (
+              <h3
+                className="text-left text-[1.75rem] font-medium leading-snug text-dark [&_b]:bg-primary [&_b]:px-[3px] [&_b]:text-white"
+                dangerouslySetInnerHTML={{ __html: str(data.title) }}
+              />
+            )}
+            {paras.map((p, i) => (
+              <p key={i} className="mt-3 text-[1.25rem] leading-8 text-ink-soft first:mt-2">
+                {p}
+              </p>
+            ))}
+            {cta?.href && (
+              <a
+                href={cta.href}
+                target={cta.href.startsWith("http") ? "_blank" : undefined}
+                rel={cta.href.startsWith("http") ? "noreferrer" : undefined}
+                className="mt-6 inline-block rounded-none border-2 border-primary px-[30px] py-2.5 text-[15px] font-medium text-primary transition-colors hover:bg-primary hover:text-white"
+              >
+                {cta.label ?? ""}
+              </a>
+            )}
+          </div>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+// TESTIMONIAL — mavi gradyan zeminli musteri referans slider'i (client swiper).
+function Testimonial({ data }: BlockProps): ReactElement | null {
+  const items = arr<TestimonialItem>(data.items);
+  if (items.length === 0) return null;
+  return <TestimonialSlider items={items} />;
+}
+
 // CTA bandi — koyu zemin, baslik + buton (urun sayfasi kapanisi vb.).
 function CtaBanner({ data }: BlockProps): ReactElement {
   const cta = data.cta as Cta | undefined;
@@ -313,7 +474,7 @@ function CtaBanner({ data }: BlockProps): ReactElement {
 }
 
 // Registry: yeni blok tipi = buraya bir bilesen ekle (modulerlik).
-const REGISTRY: Record<string, (props: BlockProps) => ReactElement> = {
+const REGISTRY: Record<string, (props: BlockProps) => ReactElement | null> = {
   HERO: Hero,
   SECTION_HEADING: SectionHeading,
   STATS: Stats,
@@ -324,6 +485,9 @@ const REGISTRY: Record<string, (props: BlockProps) => ReactElement> = {
   CTA_BANNER: CtaBanner,
   FAQ: Faq,
   RICH_TEXT: RichText,
+  PRODUCT_TABS: ProductTabs,
+  MEDIA_TEXT: MediaText,
+  TESTIMONIAL: Testimonial,
 };
 
 export function Blocks({

@@ -70,6 +70,22 @@
   height: auto;
 }
 
+/* Musteri referans slider'i (krontech .blue-bg-slider): beyaz noktalar,
+   pagination icerigin ~80px altinda (alt padding alaninda) */
+.testimonial-slider {
+  --swiper-theme-color: #ffffff;
+}
+.testimonial-slider .swiper-pagination {
+  bottom: -80px;
+}
+.testimonial-slider .swiper-pagination-bullet {
+  background: #ffffff;
+  opacity: 0.5;
+}
+.testimonial-slider .swiper-pagination-bullet-active {
+  opacity: 1;
+}
+
 html {
   background-color: #ffffff;
 }

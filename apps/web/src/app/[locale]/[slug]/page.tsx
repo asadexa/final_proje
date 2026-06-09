@@ -44,6 +44,9 @@ export default async function EntryPage({ params }: PageProps<"/[locale]/[slug]"
   ]);
   // POST: icerikteki HERO blogu [slug] makale basligiyla cakisir -> render'dan cikar.
   const isPost = entry.type === "POST";
+  // PRODUCT: krontech sirasi banner -> breadcrumb -> tab bar; breadcrumb
+  // PRODUCT_TABS blogunun icinde gelir -> sayfa ustu breadcrumb cizilmez.
+  const isProduct = entry.type === "PRODUCT";
   const rendered = isPost ? entry.blocks.filter((b) => b.type !== "HERO") : entry.blocks;
   const readingMin = entry.post?.readingMin;
   const cover = entry.coverImage?.url;
@@ -60,7 +63,8 @@ export default async function EntryPage({ params }: PageProps<"/[locale]/[slug]"
       {faq && <JsonLd data={faq} />}
       <JsonLd data={breadcrumb} />
 
-      {/* Gorunur breadcrumb — breadcrumb JSON-LD ile uyumlu */}
+      {/* Gorunur breadcrumb — breadcrumb JSON-LD ile uyumlu (PRODUCT: PRODUCT_TABS icinde) */}
+      {!isProduct && (
       <nav aria-label="breadcrumb" className="border-b border-line bg-surface">
         <ol className="mx-auto flex max-w-[1140px] flex-wrap items-center gap-2 px-4 py-3 text-sm text-muted sm:px-6">
           <li>
@@ -82,6 +86,7 @@ export default async function EntryPage({ params }: PageProps<"/[locale]/[slug]"
           <li className="text-ink-soft">{entry.title}</li>
         </ol>
       </nav>
+      )}
 
       {isPost && (
         <header className="bg-surface-muted">
