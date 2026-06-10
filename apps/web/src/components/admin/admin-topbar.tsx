@@ -68,6 +68,16 @@ export function AdminTopbar(): ReactElement {
               >
                 Denetim
               </Link>
+              <Link
+                href="/admin/architect"
+                className={
+                  pathname.startsWith("/admin/architect")
+                    ? "font-medium text-primary"
+                    : "text-ink-soft hover:text-primary"
+                }
+              >
+                ✨ AI Mimar
+              </Link>
             </nav>
             <button
               type="button"

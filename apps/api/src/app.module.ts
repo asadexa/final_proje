@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AiModule } from './ai/ai.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -36,6 +37,7 @@ import { RedisModule } from './redis/redis.module';
     FormsModule,
     MediaModule,
     RedirectsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [
