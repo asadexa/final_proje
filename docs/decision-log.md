@@ -115,3 +115,16 @@
 | **Paylasilan `page-banner.tsx`** | Iki sayfa ayni krontech kalibini kullaniyor (`pages-top-image` 226px + `breadcrumb-desktop`); h1 gorunmez ama erisilebilir (`sr-only` = krontech `display-3 invisible` karsiligi) | Olculen: `.gray-bg-top` 226px/bg-#000/cover, `no-overlay`; breadcrumb 11px son oge bold |
 | **Olculen kart detaylari** | Tahmin degil introspection | `.carouselContainer` p-20 + golge `0 6px 12px -4px rgba(37,38,41,.12)` + gorsel -20px tasma; `.gradient-img::after` mavi gradyan op .8; `.notch` yan kertikler (#f5f6f8 ucgen, top 50% + 50px); `.big-from .form-control` h-50 / `#a7a7a8`; `.contactinfo` deger sutunu 230px, ikonlar #1563ff |
 | **Telefon ulke-bayragi secici atlandi** | krontech intlTelInput 3rd-party'si; form degerine katkisi yok, agirlik ekler (performans notumuzla celisirdi) | Duz `tel` input; sapma burada belgelendi |
+
+## Admin paneli bosluk kapatma turu (2026-06-09) — PDF "Backend / Admin Panel" eksiksiz
+
+| Karar | Neden | Nasil |
+|------|------|-------|
+| **SEO panel genisletme: UI-only** | SeoDto + Prisma modeli + public metadata (lib/seo.ts) ZATEN tum alanlari destekliyordu; eksik yalniz editor formuydu | Editore canonical + robots index/follow checkbox + OG title/description; save body tum alanlari yollar. E2E: PATCH -> canonical/robotsIndex dondu |
+| **Redirect CRUD admin API + UI** | PDF SEO gereksinimi "Redirect yonetimi"; seed-only idi | `admin-redirects.controller` (GET/POST/PATCH/DELETE; DELETE yalniz ADMIN) + dogrulama (source `/` ile baslar, 301/302) + degisimde Redis `redirects:enabled` dusurulur (proxy in-mem cache <=60sn gecikme — UI'da acikca yazar). `/admin/redirects` sayfasi |
+| **Form tanimlama admin'den** | PDF "Form tanimlama"; seed-only idi. Form sistemi field-driven oldugu icin tanim = veri | POST/PATCH `/admin/forms` (key kebab-case, alan adi regex, benzersizlik) + `form-def-editor.tsx` (alan satirlari + sira + enable/disable). E2E: create -> public GET -> submit -> disable -> 404 |
+| **Medya tekrar kullanimi: iliski + URL** | "Tekrar kullanim" iki seviye: yapisal (Media FK) ve serbest (blok JSON'daki url) | (1) POST editorunde kapak gorseli secici -> `coverImageId` connect/disconnect (Entry-Media ILISKISI = gercek reuse); (2) medya sayfasinda "URL kopyala" |
+| **Ceviri eslestirme UI** | TranslationGroup modeli + hreflang zaten calisiyordu; admin'de gorunmuyordu | `findOne` artik grup kardeslerini dondurur; editor yan panelinde "Ceviriler" (kardese link + durum) + eksik dil icin "cevirisi olustur" = ayni gruba kopya-taslak POST (blok yapisi kopyalanir, metin cevrilir). E2E: grup baglama dogrulandi |
+| **Audit log sayfasi** | API (`GET /admin/audit`) Faz 3'ten beri vardi; gorsel yuzu yoktu | `/admin/audit` tablosu (zaman/aksiyon/varlik/meta) + topbar "Denetim" |
+| **NestJS modul dersi** | AdminRedirectsController eklenince api crash-loop: JwtAuthGuard'in JwtService'i modul kapsaminda yok | Guard kullanan HER modul `AuthModule` import etmeli (FormsModule kalibi); RedirectsModule'e eklendi |
+| **Lint kurali uyumu** | Yeni sayfalar 2 yeni eslint hatasi getirdi (pre-existing 3'e eklenmemeli) | `set-state-in-effect` -> effect'te `Promise.resolve().then(load)`; `window.location.href` atamasi -> `useRouter().push` |
