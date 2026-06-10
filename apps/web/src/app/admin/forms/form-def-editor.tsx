@@ -8,6 +8,7 @@ export interface FieldRow {
   label: string;
   type: string;
   required: boolean;
+  options?: string[]; // select tipi icin secenekler
 }
 
 const FIELD_TYPES = ["text", "email", "tel", "textarea", "select"];
@@ -128,6 +129,18 @@ export function FormDefEditor({
               />
               zorunlu
             </label>
+            {f.type === "select" && (
+              <input
+                className={`${inputCls} sm:col-span-4`}
+                placeholder="Seçenekler (virgülle ayırın): Evet, Hayır"
+                value={(f.options ?? []).join(", ")}
+                onChange={(e) =>
+                  patchField(i, {
+                    options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                  })
+                }
+              />
+            )}
             <div className="flex gap-1 text-xs">
               <button type="button" onClick={() => moveField(i, -1)} className="rounded border border-line px-2 py-1 hover:border-primary">↑</button>
               <button type="button" onClick={() => moveField(i, 1)} className="rounded border border-line px-2 py-1 hover:border-primary">↓</button>

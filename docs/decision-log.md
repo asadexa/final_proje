@@ -137,3 +137,14 @@
 | "Bloklar cok teknik (ham JSON)" | `block-form.tsx`: 16 blok tipinin tamami icin alan tanimlari (FieldSpec) + jenerik renderer (metin/select/link/gorsel-secicili-image/satir-listesi/ic-ice). Varsayilan FORM modu; "JSON" dugmesiyle guc-kullanici moduna gecis (gecersiz JSON'dan form'a gecis engellenir). Alan tanimlari @kron/shared Zod semalarinin UI izdusumu |
 | "Kaydet'te geri bildirim yok" | (Aslinda kucuk gri yazi vardi - gozden kacti.) Sag-ust sabit TOAST (yesil/kirmizi, 4sn) + `adminRequest` helper API hata MESAJINI tasir (adminFetch yutuyordu) |
 | "Onizleme hep ayni sayfa" | Teshis: link uretimi DOGRUYDU (icerik basina farkli, E2E ile kanitlandi). Iki gercek neden: (1) kullanicinin yeni actigi kayitlar bloksuz -> bos sablon; (2) onizleme KAYDEDILMIS hali gosterir, kaydetmeden Onizle = eski icerik. Cozum: dirty takibi + "Kaydedilmemis degisiklikler var" uyarisi + Onizle'de once-kaydet onayi |
+
+## Kullanici geri bildirimi turu 2 (2026-06-10) — 7 madde
+
+| Madde | Teshis / Cozum |
+|------|-------|
+| Zamanlanmis yayin saati 3 saat kayiyor | datetime-local YEREL, gosterim `slice(0,16)` UTC kesiyordu (12:00 sec -> 09:00 gorun). `isoToLocalInput` ile yerel donusum; kayit zaten dogruydu |
+| Yeni form listede en altta | `listDefinitions` `key asc` siraliydi -> `createdAt desc` (yeni ustte) |
+| Bloksuz icerik onizlemesi bos sayfa | Preview sayfasina bos-durum mesaji: baslik + "Blok ekleyin, burada gorunecek" yonlendirmesi |
+| ~15dk sonra logout | Access token TTL 900s, admin istemcisinde YENILEME YOKTU. Cozum: 401'de sessiz refresh (httpOnly cookie, credentials:include — localhost:3000->4000 same-site) + retry; login'e credentials eklendi. Bonus bug: ayni saniyede uretilen refresh token'lar birebir ayni string -> tokenHash unique ihlali (500) -> payload'a rastgele `jti` |
+| CONTACT_FORM blogu render edilmiyordu | `dynamic-form.tsx`: FormDefinition'i public API'den ceker, alanlari (select options dahil) render eder + KVKK + honeypot. Artik admin'de tanimlanan HER form bir sayfaya CONTACT_FORM bloguyla eklenip aninda canlida test edilir. LOGO_CLOUD da registry'ye eklendi (eksikti). FormField'a `options[]` (DTO + tanim editorunde virgullu giris) |
+| "Gecersiz deger zaten girilemesin, uyari kutuda olsun" | (1) NORMALIZASYON: link/image alanlari her zaman tam string objesi uretir ({label,href}/{url,alt}) -> "href: expected string, received undefined" sinifi hatalar IMKANSIZ; (2) zorunlu alanlar (Zod ile esles) kirmizi cerceve + kutu icinde "Zorunlu alan — bos birakilirsa kaydedilemez" |

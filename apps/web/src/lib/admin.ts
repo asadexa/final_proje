@@ -22,6 +22,9 @@ export async function login(email: string, password: string): Promise<boolean> {
   const res = await fetch(`${API}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    // credentials: refresh_token httpOnly cookie'sinin TARAYICIYA yazilmasi icin sart
+    // (localhost:3000 -> :4000 same-site; CORS credentials acik)
+    credentials: "include",
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) return false;
@@ -31,22 +34,53 @@ export async function login(email: string, password: string): Promise<boolean> {
   return true;
 }
 
+// Sessiz oturum yenileme: access token (15dk) dolunca refresh cookie ile yeni
+// token alinir; kullanici calismaya devam eder (onceki davranis: aniden logout).
+let refreshing: Promise<boolean> | null = null;
+async function tryRefresh(): Promise<boolean> {
+  refreshing ??= (async () => {
+    try {
+      const res = await fetch(`${API}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) return false;
+      const data = (await res.json()) as { accessToken?: string };
+      if (!data.accessToken) return false;
+      setToken(data.accessToken);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      // es zamanli 401'ler tek refresh'i paylasir; bitince sifirla
+      window.setTimeout(() => {
+        refreshing = null;
+      }, 0);
+    }
+  })();
+  return refreshing;
+}
+
 export function logout(): void {
   clearToken();
   if (typeof window !== "undefined") window.location.href = "/admin/login";
 }
 
-// Bearer'li admin API cagrisi. 401 -> token temizle + login'e yonlendir.
+// Bearer'li admin API cagrisi. 401 -> once sessiz refresh dene, olmazsa login'e yonlendir.
 export async function adminFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
-  const token = getToken();
-  const res = await fetch(`${API}/api${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+  const doFetch = async (): Promise<Response> => {
+    const token = getToken();
+    return fetch(`${API}/api${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  };
+  let res = await doFetch();
+  if (res.status === 401 && (await tryRefresh())) res = await doFetch();
   if (res.status === 401) {
     clearToken();
     if (typeof window !== "undefined") window.location.href = "/admin/login";
@@ -63,15 +97,19 @@ export async function adminRequest<T>(
   path: string,
   init?: RequestInit,
 ): Promise<{ ok: boolean; data?: T; message?: string }> {
-  const token = getToken();
-  const res = await fetch(`${API}/api${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+  const doFetch = async (): Promise<Response> => {
+    const token = getToken();
+    return fetch(`${API}/api${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  };
+  let res = await doFetch();
+  if (res.status === 401 && (await tryRefresh())) res = await doFetch();
   if (res.status === 401) {
     clearToken();
     if (typeof window !== "undefined") window.location.href = "/admin/login";
@@ -105,14 +143,18 @@ export async function adminDownload(path: string, filename: string): Promise<voi
 
 // Multipart dosya yukleme (Content-Type'i tarayici ayarlar; JSON header EKLENMEZ).
 export async function adminUpload<T>(path: string, file: File): Promise<T | null> {
-  const token = getToken();
-  const form = new FormData();
-  form.append("file", file);
-  const res = await fetch(`${API}/api${path}`, {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: form,
-  });
+  const doFetch = async (): Promise<Response> => {
+    const token = getToken();
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${API}/api${path}`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+  };
+  let res = await doFetch();
+  if (res.status === 401 && (await tryRefresh())) res = await doFetch();
   if (res.status === 401) {
     clearToken();
     if (typeof window !== "undefined") window.location.href = "/admin/login";

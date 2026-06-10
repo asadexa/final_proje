@@ -59,6 +59,12 @@ export class FormFieldDto {
   @IsOptional()
   @IsBoolean()
   required?: boolean;
+
+  @ApiPropertyOptional({ type: [String], description: 'select tipi icin secenekler' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  options?: string[];
 }
 
 export class CreateFormDefinitionDto {

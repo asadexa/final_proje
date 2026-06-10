@@ -27,7 +27,19 @@ export default async function PreviewPage({
           ? "Önizleme modu — taslak içerik (yayında değil)"
           : "Preview mode — draft content (not published)"}
       </div>
-      <Blocks blocks={entry.blocks} locale={locale} />
+      {entry.blocks.length === 0 ? (
+        /* Bloksuz icerik: bos sayfa yerine yol gosteren mesaj */
+        <div className="mx-auto max-w-[1140px] px-4 py-24 text-center sm:px-6">
+          <h1 className="text-2xl font-bold text-dark">{entry.title}</h1>
+          <p className="mx-auto mt-4 max-w-xl text-ink-soft">
+            {locale === "tr"
+              ? "Bu içerikte henüz blok yok. Admin panelindeki editörden “+ Blok ekle” ile bölüm ekleyin; eklediğiniz her blok burada görünecek."
+              : "This entry has no blocks yet. Add sections via “+ Add block” in the admin editor; every block you add will appear here."}
+          </p>
+        </div>
+      ) : (
+        <Blocks blocks={entry.blocks} locale={locale} />
+      )}
     </>
   );
 }

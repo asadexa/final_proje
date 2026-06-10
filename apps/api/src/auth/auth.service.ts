@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser, JwtPayload } from './types';
 
@@ -41,8 +41,10 @@ export class AuthService {
       expiresIn: Number(process.env.JWT_ACCESS_TTL ?? 900),
     });
     const refreshTtl = Number(process.env.JWT_REFRESH_TTL ?? 604800);
+    // jti: ayni saniyede uretilen iki token birebir ayni string olur (sub+iat+exp)
+    // -> tokenHash unique ihlali. Rastgele jti her token'i benzersiz yapar.
     const refreshToken = await this.jwt.signAsync(
-      { sub: user.id },
+      { sub: user.id, jti: randomUUID() },
       { secret: process.env.JWT_REFRESH_SECRET, expiresIn: refreshTtl },
     );
     await this.prisma.refreshToken.create({

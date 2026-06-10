@@ -24,6 +24,7 @@ export interface FieldSpec {
   label: string;
   kind: Kind;
   hint?: string;
+  required?: boolean; // @kron/shared Zod semasinda zorunlu alan -> kutu icinde uyari
   options?: string[]; // select
   fields?: FieldSpec[]; // list satir alanlari
 }
@@ -43,7 +44,7 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
   HERO: [
     { key: "variant", label: "Görünüm", kind: "select", options: ["", "product"], hint: "product = ürün sayfası banner'ı" },
     { key: "eyebrow", label: "Üst etiket", kind: "text" },
-    { key: "title", label: "Başlık", kind: "text", hint: "<b>...</b> = mavi vurgu" },
+    { key: "title", label: "Başlık", kind: "text", required: true, hint: "<b>...</b> = mavi vurgu" },
     { key: "subtitle", label: "Alt başlık", kind: "textarea" },
     LINK("cta", "Buton"),
     IMG("image", "Arka plan görseli"),
@@ -58,7 +59,7 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
       key: "slides", label: "Slaytlar (ana sayfa karuseli)", kind: "list",
       fields: [
         { key: "eyebrow", label: "Üst etiket", kind: "text" },
-        { key: "title", label: "Başlık", kind: "text", hint: "<b>...</b> = mavi vurgu" },
+        { key: "title", label: "Başlık", kind: "text", required: true, hint: "<b>...</b> = mavi vurgu" },
         { key: "subtitle", label: "Alt başlık", kind: "textarea" },
         LINK("cta", "Buton"),
         IMG("image", "Zemin görseli"),
@@ -67,7 +68,7 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
     },
   ],
   SECTION_HEADING: [
-    { key: "title", label: "Başlık", kind: "text" },
+    { key: "title", label: "Başlık", kind: "text", required: true },
     { key: "intro", label: "Giriş metni", kind: "textarea" },
     { key: "align", label: "Hizalama", kind: "select", options: ["left", "center"] },
   ],
@@ -76,7 +77,7 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
     {
       key: "items", label: "Öğeler", kind: "list",
       fields: [
-        { key: "title", label: "Başlık", kind: "text" },
+        { key: "title", label: "Başlık", kind: "text", required: true },
         { key: "description", label: "Açıklama", kind: "textarea" },
         { key: "icon", label: "İkon (URL)", kind: "text" },
       ],
@@ -89,7 +90,7 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
     {
       key: "products", label: "Ürünler", kind: "list",
       fields: [
-        { key: "name", label: "Ad", kind: "text" },
+        { key: "name", label: "Ad", kind: "text", required: true },
         { key: "description", label: "Açıklama", kind: "textarea" },
         { key: "href", label: "Bağlantı", kind: "text" },
         { key: "features", label: "Özellikler (her satır bir madde)", kind: "stringlist" },
@@ -98,8 +99,8 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
     },
   ],
   VALUE_PROP: [
-    { key: "title", label: "Başlık", kind: "text", hint: "<b>...</b> = mavi vurgu" },
-    { key: "body", label: "Metin", kind: "textarea" },
+    { key: "title", label: "Başlık", kind: "text", required: true, hint: "<b>...</b> = mavi vurgu" },
+    { key: "body", label: "Metin", kind: "textarea", required: true },
     LINK("cta", "Buton"),
     IMG("image", "Görsel"),
   ],
@@ -109,14 +110,14 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
     {
       key: "items", label: "Sayılar", kind: "list",
       fields: [
-        { key: "value", label: "Değer", kind: "text" },
+        { key: "value", label: "Değer", kind: "text", required: true },
         { key: "label", label: "Etiket", kind: "text" },
         IMG("icon", "İkon"),
       ],
     },
   ],
   CASE_STUDY: [
-    { key: "title", label: "Başlık", kind: "text", hint: "<b>...</b> = mavi kutu vurgu" },
+    { key: "title", label: "Başlık", kind: "text", required: true, hint: "<b>...</b> = mavi kutu vurgu" },
     { key: "excerpt", label: "Özet", kind: "textarea" },
     IMG("image", "Görsel"),
     LINK("cta", "Buton"),
@@ -126,11 +127,11 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
     { key: "limit", label: "Yazı sayısı", kind: "number" },
   ],
   RICH_TEXT: [
-    { key: "html", label: "İçerik (HTML)", kind: "richtext", hint: "h2/h3/p/ul/ol/blockquote/a kullanılabilir" },
+    { key: "html", label: "İçerik (HTML)", kind: "richtext", required: true, hint: "h2/h3/p/ul/ol/blockquote/a kullanılabilir" },
   ],
   MEDIA_TEXT: [
-    { key: "title", label: "Başlık", kind: "text", hint: "<b>...</b> = mavi kutu vurgu" },
-    { key: "body", label: "Metin", kind: "textarea", hint: "Boş satırla ayırarak çok paragraf" },
+    { key: "title", label: "Başlık", kind: "text", required: true, hint: "<b>...</b> = mavi kutu vurgu" },
+    { key: "body", label: "Metin", kind: "textarea", required: true, hint: "Boş satırla ayırarak çok paragraf" },
     IMG("image", "Görsel"),
     { key: "imageSide", label: "Görsel tarafı", kind: "select", options: ["left", "right"] },
     LINK("cta", "Buton (opsiyonel)"),
@@ -140,12 +141,12 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
     { key: "logos", label: "Logolar", kind: "list", fields: [{ key: "url", label: "Görsel URL", kind: "text" }, { key: "alt", label: "Alt metin", kind: "text" }] },
   ],
   CTA_BANNER: [
-    { key: "title", label: "Başlık", kind: "text" },
+    { key: "title", label: "Başlık", kind: "text", required: true },
     LINK("cta", "Buton"),
   ],
   CONTACT_FORM: [
     { key: "title", label: "Başlık", kind: "text" },
-    { key: "formKey", label: "Form anahtarı", kind: "text", hint: "Formlar sayfasındaki key (örn. contact)" },
+    { key: "formKey", label: "Form anahtarı", kind: "text", required: true, hint: "Formlar sayfasındaki key (örn. contact)" },
     { key: "consentText", label: "KVKK metni", kind: "textarea" },
   ],
   FAQ: [
@@ -153,8 +154,8 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
     {
       key: "items", label: "Sorular", kind: "list",
       fields: [
-        { key: "question", label: "Soru", kind: "text" },
-        { key: "answer", label: "Cevap", kind: "textarea" },
+        { key: "question", label: "Soru", kind: "text", required: true },
+        { key: "answer", label: "Cevap", kind: "textarea", required: true },
       ],
     },
   ],
@@ -163,7 +164,7 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
     {
       key: "tabs", label: "Sekmeler", kind: "list",
       fields: [
-        { key: "label", label: "Etiket", kind: "text" },
+        { key: "label", label: "Etiket", kind: "text", required: true },
         { key: "href", label: "Bağlantı", kind: "text", hint: "boş = tıklanamaz" },
         { key: "icon", label: "İkon URL", kind: "text" },
         { key: "active", label: "Aktif sekme", kind: "checkbox" },
@@ -174,8 +175,8 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
     {
       key: "items", label: "Referanslar", kind: "list",
       fields: [
-        { key: "title", label: "Başlık", kind: "text", hint: "<b>...</b> = beyaz kutu vurgu" },
-        { key: "quote", label: "Alıntı", kind: "textarea" },
+        { key: "title", label: "Başlık", kind: "text", required: true, hint: "<b>...</b> = beyaz kutu vurgu" },
+        { key: "quote", label: "Alıntı", kind: "textarea", required: true },
         { key: "author", label: "Yazar", kind: "text" },
         IMG("image", "Görsel"),
         IMG("logo", "Müşteri logosu"),
@@ -216,26 +217,36 @@ function Field({
     </label>
   );
   switch (spec.kind) {
-    case "text":
+    case "text": {
+      const empty = spec.required && str(value).trim() === "";
       return (
         <div>
           {label}
-          <input className={inputCls} value={str(value)} onChange={(e) => onChange(e.target.value)} />
+          <input
+            className={`${inputCls} ${empty ? "!border-red-400" : ""}`}
+            value={str(value)}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          {empty && <p className="mt-0.5 text-[11px] text-red-600">Zorunlu alan — boş bırakılırsa kaydedilemez.</p>}
         </div>
       );
+    }
     case "textarea":
-    case "richtext":
+    case "richtext": {
+      const empty = spec.required && str(value).trim() === "";
       return (
         <div>
           {label}
           <textarea
-            className={inputCls}
+            className={`${inputCls} ${empty ? "!border-red-400" : ""}`}
             rows={spec.kind === "richtext" ? 8 : 3}
             value={str(value)}
             onChange={(e) => onChange(e.target.value)}
           />
+          {empty && <p className="mt-0.5 text-[11px] text-red-600">Zorunlu alan — boş bırakılırsa kaydedilemez.</p>}
         </div>
       );
+    }
     case "number":
       return (
         <div>
@@ -270,6 +281,10 @@ function Field({
       );
     case "link": {
       const v = obj(value);
+      // Normalizasyon: link her zaman TAM string ciftidir ({label,href}) —
+      // "href: expected string, received undefined" hatasi olusamaz.
+      const emit = (p: Partial<{ label: string; href: string }>): void =>
+        onChange({ label: str(v.label), href: str(v.href), ...p });
       return (
         <div>
           {label}
@@ -278,13 +293,13 @@ function Field({
               className={inputCls}
               placeholder="Etiket"
               value={str(v.label)}
-              onChange={(e) => onChange({ ...v, label: e.target.value })}
+              onChange={(e) => emit({ label: e.target.value })}
             />
             <input
               className={inputCls}
               placeholder="/tr/contact"
               value={str(v.href)}
-              onChange={(e) => onChange({ ...v, href: e.target.value })}
+              onChange={(e) => emit({ href: e.target.value })}
             />
           </div>
         </div>
@@ -292,6 +307,9 @@ function Field({
     }
     case "image": {
       const v = obj(value);
+      // Normalizasyon: image alanlari her zaman string ({url,alt})
+      const emit = (p: Partial<{ url: string; alt: string }>): void =>
+        onChange({ url: str(v.url), alt: str(v.alt), ...p });
       return (
         <div>
           {label}
@@ -309,15 +327,15 @@ function Field({
                 className={inputCls}
                 placeholder="Görsel URL"
                 value={str(v.url)}
-                onChange={(e) => onChange({ ...v, url: e.target.value })}
+                onChange={(e) => emit({ url: e.target.value })}
               />
               <input
                 className={inputCls}
                 placeholder="Alt metin (erişilebilirlik)"
                 value={str(v.alt)}
-                onChange={(e) => onChange({ ...v, alt: e.target.value })}
+                onChange={(e) => emit({ alt: e.target.value })}
               />
-              <MediaPicker onPick={(m) => onChange({ ...v, url: m.url })} />
+              <MediaPicker onPick={(m) => emit({ url: m.url })} />
             </div>
           </div>
         </div>

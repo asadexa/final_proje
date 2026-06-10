@@ -87,7 +87,8 @@ export class FormsService {
   // --------------------------- ADMIN ---------------------------
 
   listDefinitions() {
-    return this.prisma.formDefinition.findMany({ orderBy: { key: 'asc' } });
+    // En yeni tanim ustte (kullanici beklentisi: yeni olusturulan listede ilk gorunsun)
+    return this.prisma.formDefinition.findMany({ orderBy: { createdAt: 'desc' } });
   }
 
   // Form tanimlama (PDF "Form Yonetimi: Form tanimlama") — admin'den olustur/duzenle.

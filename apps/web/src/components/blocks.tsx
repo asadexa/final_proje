@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from "react";
 import { listEntries } from "@/lib/api";
 import type { BlockNode } from "@/lib/types";
 import { BlogCarouselClient } from "./blog-carousel";
+import { DynamicForm } from "./dynamic-form";
 import { HeroCarousel } from "./hero-carousel";
 import { HeroSlide, type HeroSlideData } from "./hero-slide";
 import { ProductCarousel } from "./product-carousel";
@@ -453,6 +454,26 @@ function Testimonial({ data }: BlockProps): ReactElement | null {
   return <TestimonialSlider items={items} />;
 }
 
+// Logo bulutu — basit logo gridi (musteri/partner logolari).
+function LogoCloud({ data }: BlockProps): ReactElement {
+  const logos = arr<ImageData>(data.logos);
+  return (
+    <section className="bg-surface">
+      <Container className="py-12 text-center">
+        {str(data.title) && <h2 className="mb-8 text-2xl font-light text-dark">{str(data.title)}</h2>}
+        <div className="flex flex-wrap items-center justify-center gap-10">
+          {logos.map((l, i) =>
+            l.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={i} src={l.url} alt={l.alt ?? ""} className="max-h-[60px] max-w-[160px] object-contain" />
+            ) : null,
+          )}
+        </div>
+      </Container>
+    </section>
+  );
+}
+
 // CTA bandi — koyu zemin, baslik + buton (urun sayfasi kapanisi vb.).
 function CtaBanner({ data }: BlockProps): ReactElement {
   const cta = data.cta as Cta | undefined;
@@ -488,6 +509,7 @@ const REGISTRY: Record<string, (props: BlockProps) => ReactElement | null> = {
   PRODUCT_TABS: ProductTabs,
   MEDIA_TEXT: MediaText,
   TESTIMONIAL: Testimonial,
+  LOGO_CLOUD: LogoCloud,
 };
 
 export function Blocks({
@@ -503,6 +525,20 @@ export function Blocks({
         // BLOG_CAROUSEL async (yazilari ceker); ayrica ele alinir.
         if (b.type === "BLOG_CAROUSEL") {
           return <BlogCarousel key={b.id} data={b.data} locale={locale} />;
+        }
+        // CONTACT_FORM locale gerektirir: admin'de tanimlanan formu render eder.
+        if (b.type === "CONTACT_FORM") {
+          const d = b.data as { formKey?: string; title?: string; consentText?: string };
+          if (!d.formKey) return null;
+          return (
+            <DynamicForm
+              key={b.id}
+              formKey={d.formKey}
+              title={d.title}
+              consentText={d.consentText}
+              locale={locale}
+            />
+          );
         }
         const Component = REGISTRY[b.type];
         return Component ? <Component key={b.id} data={b.data} /> : null;

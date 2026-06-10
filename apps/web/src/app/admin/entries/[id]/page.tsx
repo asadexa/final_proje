@@ -52,6 +52,14 @@ interface AdminEntry {
   seo?: SeoData | null;
 }
 const LOCALES = ["tr", "en"];
+
+// datetime-local <-> ISO donusumu YEREL saatte yapilmali; aksi halde UTC'ye
+// kayar (orn. TR'de 12:00 secimi 09:00 gorunur). slice(0,16) UTC gosterirdi.
+function isoToLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number): string => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 interface BlockEdit {
   type: string;
   enabled: boolean;
@@ -521,7 +529,7 @@ export default function EntryEditorPage(): ReactElement {
               <input
                 type="datetime-local"
                 className={inputCls}
-                value={entry.publishAt ? entry.publishAt.slice(0, 16) : ""}
+                value={entry.publishAt ? isoToLocalInput(entry.publishAt) : ""}
                 onChange={(e) => patchEntry({ publishAt: e.target.value ? new Date(e.target.value).toISOString() : null })}
               />
             </div>
