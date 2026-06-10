@@ -32,6 +32,17 @@ async function main(): Promise<void> {
     update: {},
     create: { email, passwordHash, name: 'Admin', role: 'ADMIN' },
   });
+  // Onay akisi demosu icin EDITOR rolu (yayinlayamaz; REVIEW'a gonderir)
+  await prisma.user.upsert({
+    where: { email: 'editor@kron.local' },
+    update: {},
+    create: {
+      email: 'editor@kron.local',
+      passwordHash: await bcrypt.hash('Editor123!', 10),
+      name: 'Editor',
+      role: 'EDITOR',
+    },
+  });
 
   // 3) Form tanimlari (demo talep + iletisim)
   await prisma.formDefinition.upsert({

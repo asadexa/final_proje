@@ -4,10 +4,17 @@
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 const TOKEN_KEY = "kron_admin_token";
+const ROLE_KEY = "kron_admin_role";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY);
+}
+
+// Onay akisi UI'i icin rol (gercek yetki sunucuda zorlanir; bu yalniz gorunum)
+export function getRole(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ROLE_KEY);
 }
 
 function setToken(token: string): void {
@@ -15,7 +22,10 @@ function setToken(token: string): void {
 }
 
 function clearToken(): void {
-  if (typeof window !== "undefined") localStorage.removeItem(TOKEN_KEY);
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(ROLE_KEY);
+  }
 }
 
 export async function login(email: string, password: string): Promise<boolean> {
@@ -28,9 +38,12 @@ export async function login(email: string, password: string): Promise<boolean> {
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) return false;
-  const data = (await res.json()) as { accessToken?: string };
+  const data = (await res.json()) as { accessToken?: string; user?: { role?: string } };
   if (!data.accessToken) return false;
   setToken(data.accessToken);
+  if (data.user?.role && typeof window !== "undefined") {
+    localStorage.setItem(ROLE_KEY, data.user.role);
+  }
   return true;
 }
 

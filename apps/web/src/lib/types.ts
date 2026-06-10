@@ -47,7 +47,7 @@ export interface PublicEntry {
   post?: { readingMin?: number | null; tags?: string[] } | null;
 }
 
-export type EntryStatus = "DRAFT" | "PUBLISHED" | "SCHEDULED" | "ARCHIVED";
+export type EntryStatus = "DRAFT" | "REVIEW" | "PUBLISHED" | "SCHEDULED" | "ARCHIVED";
 
 export interface EntryListItem {
   id: string;

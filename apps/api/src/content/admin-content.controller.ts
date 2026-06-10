@@ -29,7 +29,7 @@ export class AdminContentController {
   @Roles('ADMIN', 'EDITOR')
   @ApiOperation({ summary: 'Icerik olustur (bloklarla)' })
   create(@Body() dto: CreateEntryDto, @CurrentUser() user: AuthUser) {
-    return this.content.create(dto, user.id);
+    return this.content.create(dto, user.id, user.role);
   }
 
   @Get()
@@ -50,7 +50,7 @@ export class AdminContentController {
   @Roles('ADMIN', 'EDITOR')
   @ApiOperation({ summary: 'Icerik guncelle (bloklar verildiyse degistirilir)' })
   update(@Param('id') id: string, @Body() dto: UpdateEntryDto, @CurrentUser() user: AuthUser) {
-    return this.content.update(id, dto, user.id);
+    return this.content.update(id, dto, user.id, user.role);
   }
 
   @Get(':id/versions')

@@ -6,7 +6,7 @@ import { type ReactElement, useCallback, useEffect, useState } from "react";
 import { BLOCK_FORMS, BlockForm } from "@/components/admin/block-form";
 import { MediaPicker } from "@/components/admin/media-picker";
 import { VisualEditor, type VisualBlock } from "@/components/admin/visual-editor";
-import { adminFetch, adminRequest, getToken } from "@/lib/admin";
+import { adminFetch, adminRequest, getRole, getToken } from "@/lib/admin";
 import type { BlockNode, EntryStatus, SeoData } from "@/lib/types";
 
 const BLOCK_TYPES = [
@@ -27,7 +27,9 @@ const BLOCK_TYPES = [
   "PRODUCT_TABS",
   "TESTIMONIAL",
 ];
-const STATUSES: EntryStatus[] = ["DRAFT", "PUBLISHED", "SCHEDULED", "ARCHIVED"];
+const STATUSES: EntryStatus[] = ["DRAFT", "REVIEW", "PUBLISHED", "SCHEDULED", "ARCHIVED"];
+// Onay akisi (lite): EDITOR yayinlayamaz — REVIEW'a gonderir (sunucu da zorlar)
+const EDITOR_STATUSES: EntryStatus[] = ["DRAFT", "REVIEW", "ARCHIVED"];
 
 interface TranslationSibling {
   id: string;
@@ -598,12 +600,35 @@ export default function EntryEditorPage(): ReactElement {
               value={entry.status}
               onChange={(e) => patchEntry({ status: e.target.value as EntryStatus })}
             >
-              {STATUSES.map((s) => (
+              {(getRole() === "ADMIN" ? STATUSES : EDITOR_STATUSES).map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {s === "REVIEW" ? "REVIEW (onay bekliyor)" : s}
                 </option>
               ))}
+              {/* mevcut durum listede yoksa da gorunsun (orn. EDITOR, PUBLISHED icerige bakarken) */}
+              {getRole() !== "ADMIN" && !EDITOR_STATUSES.includes(entry.status) && (
+                <option value={entry.status} disabled>
+                  {entry.status}
+                </option>
+              )}
             </select>
+            {getRole() !== "ADMIN" && (
+              <p className="mt-1 text-[11px] text-muted">
+                Yayınlama ADMIN onayı gerektirir — REVIEW ile onaya gönderin.
+              </p>
+            )}
+            {getRole() === "ADMIN" && entry.status === "REVIEW" && (
+              <button
+                type="button"
+                onClick={() => {
+                  patchEntry({ status: "PUBLISHED" });
+                  showToast("ok", "Durum PUBLISHED yapıldı — Kaydet ile onayla.");
+                }}
+                className="mt-2 w-full rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+              >
+                ✓ Onayla ve Yayınla
+              </button>
+            )}
           </div>
           {entry.status === "SCHEDULED" && (
             <div>

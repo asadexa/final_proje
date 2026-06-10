@@ -31,6 +31,7 @@ enum EntryType {
 
 enum EntryStatus {
   DRAFT
+  REVIEW // onay bekliyor (EDITOR gonderir, ADMIN yayinlar)
   PUBLISHED
   SCHEDULED
   ARCHIVED

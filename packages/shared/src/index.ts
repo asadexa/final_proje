@@ -15,7 +15,7 @@ export type Role = (typeof ROLES)[number];
 export const ENTRY_TYPES = ['PAGE', 'PRODUCT', 'POST'] as const;
 export type EntryType = (typeof ENTRY_TYPES)[number];
 
-export const ENTRY_STATUSES = ['DRAFT', 'PUBLISHED', 'SCHEDULED', 'ARCHIVED'] as const;
+export const ENTRY_STATUSES = ['DRAFT', 'REVIEW', 'PUBLISHED', 'SCHEDULED', 'ARCHIVED'] as const;
 export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 
 export const BLOCK_TYPES = [

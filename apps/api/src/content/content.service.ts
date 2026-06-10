@@ -160,8 +160,9 @@ export class ContentService {
 
   // ----------------------------- ADMIN ------------------------------
 
-  async create(dto: CreateEntryDto, authorId?: string) {
+  async create(dto: CreateEntryDto, authorId?: string, authorRole?: string) {
     this.assertBlocksValid(dto.blocks);
+    this.assertCanSetStatus(dto.status, authorRole);
     const status = dto.status ?? 'DRAFT';
     const entry = await this.prisma.entry.create({
       data: {
@@ -238,9 +239,20 @@ export class ContentService {
     return entry;
   }
 
-  async update(id: string, dto: UpdateEntryDto, userId?: string) {
+  // Onay akisi (lite): EDITOR yayinlayamaz/zamanlayamaz — REVIEW'a gonderir; ADMIN onaylar.
+  private assertCanSetStatus(status: string | undefined, role?: string): void {
+    if (!status || !role) return;
+    if (role !== 'ADMIN' && (status === 'PUBLISHED' || status === 'SCHEDULED')) {
+      throw new ForbiddenException(
+        "Yayınlama yetkisi ADMIN'de. İçeriği 'REVIEW' durumuyla onaya gönderin.",
+      );
+    }
+  }
+
+  async update(id: string, dto: UpdateEntryDto, userId?: string, userRole?: string) {
     await this.findOne(id);
     this.assertBlocksValid(dto.blocks);
+    this.assertCanSetStatus(dto.status, userRole);
     const data: Prisma.EntryUpdateInput = {
       type: dto.type,
       slug: dto.slug,
@@ -276,7 +288,13 @@ export class ContentService {
       include: { blocks: { orderBy: { order: 'asc' } }, seo: true },
     });
     await this.snapshotVersion(id, userId);
-    await this.audit(dto.status === 'PUBLISHED' ? 'entry.publish' : 'entry.update', id, userId, {
+    const action =
+      dto.status === 'PUBLISHED'
+        ? 'entry.publish'
+        : dto.status === 'REVIEW'
+          ? 'entry.review-request'
+          : 'entry.update';
+    await this.audit(action, id, userId, {
       status: dto.status ?? null,
     });
     await this.invalidatePublicCache();
