@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { type ReactElement, useCallback, useEffect, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useRef, useState } from "react";
 import { BLOCK_FORMS, BlockForm } from "@/components/admin/block-form";
+import { BlockPicker } from "@/components/admin/block-picker";
 import { MediaPicker } from "@/components/admin/media-picker";
 import { VisualEditor, type VisualBlock } from "@/components/admin/visual-editor";
 import { adminFetch, adminRequest, getRole, getToken } from "@/lib/admin";
@@ -99,6 +100,8 @@ export default function EntryEditorPage(): ReactElement {
   const [dirty, setDirty] = useState(false);
   // Gorsel duzenleme modu (Webflow-lite): canli onizleme + tikla-duzenle
   const [visualMode, setVisualMode] = useState(false);
+  // Blok galerisi (form editorunde de ayni secici kullanilir)
+  const [blockPickerOpen, setBlockPickerOpen] = useState(false);
   // Saglik denetimi bulgulari (null = henuz calistirilmadi)
   const [health, setHealth] = useState<HealthFinding[] | null>(null);
   const [healthBusy, setHealthBusy] = useState(false);
@@ -143,8 +146,44 @@ export default function EntryEditorPage(): ReactElement {
       window.location.href = "/admin/login";
       return;
     }
-    void load();
+    // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
+    void Promise.resolve().then(load);
   }, [load]);
+
+  // Kaydedilmemis degisiklik var mi (SSE handler'inda guncel deger icin ref)
+  const dirtyRef = useRef(false);
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty]);
+  // Kendi yazma islemlerimizin tetikledigi SSE olaylarini yutmak icin sayac
+  // (her kendi PATCH/restore tam bir olay uretir -> bire bir dusulur)
+  const suppressSse = useRef(0);
+
+  // Bu icerik BASKA yerden degisirse (Time Machine restore, baska sekme/kullanici)
+  // editor kendini tazeler — "restore ettim ama editor eski hali gosteriyor" sorunu biter.
+  useEffect(() => {
+    const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+    const es = new EventSource(`${api}/api/events/content`);
+    es.onmessage = (m) => {
+      try {
+        const e = JSON.parse(m.data as string) as { entryId?: string; action?: string };
+        if (e.entryId !== id) return;
+        if (suppressSse.current > 0) {
+          suppressSse.current -= 1; // kendi kaydimizin olayi
+          return;
+        }
+        if (dirtyRef.current) {
+          showToast("err", "Bu içerik başka bir yerden değişti — kaydetmeden önce sayfayı yenileyin!");
+          return;
+        }
+        void load();
+        showToast("ok", e.action === "restore" ? "Sürüm geri yüklendi — içerik tazelendi." : "İçerik başka bir yerden güncellendi — tazelendi.");
+      } catch {
+        // bozuk event yutulur
+      }
+    };
+    return () => es.close();
+  }, [id, load, showToast]);
 
   function patchEntry(p: Partial<AdminEntry>): void {
     setDirty(true);
@@ -172,13 +211,6 @@ export default function EntryEditorPage(): ReactElement {
     setDirty(true);
     setBlocks((prev) => prev.filter((_, j) => j !== i));
   }
-  function addBlock(): void {
-    setDirty(true);
-    setBlocks((prev) => [
-      ...prev,
-      { type: "RICH_TEXT", enabled: true, mode: "form", data: { html: "<p></p>" }, dataText: '{\n  "html": "<p></p>"\n}' },
-    ]);
-  }
   // Gorsel editor <-> blok state koprusu
   function toVisual(): VisualBlock[] {
     return blocks.map((b) => {
@@ -202,10 +234,15 @@ export default function EntryEditorPage(): ReactElement {
       })),
     );
   }
-  function addBlockOfType(type: string): void {
+  // Galeriden preset verisiyle veya bos olarak blok ekler
+  function addBlockOfType(type: string, presetData?: Record<string, unknown>): void {
     setDirty(true);
     const data: Record<string, unknown> =
-      type === "RICH_TEXT" ? { html: "<p>Yeni içerik</p>" } : {};
+      presetData && Object.keys(presetData).length > 0
+        ? presetData
+        : type === "RICH_TEXT"
+          ? { html: "<p>Yeni içerik</p>" }
+          : {};
     setBlocks((prev) => [
       ...prev,
       { type, enabled: true, mode: BLOCK_FORMS[type] ? "form" : "json", data, dataText: JSON.stringify(data, null, 2) },
@@ -266,6 +303,7 @@ export default function EntryEditorPage(): ReactElement {
       // Kapak gorseli yalnizca degistiyse gonderilir ("" = kaldir)
       ...(coverSel !== undefined ? { coverImageId: coverSel } : {}),
     };
+    suppressSse.current += 1; // kendi SSE olayimizi yutmak icin
     const res = await adminRequest<AdminEntry>(`/admin/entries/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -276,6 +314,7 @@ export default function EntryEditorPage(): ReactElement {
       await load();
       return true;
     }
+    suppressSse.current = Math.max(0, suppressSse.current - 1); // emit olmadi, sayaci geri al
     showToast("err", `Kaydetme başarısız: ${res.message ?? "bilinmeyen hata"}`);
     return false;
   }
@@ -332,9 +371,20 @@ export default function EntryEditorPage(): ReactElement {
 
   async function restore(version: number): Promise<void> {
     if (!window.confirm(`v${version} sürümüne geri dönülsün mü?`)) return;
-    const r = await adminFetch(`/admin/entries/${id}/versions/${version}/restore`, { method: "POST" });
+    suppressSse.current += 1;
+    const r = await adminFetch<{ alreadyAtVersion?: boolean }>(
+      `/admin/entries/${id}/versions/${version}/restore`,
+      { method: "POST" },
+    );
+    // alreadyAtVersion veya hata: API olay yayinlamaz -> sayaci geri al
+    if (!r || r.alreadyAtVersion) suppressSse.current = Math.max(0, suppressSse.current - 1);
     if (r) {
-      showToast("ok", `v${version} geri yüklendi ✓`);
+      showToast(
+        "ok",
+        r.alreadyAtVersion
+          ? `İçerik zaten v${version} ile aynı — kopya alınmadı.`
+          : `v${version} geri yüklendi ✓`,
+      );
       await load();
     }
   }
@@ -467,10 +517,23 @@ export default function EntryEditorPage(): ReactElement {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-dark">Bloklar ({blocks.length})</h2>
-            <button type="button" onClick={addBlock} className="text-sm font-medium text-primary hover:underline">
-              + Blok ekle
+            <button
+              type="button"
+              onClick={() => setBlockPickerOpen(true)}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              + Blok ekle (galeriden seç)
             </button>
           </div>
+          {blockPickerOpen && (
+            <BlockPicker
+              onClose={() => setBlockPickerOpen(false)}
+              onPick={(type, data) => {
+                addBlockOfType(type, data);
+                setBlockPickerOpen(false);
+              }}
+            />
+          )}
           {blocks.map((b, i) => (
             <div key={i} className="rounded-lg border border-line bg-surface p-4">
               <div className="mb-2 flex items-center gap-2">

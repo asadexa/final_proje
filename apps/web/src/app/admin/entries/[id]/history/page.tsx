@@ -84,9 +84,16 @@ export default function HistoryPage(): ReactElement {
 
   async function restore(version: number): Promise<void> {
     if (!window.confirm(`v${version} geri yüklensin mi? (mevcut hal yeni sürüm olarak saklanır)`)) return;
-    const r = await adminFetch(`/admin/entries/${id}/versions/${version}/restore`, { method: "POST" });
+    const r = await adminFetch<{ alreadyAtVersion?: boolean }>(
+      `/admin/entries/${id}/versions/${version}/restore`,
+      { method: "POST" },
+    );
     if (r) {
-      setMsg(`v${version} geri yüklendi ✓`);
+      setMsg(
+        r.alreadyAtVersion
+          ? `İçerik zaten v${version} ile aynı — yeni kopya alınmadı.`
+          : `v${version} geri yüklendi ✓ — açık editör/önizleme sekmeleri kendini tazeler.`,
+      );
       setSelected([]);
       setDiff(null);
       setDetails({});

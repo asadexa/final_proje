@@ -1,7 +1,9 @@
 "use client";
 
 import { type ReactElement, useCallback, useEffect, useRef, useState } from "react";
+import { BLOCK_CATALOG } from "./block-catalog";
 import { BLOCK_FORMS, BlockForm } from "./block-form";
+import { BlockPicker } from "./block-picker";
 import { BlocksClientRender, type RenderBlock } from "./blocks-client-render";
 
 // Gorsel Duzenleme Modu (Webflow-lite):
@@ -39,7 +41,7 @@ export function VisualEditor({
   dirty: boolean;
   onSave: () => void;
   onExit: () => void;
-  onAddBlock: (type: string) => void;
+  onAddBlock: (type: string, data?: Record<string, unknown>) => void;
   onRemoveBlock: (index: number) => void;
   onMoveBlock: (index: number, dir: -1 | 1) => void;
 }): ReactElement {
@@ -236,32 +238,29 @@ export function VisualEditor({
           <div className="mt-6 border-t border-line pt-4">
             <button
               type="button"
-              onClick={() => setAddOpen((o) => !o)}
-              className="text-sm font-medium text-primary hover:underline"
+              onClick={() => setAddOpen(true)}
+              className="w-full rounded bg-primary/10 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/20"
             >
-              + Blok ekle
+              + Blok ekle (galeriden seç)
             </button>
-            {addOpen && (
-              <div className="mt-2 grid grid-cols-2 gap-1">
-                {Object.keys(BLOCK_FORMS).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      onAddBlock(t);
-                      setAddOpen(false);
-                      setSel(blocks.length); // yeni blok sona eklenir
-                    }}
-                    className="rounded border border-line px-2 py-1.5 text-left text-xs text-ink-soft hover:border-primary hover:text-primary"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            )}
+            <p className="mt-1.5 text-center text-[11px] text-muted">
+              {Object.keys(BLOCK_CATALOG).length} blok tipi · hazır tasarım örnekleriyle
+            </p>
           </div>
         </aside>
       </div>
+
+      {/* Blok galerisi: aciklamali liste + canli mini-onizlemeli presetler */}
+      {addOpen && (
+        <BlockPicker
+          onClose={() => setAddOpen(false)}
+          onPick={(type, data) => {
+            onAddBlock(type, data);
+            setAddOpen(false);
+            setSel(blocks.length); // yeni blok sona eklenir
+          }}
+        />
+      )}
     </div>
   );
 }

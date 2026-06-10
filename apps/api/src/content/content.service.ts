@@ -249,10 +249,18 @@ export class ContentService {
     }
   }
 
+  // Seed/dogrudan-DB ile gelen iceriklerin surumu yoktur; ILK duzenlemeden once
+  // mevcut (duzenleme ONCESI) hal v1 olarak saklanir — orijinal asla kaybolmaz.
+  private async ensureBaselineSnapshot(entryId: string, userId?: string): Promise<void> {
+    const count = await this.prisma.contentVersion.count({ where: { entryId } });
+    if (count === 0) await this.snapshotVersion(entryId, userId, 'ilk hal (duzenleme oncesi)');
+  }
+
   async update(id: string, dto: UpdateEntryDto, userId?: string, userRole?: string) {
     await this.findOne(id);
     this.assertBlocksValid(dto.blocks);
     this.assertCanSetStatus(dto.status, userRole);
+    await this.ensureBaselineSnapshot(id, userId);
     const data: Prisma.EntryUpdateInput = {
       type: dto.type,
       slug: dto.slug,
@@ -447,6 +455,7 @@ export class ContentService {
       select: { id: true },
     });
     for (const e of due) {
+      await this.ensureBaselineSnapshot(e.id);
       await this.prisma.entry.update({
         where: { id: e.id },
         data: { status: 'PUBLISHED', publishedAt: now },
@@ -456,6 +465,35 @@ export class ContentService {
     }
     if (due.length > 0) await this.invalidatePublicCache();
     return due.length;
+  }
+
+  // Karsilastirma icin kanonik imza: baslik+ozet+bloklar(type/order/data)+seo alanlari.
+  // Restore idempotentligi: mevcut icerik hedef surumle AYNIYSA yeni kopya alinmaz.
+  private contentSignature(s: {
+    title?: string | null;
+    excerpt?: string | null;
+    blocks?: Array<{ type: string; order: number; data: unknown }>;
+    seo?: Record<string, unknown> | null;
+  }): string {
+    const seo = s.seo
+      ? {
+          metaTitle: s.seo.metaTitle ?? null,
+          metaDescription: s.seo.metaDescription ?? null,
+          canonicalUrl: s.seo.canonicalUrl ?? null,
+          robotsIndex: s.seo.robotsIndex ?? true,
+          robotsFollow: s.seo.robotsFollow ?? true,
+          ogTitle: s.seo.ogTitle ?? null,
+          ogDescription: s.seo.ogDescription ?? null,
+        }
+      : null;
+    return JSON.stringify({
+      title: s.title ?? null,
+      excerpt: s.excerpt ?? null,
+      blocks: [...(s.blocks ?? [])]
+        .sort((a, b) => a.order - b.order)
+        .map((b) => ({ type: b.type, data: b.data })),
+      seo,
+    });
   }
 
   // Bir versiyonun snapshot'indan entry'yi geri yukler (baslik+ozet+bloklar+seo).
@@ -482,6 +520,28 @@ export class ContentService {
       blocks?: SnapBlock[];
       seo?: SnapSeo | null;
     };
+
+    // Idempotentlik kontrolu: zaten bu surumdeysek hicbir sey yazma, kopya alma.
+    const current = await this.prisma.entry.findUnique({
+      where: { id: entryId },
+      include: { blocks: { orderBy: { order: 'asc' } }, seo: true },
+    });
+    if (!current) throw new NotFoundException('Icerik bulunamadi.');
+    const currentSig = this.contentSignature({
+      title: current.title,
+      excerpt: current.excerpt,
+      blocks: current.blocks.map((b) => ({ type: b.type, order: b.order, data: b.data })),
+      seo: current.seo as Record<string, unknown> | null,
+    });
+    const targetSig = this.contentSignature({
+      title: snap.title,
+      excerpt: snap.excerpt,
+      blocks: (snap.blocks ?? []).map((b) => ({ type: b.type, order: b.order, data: b.data })),
+      seo: (snap.seo ?? null) as Record<string, unknown> | null,
+    });
+    if (currentSig === targetSig) {
+      return { alreadyAtVersion: true, version, entry: await this.findOne(entryId) };
+    }
 
     const seoData = snap.seo
       ? {
@@ -517,8 +577,8 @@ export class ContentService {
     await this.snapshotVersion(entryId, userId, `restored from v${version}`);
     await this.audit('entry.restore', entryId, userId, { fromVersion: version });
     await this.invalidatePublicCache();
-    this.events.emit({ action: 'restore', entryId });
-    return this.findOne(entryId);
+    this.events.emit({ action: 'restore', entryId, slug: current.slug, localeCode: current.localeCode });
+    return { alreadyAtVersion: false, version, entry: await this.findOne(entryId) };
   }
 
   // ----------------------------- PREVIEW (imzali jeton) -----------------------------
