@@ -585,7 +585,12 @@ export default function EntryEditorPage(): ReactElement {
         </div>
 
         <div className="rounded-lg border border-line bg-surface p-4">
-          <h3 className="mb-2 text-sm font-semibold text-dark">Sürümler ({versions.length})</h3>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-dark">Sürümler ({versions.length})</h3>
+            <Link href={`/admin/entries/${id}/history`} className="text-xs font-medium text-primary hover:underline">
+              Zaman Tüneli →
+            </Link>
+          </div>
           <ul className="space-y-2 text-sm">
             {versions.map((v) => (
               <li key={v.version} className="flex items-center justify-between">

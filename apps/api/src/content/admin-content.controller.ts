@@ -60,6 +60,13 @@ export class AdminContentController {
     return this.content.listVersions(id);
   }
 
+  @Get(':id/versions/:version')
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Tek surumun tam snapshot detayi (Time Machine onizleme/diff)' })
+  version(@Param('id') id: string, @Param('version') version: string) {
+    return this.content.getVersion(id, Number(version));
+  }
+
   @Post(':id/versions/:version/restore')
   @Roles('ADMIN', 'EDITOR')
   @ApiOperation({ summary: 'Bir versiyonu geri yukle (yeni versiyon olusur)' })

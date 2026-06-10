@@ -292,8 +292,26 @@ export class ContentService {
     return this.prisma.contentVersion.findMany({
       where: { entryId },
       orderBy: { version: 'desc' },
-      select: { id: true, version: true, note: true, createdById: true, createdAt: true },
+      select: {
+        id: true,
+        version: true,
+        note: true,
+        createdById: true,
+        createdAt: true,
+        // Time Machine: kim yapti (e-posta yeter; PII minimal)
+        createdBy: { select: { email: true } },
+      },
     });
+  }
+
+  // Time Machine: tek surumun tam snapshot'i (gorsel onizleme + diff icin).
+  async getVersion(entryId: string, version: number) {
+    const v = await this.prisma.contentVersion.findUnique({
+      where: { entryId_version: { entryId, version } },
+      include: { createdBy: { select: { email: true } } },
+    });
+    if (!v) throw new NotFoundException('Surum bulunamadi.');
+    return v;
   }
 
   listAudit(q: ListQueryDto) {
