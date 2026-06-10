@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { validateBlockData } from '@kron/shared';
 import { BlockType, Prisma } from '../generated/prisma/client';
+import { checkContentHealth } from './content-health';
 import { EventsService } from '../events/events.service';
 import { CacheService } from '../redis/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -313,6 +314,18 @@ export class ContentService {
         // Time Machine: kim yapti (e-posta yeter; PII minimal)
         createdBy: { select: { email: true } },
       },
+    });
+  }
+
+  // Icerik Saglik Denetimi: kural tabanli SEO/erisilebilirlik/UX bulgulari.
+  async healthCheck(id: string) {
+    const entry = await this.findOne(id);
+    return checkContentHealth({
+      type: entry.type,
+      title: entry.title,
+      excerpt: entry.excerpt,
+      blocks: entry.blocks.map((b) => ({ type: b.type, data: b.data })),
+      seo: entry.seo,
     });
   }
 

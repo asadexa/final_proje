@@ -78,6 +78,12 @@ interface VersionRow {
   note?: string | null;
   createdAt: string;
 }
+interface HealthFinding {
+  severity: "error" | "warning" | "info";
+  code: string;
+  message: string;
+  where?: string;
+}
 
 export default function EntryEditorPage(): ReactElement {
   const id = (useParams().id as string) ?? "";
@@ -91,6 +97,9 @@ export default function EntryEditorPage(): ReactElement {
   const [dirty, setDirty] = useState(false);
   // Gorsel duzenleme modu (Webflow-lite): canli onizleme + tikla-duzenle
   const [visualMode, setVisualMode] = useState(false);
+  // Saglik denetimi bulgulari (null = henuz calistirilmadi)
+  const [health, setHealth] = useState<HealthFinding[] | null>(null);
+  const [healthBusy, setHealthBusy] = useState(false);
   // Kapak gorseli secimi: undefined = degismedi, "" = kaldir, id = sec
   const [coverSel, setCoverSel] = useState<string | undefined>(undefined);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
@@ -308,6 +317,15 @@ export default function EntryEditorPage(): ReactElement {
     });
     if (created) router.push(`/admin/entries/${created.id}`);
     else showToast("err", "Çeviri oluşturulamadı (slug bu dilde zaten var olabilir).");
+  }
+
+  // Kural tabanli saglik denetimi (kaydedilmis hal uzerinden calisir)
+  async function runHealth(): Promise<void> {
+    setHealthBusy(true);
+    if (dirty) showToast("err", "Denetim KAYDEDİLMİŞ hali inceler — önce kaydedin.");
+    const f = await adminFetch<HealthFinding[]>(`/admin/entries/${id}/health`);
+    setHealth(f ?? []);
+    setHealthBusy(false);
   }
 
   async function restore(version: number): Promise<void> {
@@ -622,6 +640,38 @@ export default function EntryEditorPage(): ReactElement {
           </button>
           {dirty && (
             <p className="text-center text-xs text-amber-600">Kaydedilmemiş değişiklikler var</p>
+          )}
+        </div>
+
+        {/* Kural tabanli Saglik Denetimi (SEO/erisilebilirlik/UX/GEO) */}
+        <div className="rounded-lg border border-line bg-surface p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-dark">Sağlık Denetimi</h3>
+            <button
+              type="button"
+              onClick={() => void runHealth()}
+              disabled={healthBusy}
+              className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
+            >
+              {healthBusy ? "Denetleniyor…" : "Denetle"}
+            </button>
+          </div>
+          {health === null ? (
+            <p className="text-xs text-muted">SEO, erişilebilirlik, UX ve GEO kuralları.</p>
+          ) : health.length === 0 ? (
+            <p className="text-xs font-medium text-green-700">✓ Sorun bulunamadı.</p>
+          ) : (
+            <ul className="space-y-1.5 text-xs">
+              {health.map((f, i) => (
+                <li
+                  key={f.code + i}
+                  className={`rounded px-2 py-1.5 ${f.severity === "error" ? "bg-red-50 text-red-800" : f.severity === "warning" ? "bg-amber-50 text-amber-800" : "bg-blue-50 text-blue-800"}`}
+                >
+                  {f.message}
+                  {f.where && <span className="block text-[10px] opacity-70">{f.where}</span>}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 

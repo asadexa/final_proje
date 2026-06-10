@@ -60,6 +60,13 @@ export class AdminContentController {
     return this.content.listVersions(id);
   }
 
+  @Get(':id/health')
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Icerik saglik denetimi (kural tabanli SEO/erisilebilirlik/UX)' })
+  health(@Param('id') id: string) {
+    return this.content.healthCheck(id);
+  }
+
   @Get(':id/versions/:version')
   @Roles('ADMIN', 'EDITOR')
   @ApiOperation({ summary: 'Tek surumun tam snapshot detayi (Time Machine onizleme/diff)' })
