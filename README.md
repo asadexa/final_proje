@@ -83,9 +83,42 @@ Tam gerekceler: [`docs/adr/0001-tech-stack.md`](docs/adr/0001-tech-stack.md)
 ## Durum
 
 Tum ana fazlar tamam: icerik modeli + headless API, **admin panel** (icerik CRUD + blok siralama + medya + SEO + formlar),
-**yayin akisi** (taslak/yayin/zamanlanmis/onizleme/versiyon+restore/audit), **SEO/GEO**
-(meta/canonical/hreflang/sitemap/robots/301 + schema.org JSON-LD/FAQPage), **cok dillilik** (TR/EN),
+**yayin akisi** (taslak/onay/yayin/zamanlanmis/onizleme/versiyon+restore/audit), **SEO/GEO**
+(meta/canonical/hreflang/sitemap/robots/301 + OG image + schema.org JSON-LD/FAQPage), **cok dillilik** (TR/EN),
 **Redis cache + publish'te `revalidateTag`**, **formlar** (client+sunucu validasyon + KVKK + honeypot + CSV export),
-ve **testler** (Vitest + Supertest, birim + entegrasyon). Karsilastirma analizi: [`docs/comparison.md`](docs/comparison.md).
+**next/image** (otomatik WebP/AVIF + lazy + CLS korumasi), **mobil navigasyon**,
+ve **testler** (Vitest + Supertest; birim + entegrasyon, 29 test). Karsilastirma analizi: [`docs/comparison.md`](docs/comparison.md).
 
-Giris (admin): `admin@kron.local` / `Admin123!` → http://localhost:3000/admin
+## Gelismis ozellikler
+
+| Ozellik | Nerede | Ne yapar |
+|---------|--------|----------|
+| 🎨 **Gorsel Duzenleme Modu** | Editor → "Gorsel Duzenle" | Webflow-tarzi: solda gercek bilesenlerle canli onizleme, bloga tikla → formu sagda, ANINDA yansir; undo/redo (Ctrl+Z), masaustu/mobil gorunum |
+| 🧱 **Blok Galerisi** | Editor → "+ Blok ekle" | 16 blok tipi: kullanici-dostu ad + aciklama + CANLI render'li hazir tasarim ornekleri |
+| ⚡ **Canli Senkron (SSE)** | Onizleme sayfalari + editor | Icerik degisince acik onizleme/editor sekmeleri kendini tazeler (Figma hissi) |
+| ⏪ **Zaman Tuneli + Diff** | Editor → "Zaman Tuneli" | Surum gecmisi (kim/ne zaman), gorsel surum onizleme, tek tik restore, iki surum arasi git-tarzi karsilastirma |
+| ⌨️ **Komut Paleti** | `Ctrl+K` | Tum icerik/form/medya + aksiyonlarda fuzzy arama |
+| ✨ **AI Site Mimari** | Admin → "AI Mimar" | Dogal dil → taslak sayfa; her blok Zod semasindan gecer. `ANTHROPIC_API_KEY` yoksa sablon modu |
+| 🩺 **Saglik Denetimi** | Editor yan paneli | Kural tabanli SEO/erisilebilirlik/UX/GEO denetimi (10 kural) |
+| ✅ **Onay Akisi** | Durum secimi | EDITOR yayinlayamaz → REVIEW'a gonderir; ADMIN onaylar (sunucuda zorlanir) |
+| 🕸️ **Iliski Grafigi** | Admin → Ctrl+K → "Grafigi" | Sayfalar/linkler/ceviriler gorsel harita; yetim sayfa tespiti |
+
+## Girisler
+
+| Rol | E-posta | Parola | Yetki |
+|-----|---------|--------|-------|
+| ADMIN | `admin@kron.local` | `Admin123!` | Her sey + yayinlama/onay |
+| EDITOR | `editor@kron.local` | `Editor123!` | Icerik duzenler, yayinlayamaz (onaya gonderir) |
+
+Admin panel: http://localhost:3000/admin
+
+## Opsiyonel: AI Site Mimari icin Claude
+
+`.env` dosyasina ekleyin (yoksa ozellik sablon moduyla calisir):
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-...
+AI_MODEL=claude-opus-4-8   # varsayilan
+```
+
+Sonra: `docker compose up -d api`

@@ -167,3 +167,18 @@
 | **13 Onay akisi lite** | REVIEW enum + sunucuda rol zorlamasi (EDITOR PUBLISHED/SCHEDULED yapamaz - 403); UI rol-farkindali (getRole localStorage — yalniz gorunum, gercek yetki sunucuda). editor@kron.local seed kullanicisi. Audit: entry.review-request |
 | **6 AI Site Architect** | GUVENLIK MODELI: LLM ciktisindaki her blok validateBlockData'dan (Zod) gecmeden DB'ye yazilamaz — "AI'a sema dayatma" hikayesi. Resmi @anthropic-ai/sdk, claude-opus-4-8, adaptive thinking (claude-api skill referansiyla yazildi). Key yoksa deterministik SABLON modu (demo gunu dis bagimlilik riski sifir); UI rozeti modu gosterir |
 | **12 Iliski grafigi** | Kutuphanesiz SVG (tip kolonlari + locale alt-kolonu); kenarlar: blok verisinden regex ile ic linkler (/tr|en/slug) + ceviri gruplari (kesikli). Yetim tespiti (gelen linki olmayan, kirmizi halka). Zoom=viewBox/tekerlek, pan=surukle. NestJS dersi: statik 'graph' yolu ':id' parametreli yoldan ONCE tanimlanmali |
+
+## Degerlendirme turu duzeltmeleri + PDF bosluk kapatma (2026-06-10/11)
+
+| Konu | Karar / Nasil |
+|------|-------|
+| **Blok galerisi** (kullanici onerisi) | block-catalog.ts: 16 tip icin TR ad + aciklama + ~25 hazir tasarim ornegi; block-picker.tsx iki adimli secici — presetler GERCEK bilesenlerle CANLI mini-onizleme (statik gorsel degil). Iki editorde de ayni galeri |
+| **Restore idempotentligi** (kullanici bulgusu) | Ayni surume ikinci restore kopya COGALTIYORDU. contentSignature (kanonik JSON imza) ile karsilastirma; ayniysa yazma yok + alreadyAtVersion doner. Entegrasyon testi eklendi |
+| **"Restore etti ama eski sayfa gorunuyor"** | Restore CALISIYORDU; acik editor sekmesi bayatti. Editor artik SSE dinler: disaridan update/restore gelince sessizce tazeler (dirty ise UYARIR, ezmez); kendi olaylari sayacla yutulur (Date.now degil — react-hooks/purity dersi: saf sayac ref'i) |
+| **Baseline v1** (kullanici bulgusu) | Seed icerigin surumu yoktu -> ilk edit v1 = SONRASI oluyordu, orijinal kayboluyordu. ensureBaselineSnapshot: ilk degisiklikten once mevcut hal v1 "ilk hal (duzenleme oncesi)" olarak saklanir |
+| **next/image gecisi** (PDF: WebP/AVIF + lazy) | Public sitedeki tum buyuk gorseller next/image (otomatik WebP/AVIF dogrulandi, lazy, width/height=CLS korumasi, hero grafigi priority, fill+sizes nerede konteyner-bazli). Kucuk ikonlar raw img+loading=lazy (boyut degisken). Admin paneli raw img KALDI (dahili arac, noindex — bilincli). MinIO host'u remotePatterns ile (S3_PUBLIC_URL'den turetilir) — kullanicinin yukledigi kapak 500 veriyordu, kok neden buydu |
+| **Mobil navigasyon** (PDF: responsive) | Mobilde nav tamamen gizliydi (gezinme imkansiz). details/summary tabanli hamburger: JS'siz, erisilebilir, server component'te calisir; gruplu 28 link |
+| **OG image** | Kapak gorseli varsa OG/Twitter paylasim gorseli olarak MUTLAK URL ile metadata'ya eklenir |
+| **Lint %100** | 3 pre-existing set-state-in-effect kapatildi (Promise.resolve().then(load) kaibi) — artik sifir hata |
+| **Test 29/29** | +4 entegrasyon: onay akisi (EDITOR 403/REVIEW/ADMIN publish), redirect validasyon, saglik ucu, restore idempotentligi |
+| **PDF Mimari docs** | docs/deployment.md (prod imaj stratejisi, olcekleme — SSE coklu-replika icin Redis pub/sub plani, cron lider kilidi, logging/monitoring hedefi, perf olcumu) + docs/demo-senaryosu.md (12dk akis + olasi soru cevaplari) |
