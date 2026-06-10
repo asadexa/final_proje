@@ -60,6 +60,8 @@ export function CommandPalette(): ReactElement | null {
       { id: "a-newform", label: "Yeni Form Tanımla", group: "Aksiyonlar", run: () => go("/admin/forms/new") },
       { id: "a-redirects", label: "Yönlendirmeler (301/302)", group: "Aksiyonlar", run: () => go("/admin/redirects") },
       { id: "a-audit", label: "Denetim Kaydı", group: "Aksiyonlar", run: () => go("/admin/audit") },
+      { id: "a-architect", label: "AI Mimar (sayfa üret)", hint: "prompt → taslak", group: "Aksiyonlar", run: () => go("/admin/architect") },
+      { id: "a-graph", label: "İçerik İlişki Grafiği", group: "Aksiyonlar", run: () => go("/admin/graph") },
       { id: "a-site", label: "Siteyi Aç (yeni sekme)", group: "Aksiyonlar", run: () => window.open("/tr", "_blank") },
       { id: "a-logout", label: "Çıkış Yap", group: "Aksiyonlar", run: () => logout() },
     ],

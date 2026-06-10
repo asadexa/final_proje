@@ -335,6 +335,77 @@ export class ContentService {
     });
   }
 
+  // Iliski grafigi: dugum = entry; kenar = blok icindeki ic link veya ceviri grubu.
+  async contentGraph() {
+    const entries = await this.prisma.entry.findMany({
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        type: true,
+        localeCode: true,
+        groupId: true,
+        status: true,
+        blocks: { select: { data: true } },
+      },
+    });
+    const bySlug = new Map<string, string>(); // "locale:slug" -> id
+    for (const e of entries) bySlug.set(`${e.localeCode}:${e.slug}`, e.id);
+
+    // blok verisindeki tum ic linkleri topla (/tr/... | /en/...)
+    const collectHrefs = (v: unknown, out: string[]): void => {
+      if (typeof v === 'string') {
+        if (/^\/(tr|en)\/[a-z0-9-]+/.test(v)) out.push(v);
+        return;
+      }
+      if (Array.isArray(v)) {
+        for (const item of v) collectHrefs(item, out);
+        return;
+      }
+      if (v && typeof v === 'object') {
+        for (const val of Object.values(v)) collectHrefs(val, out);
+      }
+    };
+
+    const links: Array<{ source: string; target: string; kind: 'link' | 'translation' }> = [];
+    const seen = new Set<string>();
+    for (const e of entries) {
+      const hrefs: string[] = [];
+      for (const b of e.blocks) collectHrefs(b.data, hrefs);
+      for (const href of hrefs) {
+        const m = /^\/(tr|en)\/([a-z0-9-]+)/.exec(href);
+        if (!m) continue;
+        const targetId = bySlug.get(`${m[1]}:${m[2]}`);
+        if (!targetId || targetId === e.id) continue;
+        const key = `${e.id}->${targetId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        links.push({ source: e.id, target: targetId, kind: 'link' });
+      }
+    }
+    // ceviri kenarlari (ayni grup, tek yonde bir kez)
+    const byGroup = new Map<string, string[]>();
+    for (const e of entries) {
+      const arr = byGroup.get(e.groupId) ?? [];
+      arr.push(e.id);
+      byGroup.set(e.groupId, arr);
+    }
+    for (const ids of byGroup.values()) {
+      for (let i = 1; i < ids.length; i++) {
+        links.push({ source: ids[0], target: ids[i], kind: 'translation' });
+      }
+    }
+    const nodes = entries.map((e) => ({
+      id: e.id,
+      slug: e.slug,
+      title: e.title,
+      type: e.type,
+      localeCode: e.localeCode,
+      status: e.status,
+    }));
+    return { nodes, links };
+  }
+
   // Icerik Saglik Denetimi: kural tabanli SEO/erisilebilirlik/UX bulgulari.
   async healthCheck(id: string) {
     const entry = await this.findOne(id);

@@ -157,3 +157,13 @@
 | **3+4 Time Machine + Diff** | Versiyon altyapisi (snapshot/restore/audit) zaten vardi -> yalniz UI + 1 endpoint (GET version detayi). Diff motoru saf fonksiyon (lib/diff.ts): JSON flatten -> path bazli karsilastirma; blok eslestirme INDEKS bazli (tasima = sil+ekle gorunur — bilincli sadelik, aciklanabilirlik) |
 | **10 Command Palette** | Kutuphanesiz fuzzy (ardisik eslesme bonusu); acilista tek seferlik icerik/form/medya indeksi; Ctrl+K global |
 | **1 Gorsel Editor (Webflow-lite)** | Tam ekran mod: solda GERCEK bilesenlerle canli onizleme (zoom .62 / mobil 390px), bloga hover=cerceve, tikla=sagda formu; degisiklik ANINDA yansir (ayni React state, sunucu turu yok). Undo/redo: snapshot stack + 700ms birlestirme (tus vurusu basina adim olmaz), Ctrl+Z/Ctrl+Shift+Z. BILINCLI SAPMA: metin contentEditable ile sayfa ustunde degil, yan panelde duzenlenir -> Zod validasyonu + veri butunlugu korunur (contentEditable -> blok verisine geri esleme kirilgan). React compiler dersi: render'da ref okunmaz -> canUndo/canRedo state bayraklari |
+
+## Yeni ozellik paketi 2. yarisi (2026-06-10)
+
+| Ozellik | Karar / Nasil |
+|------|-------|
+| **2 SSE canli sync** | SSE secimi (WebSocket DEGIL): tek yonlu yayin yeterli, EventSource native auto-reconnect, proxy/CORS dostu. EventsModule global; ContentService 5 noktadan emit (yalniz meta + degisen blok tipleri — optimizasyon). Onizleme sayfasi eslesen slug'da router.refresh() — yenileme yok. Durum noktasi + son olay bilgisi bantta |
+| **7 Saglik Denetimi** | AI'siz KURAL TABANLI (deterministik = guvenilir demo): 10 kural (meta desc, baslik uzunlugu, noindex, goreli canonical, ic ice veride alt'siz gorsel, CTA'siz sayfa, urunde FAQ/GEO, RICH_TEXT h1, bloksuz). 11 unit test (apps/api/test — prod tsc disinda). Gercek veride anlamli bulgular (PAM meta 162kr) |
+| **13 Onay akisi lite** | REVIEW enum + sunucuda rol zorlamasi (EDITOR PUBLISHED/SCHEDULED yapamaz - 403); UI rol-farkindali (getRole localStorage — yalniz gorunum, gercek yetki sunucuda). editor@kron.local seed kullanicisi. Audit: entry.review-request |
+| **6 AI Site Architect** | GUVENLIK MODELI: LLM ciktisindaki her blok validateBlockData'dan (Zod) gecmeden DB'ye yazilamaz — "AI'a sema dayatma" hikayesi. Resmi @anthropic-ai/sdk, claude-opus-4-8, adaptive thinking (claude-api skill referansiyla yazildi). Key yoksa deterministik SABLON modu (demo gunu dis bagimlilik riski sifir); UI rozeti modu gosterir |
+| **12 Iliski grafigi** | Kutuphanesiz SVG (tip kolonlari + locale alt-kolonu); kenarlar: blok verisinden regex ile ic linkler (/tr|en/slug) + ceviri gruplari (kesikli). Yetim tespiti (gelen linki olmayan, kirmizi halka). Zoom=viewBox/tekerlek, pan=surukle. NestJS dersi: statik 'graph' yolu ':id' parametreli yoldan ONCE tanimlanmali |

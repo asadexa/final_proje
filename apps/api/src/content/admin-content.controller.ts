@@ -39,6 +39,14 @@ export class AdminContentController {
     return this.content.findAll(query);
   }
 
+  // NOT: 'graph' statik yolu ':id'den ONCE tanimlanmali (NestJS bildirim sirasina bakar)
+  @Get('graph')
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Icerik iliski grafigi (dugumler + ic link/ceviri kenarlari)' })
+  graph() {
+    return this.content.contentGraph();
+  }
+
   @Get(':id')
   @Roles('ADMIN', 'EDITOR')
   @ApiOperation({ summary: 'Tek icerik (bloklar + seo + detay)' })
