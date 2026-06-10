@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { validateBlockData } from '@kron/shared';
 import { BlockType, Prisma } from '../generated/prisma/client';
+import { EventsService } from '../events/events.service';
 import { CacheService } from '../redis/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type {
@@ -24,6 +25,7 @@ export class ContentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly events: EventsService,
   ) {}
 
   private assertBlocksValid(blocks: BlockDto[] | undefined): void {
@@ -190,6 +192,7 @@ export class ContentService {
       status: entry.status,
     });
     await this.invalidatePublicCache();
+    this.events.emit({ action: 'create', entryId: entry.id, slug: entry.slug, localeCode: entry.localeCode });
     return entry;
   }
 
@@ -276,6 +279,14 @@ export class ContentService {
       status: dto.status ?? null,
     });
     await this.invalidatePublicCache();
+    // Canli senkronizasyon: yalniz degisen meta + blok tipleri yayinlanir (optimizasyon)
+    this.events.emit({
+      action: dto.status === 'PUBLISHED' ? 'publish' : 'update',
+      entryId: id,
+      slug: entry.slug,
+      localeCode: entry.localeCode,
+      changedBlocks: dto.blocks?.map((b) => b.type),
+    });
     return entry;
   }
 
@@ -284,6 +295,7 @@ export class ContentService {
     await this.audit('entry.delete', id, userId);
     await this.prisma.entry.delete({ where: { id } });
     await this.invalidatePublicCache();
+    this.events.emit({ action: 'delete', entryId: id });
     return { success: true };
   }
 
@@ -403,6 +415,7 @@ export class ContentService {
     await this.snapshotVersion(entryId, userId, `restored from v${version}`);
     await this.audit('entry.restore', entryId, userId, { fromVersion: version });
     await this.invalidatePublicCache();
+    this.events.emit({ action: 'restore', entryId });
     return this.findOne(entryId);
   }
 

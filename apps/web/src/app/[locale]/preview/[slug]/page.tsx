@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Blocks } from "@/components/blocks";
+import { PreviewLiveSync } from "@/components/preview-live-sync";
 import { getPreviewEntry } from "@/lib/api";
 import { isLocale } from "@/lib/i18n";
 
@@ -26,6 +27,8 @@ export default async function PreviewPage({
         {locale === "tr"
           ? "Önizleme modu — taslak içerik (yayında değil)"
           : "Preview mode — draft content (not published)"}
+        {/* SSE canli senkron: editor kaydedince bu sayfa kendini tazeler */}
+        <PreviewLiveSync slug={slug} locale={locale} />
       </div>
       {entry.blocks.length === 0 ? (
         /* Bloksuz icerik: bos sayfa yerine yol gosteren mesaj */

@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ContentModule } from './content/content.module';
+import { EventsModule } from './events/events.module';
 import { FormsModule } from './forms/forms.module';
 import { HealthModule } from './health/health.module';
 import { MediaModule } from './media/media.module';
@@ -28,6 +29,7 @@ import { RedisModule } from './redis/redis.module';
     ScheduleModule.forRoot(),
     RedisModule,
     PrismaModule,
+    EventsModule,
     HealthModule,
     AuthModule,
     ContentModule,
