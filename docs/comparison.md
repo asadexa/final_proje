@@ -163,6 +163,34 @@ auth, yayin akisi, cache) — bizim insa ettigimiz tam da bu.
 > degil. Ama mukerrer kutuphaneler, optimize edilmemis PNG'ler ve `srcset` eksikligi
 > dogrudan iyilestirilebilir teknik borctur — rebuild bunlardan kacinir.
 
+### Canli olcum: ayni arac, ayni makine, ayni ag (2026-06-11)
+
+Headless Chromium (1440x900) ile **ayni metodoloji** iki siteye uygulandi
+(Navigation Timing + Resource Timing). Onemli adillik notlari tablonun altinda.
+
+| Metrik (ana sayfa, soguk) | krontech.com | Rebuild `/tr` (DEV modu) |
+|---|---:|---:|
+| Tam yuklenme (load) | **13.8 s** | **1.6 s** |
+| DOM hazir | 12.2 s | 1.0 s |
+| HTTP istegi | 103 | 40 |
+| — ucuncu-parti istek | 25 | **0** |
+| — script sayisi | 34 | 4 |
+| Transfer (olculebilen) | ~6.4 MB | ~2.8 MB |
+
+| Metrik (urun sayfasi, sicak cache) | krontech `/kron-pam` | Rebuild `/en/kron-pam` |
+|---|---:|---:|
+| Tam yuklenme | 1.26 s | 1.21 s |
+| HTTP istegi | 101 | 29 |
+
+**Adillik notlari:** (1) Rebuild **DEV modunda** olculdu (minify yok, ~2.8 MB'in cogu
+gelistirme JS chunk'lari; prod build belirgin dusurur) — krontech ise prod + Cloudflare.
+Buna RAGMEN soguk yuklemede ~9x fark var. (2) krontech transfer rakami muhtemelen
+**eksik sayim** (cross-origin kaynaklarda `Timing-Allow-Origin` yoksa transferSize=0
+okunur); istek SAYILARI guvenilirdir. (3) Sicak-cache urun sayfasinda krontech makul
+hizlanir (Cloudflare + tarayici cache) — fark esas **ilk ziyarette** ve **istek
+profilinde** (34'e karsi 4 script; 25'e karsi 0 ucuncu-parti). Rebuild gorselleri artik
+`next/image` ile WebP/AVIF olarak servis edilir (dogrulandi: `image/webp`).
+
 ---
 
 ## 4. Sonuc
