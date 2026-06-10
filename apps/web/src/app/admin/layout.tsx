@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import type { ReactElement, ReactNode } from "react";
 import { AdminTopbar } from "@/components/admin/admin-topbar";
+import { CommandPalette } from "@/components/admin/command-palette";
 import "../globals.css";
 
 // Admin paneli kendi kok layout'u (public header/footer YOK, locale YOK, noindex).
@@ -22,6 +23,8 @@ export default function AdminLayout({ children }: { children: ReactNode }): Reac
     <html lang="tr" className={`${roboto.variable} h-full`}>
       <body className="min-h-full bg-surface-muted font-sans text-ink antialiased">
         <AdminTopbar />
+        {/* Ctrl+K global komut paleti */}
+        <CommandPalette />
         <main className="mx-auto max-w-[1140px] px-4 py-8 sm:px-6">{children}</main>
       </body>
     </html>
