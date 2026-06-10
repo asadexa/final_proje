@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { type ReactElement, useCallback, useEffect, useState } from "react";
 import { BLOCK_FORMS, BlockForm } from "@/components/admin/block-form";
 import { MediaPicker } from "@/components/admin/media-picker";
+import { VisualEditor, type VisualBlock } from "@/components/admin/visual-editor";
 import { adminFetch, adminRequest, getToken } from "@/lib/admin";
 import type { BlockNode, EntryStatus, SeoData } from "@/lib/types";
 
@@ -88,6 +89,8 @@ export default function EntryEditorPage(): ReactElement {
   const [saving, setSaving] = useState(false);
   // Kaydedilmemis degisiklik takibi (Onizle akisi icin)
   const [dirty, setDirty] = useState(false);
+  // Gorsel duzenleme modu (Webflow-lite): canli onizleme + tikla-duzenle
+  const [visualMode, setVisualMode] = useState(false);
   // Kapak gorseli secimi: undefined = degismedi, "" = kaldir, id = sec
   const [coverSel, setCoverSel] = useState<string | undefined>(undefined);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
@@ -165,6 +168,39 @@ export default function EntryEditorPage(): ReactElement {
       { type: "RICH_TEXT", enabled: true, mode: "form", data: { html: "<p></p>" }, dataText: '{\n  "html": "<p></p>"\n}' },
     ]);
   }
+  // Gorsel editor <-> blok state koprusu
+  function toVisual(): VisualBlock[] {
+    return blocks.map((b) => {
+      if (b.mode === "form") return { type: b.type, data: b.data };
+      try {
+        return { type: b.type, data: JSON.parse(b.dataText) as Record<string, unknown> };
+      } catch {
+        return { type: b.type, data: {} };
+      }
+    });
+  }
+  function fromVisual(vbs: VisualBlock[]): void {
+    setDirty(true);
+    setBlocks(
+      vbs.map((vb, i) => ({
+        type: vb.type,
+        enabled: blocks[i]?.enabled ?? true,
+        mode: blocks[i]?.mode ?? (BLOCK_FORMS[vb.type] ? "form" : "json"),
+        data: vb.data,
+        dataText: JSON.stringify(vb.data, null, 2),
+      })),
+    );
+  }
+  function addBlockOfType(type: string): void {
+    setDirty(true);
+    const data: Record<string, unknown> =
+      type === "RICH_TEXT" ? { html: "<p>Yeni içerik</p>" } : {};
+    setBlocks((prev) => [
+      ...prev,
+      { type, enabled: true, mode: BLOCK_FORMS[type] ? "form" : "json", data, dataText: JSON.stringify(data, null, 2) },
+    ]);
+  }
+
   // Form <-> JSON gecisi: gecerli tarafin verisini digerine tasir
   function toggleMode(i: number): void {
     setBlocks((prev) =>
@@ -286,6 +322,34 @@ export default function EntryEditorPage(): ReactElement {
   if (!entry) return <p className="text-sm text-muted">Yükleniyor...</p>;
 
   const inputCls = "w-full rounded border border-line px-3 py-2 text-sm outline-none focus:border-primary";
+
+  // Gorsel duzenleme modu tam ekran acilir (kendi arac cubugu + onizleme + panel)
+  if (visualMode) {
+    return (
+      <>
+        {toast && (
+          <div
+            role="status"
+            className={`fixed right-6 top-16 z-[60] rounded-lg px-5 py-3 text-sm font-medium text-white shadow-lg ${toast.kind === "ok" ? "bg-green-600" : "bg-red-600"}`}
+          >
+            {toast.text}
+          </div>
+        )}
+        <VisualEditor
+          blocks={toVisual()}
+          onChange={fromVisual}
+          title={entry.title}
+          saving={saving}
+          dirty={dirty}
+          onSave={() => void save()}
+          onExit={() => setVisualMode(false)}
+          onAddBlock={addBlockOfType}
+          onRemoveBlock={removeBlock}
+          onMoveBlock={moveBlock}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
@@ -541,6 +605,13 @@ export default function EntryEditorPage(): ReactElement {
             className="w-full rounded bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-60"
           >
             {saving ? "Kaydediliyor..." : "Kaydet"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setVisualMode(true)}
+            className="w-full rounded bg-dark px-4 py-2 text-sm font-medium text-white hover:bg-black"
+          >
+            🎨 Görsel Düzenle
           </button>
           <button
             type="button"

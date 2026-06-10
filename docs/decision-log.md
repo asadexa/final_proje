@@ -148,3 +148,12 @@
 | ~15dk sonra logout | Access token TTL 900s, admin istemcisinde YENILEME YOKTU. Cozum: 401'de sessiz refresh (httpOnly cookie, credentials:include — localhost:3000->4000 same-site) + retry; login'e credentials eklendi. Bonus bug: ayni saniyede uretilen refresh token'lar birebir ayni string -> tokenHash unique ihlali (500) -> payload'a rastgele `jti` |
 | CONTACT_FORM blogu render edilmiyordu | `dynamic-form.tsx`: FormDefinition'i public API'den ceker, alanlari (select options dahil) render eder + KVKK + honeypot. Artik admin'de tanimlanan HER form bir sayfaya CONTACT_FORM bloguyla eklenip aninda canlida test edilir. LOGO_CLOUD da registry'ye eklendi (eksikti). FormField'a `options[]` (DTO + tanim editorunde virgullu giris) |
 | "Gecersiz deger zaten girilemesin, uyari kutuda olsun" | (1) NORMALIZASYON: link/image alanlari her zaman tam string objesi uretir ({label,href}/{url,alt}) -> "href: expected string, received undefined" sinifi hatalar IMKANSIZ; (2) zorunlu alanlar (Zod ile esles) kirmizi cerceve + kutu icinde "Zorunlu alan — bos birakilirsa kaydedilemez" |
+
+## Yeni ozellik paketi (2026-06-10) — kullanici secimi: 8/9/5/11 haric tum liste
+
+| Ozellik | Karar / Nasil |
+|------|-------|
+| **Temel refactor (blocks-view)** | Salt-gorsel blok bilesenleri + REGISTRY ayri dosyaya cikti. TEK temel, UC tuketici: server render (public), Time Machine surum onizleme (client), gorsel editor canli onizleme (client). "Onizleme uretimle birebir" garantisinin kaynagi |
+| **3+4 Time Machine + Diff** | Versiyon altyapisi (snapshot/restore/audit) zaten vardi -> yalniz UI + 1 endpoint (GET version detayi). Diff motoru saf fonksiyon (lib/diff.ts): JSON flatten -> path bazli karsilastirma; blok eslestirme INDEKS bazli (tasima = sil+ekle gorunur — bilincli sadelik, aciklanabilirlik) |
+| **10 Command Palette** | Kutuphanesiz fuzzy (ardisik eslesme bonusu); acilista tek seferlik icerik/form/medya indeksi; Ctrl+K global |
+| **1 Gorsel Editor (Webflow-lite)** | Tam ekran mod: solda GERCEK bilesenlerle canli onizleme (zoom .62 / mobil 390px), bloga hover=cerceve, tikla=sagda formu; degisiklik ANINDA yansir (ayni React state, sunucu turu yok). Undo/redo: snapshot stack + 700ms birlestirme (tus vurusu basina adim olmaz), Ctrl+Z/Ctrl+Shift+Z. BILINCLI SAPMA: metin contentEditable ile sayfa ustunde degil, yan panelde duzenlenir -> Zod validasyonu + veri butunlugu korunur (contentEditable -> blok verisine geri esleme kirilgan). React compiler dersi: render'da ref okunmaz -> canUndo/canRedo state bayraklari |
