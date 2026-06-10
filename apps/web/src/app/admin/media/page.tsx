@@ -31,7 +31,8 @@ export default function MediaPage(): ReactElement {
       window.location.href = "/admin/login";
       return;
     }
-    void load();
+    // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
+    void Promise.resolve().then(load);
   }, [load]);
 
   async function onUpload(e: ChangeEvent<HTMLInputElement>): Promise<void> {

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactElement } from "react";
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
@@ -43,8 +44,7 @@ export function ProductCarousel({
             {/* gorsel kenarlara tasar (krontech: negatif margin) */}
             <div className="-mx-8 -mt-10 mb-1 overflow-hidden">
               {p.image?.url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.image.url} alt={p.image.alt ?? p.name} className="w-full" />
+                <Image src={p.image.url} alt={p.image.alt ?? p.name} width={760} height={428} className="h-auto w-full" />
               ) : (
                 <div className="aspect-[16/9] w-full bg-surface-muted" />
               )}

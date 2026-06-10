@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { ContactForm } from "@/components/contact-form";
@@ -153,9 +154,15 @@ export default async function ContactPage({ params }: PageProps<"/[locale]/conta
         <div className="mx-auto max-w-[1140px] px-4 sm:px-6">
           {offs.map((o, i) => (
             <div key={o.name} className="mb-9 grid md:grid-cols-2">
-              <div className={`kron-gradient-img ${i % 2 === 1 ? "md:order-2" : ""}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={o.img} alt={o.name} className="h-full w-full object-cover" />
+              <div className={`kron-gradient-img relative min-h-[220px] ${i % 2 === 1 ? "md:order-2" : ""}`}>
+                {/* fill: kapsayici boyutuna gore srcset (kron-gradient-img zaten relative) */}
+                <Image
+                  src={o.img}
+                  alt={o.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 555px"
+                  className="object-cover"
+                />
               </div>
               <div className={`flex flex-col justify-center ${i % 2 === 1 ? "md:order-1" : ""}`}>
                 <div className="border border-line bg-surface p-8">

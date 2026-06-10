@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactElement } from "react";
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
@@ -53,10 +54,11 @@ export function BlogCarouselClient({
               >
                 <div className="relative overflow-hidden">
                   {p.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={p.image}
                       alt={p.title}
+                      width={730}
+                      height={410}
                       className="aspect-[16/9] w-full object-cover transition duration-300 group-hover:scale-105"
                     />
                   ) : (

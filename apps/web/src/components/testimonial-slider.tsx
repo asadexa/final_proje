@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { ReactElement } from "react";
 import { Autoplay, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -36,8 +37,7 @@ export function TestimonialSlider({ items }: { items: TestimonialItem[] }): Reac
               <div className="grid items-center gap-10 md:grid-cols-2">
                 <div>
                   {it.image?.url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={it.image.url} alt={it.image.alt ?? it.title} className="w-full" />
+                    <Image src={it.image.url} alt={it.image.alt ?? it.title} width={735} height={500} className="h-auto w-full" />
                   )}
                 </div>
                 <div>
@@ -46,6 +46,8 @@ export function TestimonialSlider({ items }: { items: TestimonialItem[] }): Reac
                     <img
                       src={it.logo.url}
                       alt={it.logo.alt ?? ""}
+                      loading="lazy"
+                      decoding="async"
                       className="mb-4 max-h-[60px] max-w-[160px]"
                     />
                   )}

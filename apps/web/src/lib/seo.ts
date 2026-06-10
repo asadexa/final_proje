@@ -42,6 +42,12 @@ export function metadataFromEntry(entry: PublicEntry, locale: Locale, path: stri
   const canonical = seo.canonicalUrl ?? absoluteUrl(path);
   const ogTitle = seo.ogTitle ?? title;
   const ogDescription = seo.ogDescription ?? description;
+  // OG paylasim gorseli: kapak gorseli varsa MUTLAK URL'e cevrilir
+  // (Slack/WhatsApp/X onizlemeleri goreli yolu cozemez)
+  const cover = entry.coverImage?.url;
+  const ogImages = cover
+    ? [{ url: cover.startsWith("http") ? cover : absoluteUrl(cover), alt: ogTitle }]
+    : undefined;
   return {
     title,
     description: description ?? undefined,
@@ -55,8 +61,14 @@ export function metadataFromEntry(entry: PublicEntry, locale: Locale, path: stri
       url: canonical,
       siteName: SITE_NAME,
       locale: OG_LOCALE[locale],
+      images: ogImages,
     },
-    twitter: { card: "summary_large_image", title: ogTitle, description: ogDescription ?? undefined },
+    twitter: {
+      card: "summary_large_image",
+      title: ogTitle,
+      description: ogDescription ?? undefined,
+      images: ogImages?.map((i) => i.url),
+    },
   };
 }
 

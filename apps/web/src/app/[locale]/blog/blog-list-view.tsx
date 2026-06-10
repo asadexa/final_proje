@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { listEntries } from "@/lib/api";
@@ -142,10 +143,11 @@ export async function BlogListView({
                   <div key={post.id} className="clear-both min-h-[111px] pb-3">
                     <Link href={`/${locale}/${post.slug}`} className="group block">
                       {post.coverImage?.url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={post.coverImage.url}
                           alt={post.title}
+                          width={150}
+                          height={87}
                           className="float-left mb-3 mr-[15px] h-[87px] w-[150px] object-cover mix-blend-luminosity group-hover:mix-blend-normal"
                         />
                       )}
@@ -185,10 +187,12 @@ function BlogListItem({
     <article className="mb-[42px] border-b border-[#dedede]">
       <Link href={href} className="block">
         {post.coverImage?.url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={post.coverImage.url}
             alt={post.title}
+            width={730}
+            height={411}
+            sizes="(max-width: 768px) 100vw, 730px"
             className="h-[411px] w-full object-cover max-md:h-[220px]"
           />
         ) : (

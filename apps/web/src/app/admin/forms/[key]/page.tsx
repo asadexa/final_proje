@@ -40,7 +40,8 @@ export default function FormSubmissionsPage(): ReactElement {
       window.location.href = "/admin/login";
       return;
     }
-    void load();
+    // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
+    void Promise.resolve().then(load);
   }, [load]);
 
   async function setStatus(id: string, status: string): Promise<void> {

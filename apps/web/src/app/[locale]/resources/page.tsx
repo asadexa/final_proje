@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageBanner } from "@/components/page-banner";
@@ -97,8 +98,7 @@ export default async function ResourcesPage({ params }: PageProps<"/[locale]/res
               >
                 {/* gorsel kart kenarina tasar (krontech -20px margin + gradyan) */}
                 <div className="kron-gradient-img -mx-5 -mt-5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={c.img} alt={c.title} className="w-full" />
+                  <Image src={c.img} alt={c.title} width={700} height={340} className="h-auto w-full" />
                 </div>
                 {/* krontech h4 baslik = link rengi (mavi), bold */}
                 <h4 className="mt-5 text-2xl font-bold text-primary">

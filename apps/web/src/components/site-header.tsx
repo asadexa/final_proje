@@ -110,7 +110,7 @@ export function SiteHeader({ locale, dict }: { locale: Locale; dict: Dictionary 
             })}
           </nav>
 
-          {/* Sag: arama + dil */}
+          {/* Sag: arama + dil + mobil menu */}
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -120,6 +120,73 @@ export function SiteHeader({ locale, dict }: { locale: Locale; dict: Dictionary 
               <SearchIcon />
             </button>
             <LocaleSwitcher current={locale} />
+
+            {/* Mobil hamburger (lg alti) — details/summary: JS'siz, erisilebilir */}
+            <details className="group/m relative lg:hidden">
+              <summary
+                aria-label="Menü"
+                className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded text-ink-soft hover:text-primary [&::-webkit-details-marker]:hidden"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    className="group-open/m:hidden"
+                    d="M4 6h16M4 12h16M4 18h16"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    className="hidden group-open/m:block"
+                    d="M6 6l12 12M18 6L6 18"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </summary>
+              <nav className="absolute right-0 top-full z-50 max-h-[70vh] w-[280px] overflow-y-auto rounded-md border border-line bg-surface p-2 shadow-lg">
+                {NAV.map((item) => {
+                  const label = dict.nav[item.key];
+                  if (!item.children) {
+                    return (
+                      <Link
+                        key={item.key}
+                        href={`${base}/${item.slug}`}
+                        className="block rounded px-3 py-2.5 text-sm font-medium text-dark hover:bg-surface-muted hover:text-primary"
+                      >
+                        {label}
+                      </Link>
+                    );
+                  }
+                  return (
+                    <div key={item.key} className="border-b border-line/60 pb-1 last:border-0">
+                      <p className="px-3 pt-2 text-xs font-semibold uppercase text-muted">{label}</p>
+                      {item.children.map((child) =>
+                        child.href ? (
+                          <a
+                            key={child.label}
+                            href={child.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block rounded px-3 py-2 text-sm text-ink-soft hover:bg-surface-muted hover:text-primary"
+                          >
+                            {child.label}
+                          </a>
+                        ) : (
+                          <Link
+                            key={child.label}
+                            href={`${base}/${child.slug}`}
+                            className="block rounded px-3 py-2 text-sm text-ink-soft hover:bg-surface-muted hover:text-primary"
+                          >
+                            {child.label}
+                          </Link>
+                        ),
+                      )}
+                    </div>
+                  );
+                })}
+              </nav>
+            </details>
           </div>
         </div>
       </header>

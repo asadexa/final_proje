@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Blocks } from "@/components/blocks";
@@ -106,8 +107,14 @@ export default async function EntryPage({ params }: PageProps<"/[locale]/[slug]"
           </div>
           {cover && (
             <div className="mx-auto max-w-4xl px-4 pb-2 sm:px-6">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={cover} alt={entry.title} className="w-full rounded-lg object-cover" />
+              <Image
+                src={cover}
+                alt={entry.title}
+                width={896}
+                height={504}
+                sizes="(max-width: 896px) 100vw, 896px"
+                className="h-auto w-full rounded-lg object-cover"
+              />
             </div>
           )}
         </header>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactElement } from "react";
 
@@ -51,8 +52,8 @@ export function HeroSlide({ slide }: { slide: HeroSlideData }): ReactElement {
         <div className="grid w-full items-center gap-8 md:grid-cols-2">
           {text}
           <div className="hidden justify-center md:flex">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={graphic.url} alt="" className="w-full max-w-[600px]" />
+            {/* hero grafigi LCP adayi: priority ile erken yuklenir */}
+            <Image src={graphic.url} alt="" width={600} height={600} priority className="h-auto w-full max-w-[600px]" />
           </div>
         </div>
       ) : (

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactElement, ReactNode } from "react";
 import { HeroCarousel } from "./hero-carousel";
@@ -140,10 +141,13 @@ function Stats({ data }: BlockProps): ReactElement {
           {items.map((it, i) => (
             <div key={i} className="px-4">
               {it.icon?.url && (
+                // kucuk ikon: boyutlari degisken -> raw img + lazy yeterli
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={it.icon.url}
                   alt={it.icon.alt ?? it.label ?? ""}
+                  loading="lazy"
+                  decoding="async"
                   className="mx-auto mb-4 h-20 w-auto object-contain"
                 />
               )}
@@ -268,8 +272,8 @@ function ValueProp({ data }: BlockProps): ReactElement {
           </div>
           <div>
             {img?.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={img.url} alt={img.alt ?? ""} className="w-full" />
+              // next/image: otomatik WebP/AVIF + lazy + CLS korumasi (Core Web Vitals)
+              <Image src={img.url} alt={img.alt ?? ""} width={800} height={600} className="h-auto w-full" />
             ) : (
               <div className="aspect-[4/3] w-full rounded-lg bg-surface-muted" />
             )}
@@ -305,8 +309,7 @@ function CaseStudy({ data }: BlockProps): ReactElement {
           </div>
           <div className="order-1 md:order-2">
             {img?.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={img.url} alt={img.alt ?? ""} className="w-full" />
+              <Image src={img.url} alt={img.alt ?? ""} width={800} height={600} className="h-auto w-full" />
             ) : (
               <div className="aspect-[4/3] w-full rounded-lg bg-gradient-to-br from-primary/20 to-dark/10" />
             )}
@@ -345,6 +348,8 @@ function ProductTabs({ data }: BlockProps): ReactElement {
               <img
                 src={t.icon}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 className={`mr-[7px] max-h-[20px] max-w-[20px] ${t.active ? "" : "grayscale"}`}
               />
             );
@@ -385,10 +390,16 @@ function MediaText({ data }: BlockProps): ReactElement {
     <section>
       <Container className="!px-0">
         <div className="grid md:grid-cols-2">
-          <div className={`overflow-hidden ${right ? "order-1 md:order-2" : "order-1"}`}>
+          <div className={`relative min-h-[240px] overflow-hidden ${right ? "order-1 md:order-2" : "order-1"}`}>
             {img?.url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={img.url} alt={img.alt ?? str(data.title)} className="h-full w-full object-cover" />
+              // fill: konteyner boyutuna gore otomatik srcset (mobil kucuk indirir)
+              <Image
+                src={img.url}
+                alt={img.alt ?? str(data.title)}
+                fill
+                sizes="(max-width: 768px) 100vw, 570px"
+                className="object-cover"
+              />
             )}
           </div>
           <div
@@ -440,7 +451,7 @@ function LogoCloud({ data }: BlockProps): ReactElement {
           {logos.map((l, i) =>
             l.url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={l.url} alt={l.alt ?? ""} className="max-h-[60px] max-w-[160px] object-contain" />
+              <img key={i} src={l.url} alt={l.alt ?? ""} loading="lazy" decoding="async" className="max-h-[60px] max-w-[160px] object-contain" />
             ) : null,
           )}
         </div>
