@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { type ReactElement, useCallback, useEffect, useState } from "react";
 import { adminFetch, getToken } from "@/lib/admin";
 import type { BlockNode, EntryStatus, SeoData } from "@/lib/types";
@@ -21,9 +21,18 @@ const BLOCK_TYPES = [
   "CTA_BANNER",
   "CONTACT_FORM",
   "FAQ",
+  "PRODUCT_TABS",
+  "TESTIMONIAL",
 ];
 const STATUSES: EntryStatus[] = ["DRAFT", "PUBLISHED", "SCHEDULED", "ARCHIVED"];
 
+interface TranslationSibling {
+  id: string;
+  localeCode: string;
+  title: string;
+  slug: string;
+  status: EntryStatus;
+}
 interface AdminEntry {
   id: string;
   type: string;
@@ -34,9 +43,18 @@ interface AdminEntry {
   status: EntryStatus;
   publishAt?: string | null;
   localeCode: string;
+  groupId?: string;
+  group?: { entries: TranslationSibling[] };
+  coverImage?: { id: string; url: string } | null;
   blocks: BlockNode[];
   seo?: SeoData | null;
 }
+interface MediaItem {
+  id: string;
+  url: string;
+  mime: string;
+}
+const LOCALES = ["tr", "en"];
 interface BlockEdit {
   type: string;
   enabled: boolean;
@@ -50,11 +68,17 @@ interface VersionRow {
 
 export default function EntryEditorPage(): ReactElement {
   const id = (useParams().id as string) ?? "";
+  const router = useRouter();
   const [entry, setEntry] = useState<AdminEntry | null>(null);
   const [blocks, setBlocks] = useState<BlockEdit[]>([]);
   const [versions, setVersions] = useState<VersionRow[]>([]);
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
+  // Kapak gorseli secimi: undefined = degismedi, "" = kaldir, id = sec
+  const [coverSel, setCoverSel] = useState<string | undefined>(undefined);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
 
   const loadVersions = useCallback(async () => {
     const v = await adminFetch<VersionRow[]>(`/admin/entries/${id}/versions`);
@@ -65,6 +89,8 @@ export default function EntryEditorPage(): ReactElement {
     const e = await adminFetch<AdminEntry>(`/admin/entries/${id}`);
     if (e) {
       setEntry(e);
+      setCoverSel(undefined);
+      setCoverUrl(e.coverImage?.url ?? null);
       setBlocks(
         (e.blocks ?? []).map((b) => ({
           type: b.type,
@@ -137,7 +163,14 @@ export default function EntryEditorPage(): ReactElement {
       seo: {
         metaTitle: entry.seo?.metaTitle ?? undefined,
         metaDescription: entry.seo?.metaDescription ?? undefined,
+        canonicalUrl: entry.seo?.canonicalUrl ?? undefined,
+        robotsIndex: entry.seo?.robotsIndex ?? true,
+        robotsFollow: entry.seo?.robotsFollow ?? true,
+        ogTitle: entry.seo?.ogTitle ?? undefined,
+        ogDescription: entry.seo?.ogDescription ?? undefined,
       },
+      // Kapak gorseli yalnizca degistiyse gonderilir ("" = kaldir)
+      ...(coverSel !== undefined ? { coverImageId: coverSel } : {}),
     };
     const res = await adminFetch<AdminEntry>(`/admin/entries/${id}`, {
       method: "PATCH",
@@ -155,6 +188,44 @@ export default function EntryEditorPage(): ReactElement {
   async function openPreview(): Promise<void> {
     const r = await adminFetch<{ path: string }>(`/admin/entries/${id}/preview`);
     if (r) window.open(r.path, "_blank");
+  }
+
+  // Medya kutuphanesinden kapak sec (Media iliskisiyle tekrar kullanim)
+  async function openPicker(): Promise<void> {
+    const d = await adminFetch<{ items: MediaItem[] }>("/admin/media?pageSize=48");
+    setMediaItems((d?.items ?? []).filter((m) => m.mime.startsWith("image/")));
+    setPickerOpen(true);
+  }
+  function pickCover(m: MediaItem): void {
+    setCoverSel(m.id);
+    setCoverUrl(m.url);
+    setPickerOpen(false);
+  }
+
+  // Eksik dildeki cevirisini ayni TranslationGroup'a kopya taslak olarak olusturur.
+  async function createTranslation(localeCode: string): Promise<void> {
+    if (!entry) return;
+    const created = await adminFetch<{ id: string }>("/admin/entries", {
+      method: "POST",
+      body: JSON.stringify({
+        type: entry.type,
+        localeCode,
+        slug: entry.slug,
+        title: `${entry.title} (${localeCode.toUpperCase()})`,
+        status: "DRAFT",
+        groupId: entry.groupId,
+        // Blok yapisi kopyalanir; ceviride metinler duzenlenir
+        blocks: blocks.map((b, i) => {
+          try {
+            return { type: b.type, order: i, data: JSON.parse(b.dataText) as unknown };
+          } catch {
+            return { type: b.type, order: i, data: {} };
+          }
+        }),
+      }),
+    });
+    if (created) router.push(`/admin/entries/${created.id}`);
+    else setMsg("Çeviri oluşturulamadı (slug bu dilde zaten var olabilir).");
   }
 
   async function restore(version: number): Promise<void> {
@@ -211,6 +282,58 @@ export default function EntryEditorPage(): ReactElement {
               />
               Highlights (blog sidebar&apos;ında göster)
             </label>
+          )}
+          {entry.type === "POST" && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-soft">Kapak görseli</label>
+              <div className="flex items-center gap-3">
+                {coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={coverUrl} alt="kapak" className="h-16 w-28 rounded border border-line object-cover" />
+                ) : (
+                  <div className="flex h-16 w-28 items-center justify-center rounded border border-dashed border-line text-xs text-muted">
+                    yok
+                  </div>
+                )}
+                <div className="flex flex-col gap-1 text-sm">
+                  <button type="button" onClick={() => void openPicker()} className="text-left text-primary hover:underline">
+                    Kütüphaneden seç
+                  </button>
+                  {coverUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoverSel("");
+                        setCoverUrl(null);
+                      }}
+                      className="text-left text-accent hover:underline"
+                    >
+                      Kaldır
+                    </button>
+                  )}
+                </div>
+              </div>
+              {pickerOpen && (
+                <div className="mt-3 max-h-64 overflow-y-auto rounded-lg border border-line bg-surface-muted p-3">
+                  <div className="grid grid-cols-4 gap-2">
+                    {mediaItems.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => pickCover(m)}
+                        className="overflow-hidden rounded border border-line hover:border-primary"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={m.url} alt="" className="aspect-video w-full object-cover" />
+                      </button>
+                    ))}
+                    {mediaItems.length === 0 && (
+                      <p className="col-span-4 text-center text-xs text-muted">Kütüphanede görsel yok.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -278,6 +401,52 @@ export default function EntryEditorPage(): ReactElement {
               onChange={(e) => patchSeo({ metaDescription: e.target.value })}
             />
           </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-soft">
+              Canonical URL <span className="font-normal text-muted">(boş = otomatik)</span>
+            </label>
+            <input
+              className={inputCls}
+              placeholder="https://..."
+              value={entry.seo?.canonicalUrl ?? ""}
+              onChange={(e) => patchSeo({ canonicalUrl: e.target.value || null })}
+            />
+          </div>
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 text-sm text-ink-soft">
+              <input
+                type="checkbox"
+                checked={entry.seo?.robotsIndex ?? true}
+                onChange={(e) => patchSeo({ robotsIndex: e.target.checked })}
+              />
+              Index
+            </label>
+            <label className="flex items-center gap-2 text-sm text-ink-soft">
+              <input
+                type="checkbox"
+                checked={entry.seo?.robotsFollow ?? true}
+                onChange={(e) => patchSeo({ robotsFollow: e.target.checked })}
+              />
+              Follow
+            </label>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-soft">OG Title</label>
+            <input
+              className={inputCls}
+              value={entry.seo?.ogTitle ?? ""}
+              onChange={(e) => patchSeo({ ogTitle: e.target.value || null })}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-soft">OG Description</label>
+            <textarea
+              className={inputCls}
+              rows={2}
+              value={entry.seo?.ogDescription ?? ""}
+              onChange={(e) => patchSeo({ ogDescription: e.target.value || null })}
+            />
+          </div>
         </div>
       </div>
 
@@ -325,6 +494,36 @@ export default function EntryEditorPage(): ReactElement {
             Önizle
           </button>
           {msg && <p className="text-center text-sm text-ink-soft">{msg}</p>}
+        </div>
+
+        {/* Ceviri eslestirme: ayni TranslationGroup'taki kardesler + eksik dil olusturma */}
+        <div className="rounded-lg border border-line bg-surface p-4">
+          <h3 className="mb-2 text-sm font-semibold text-dark">Çeviriler</h3>
+          <ul className="space-y-2 text-sm">
+            {(entry.group?.entries ?? [])
+              .filter((s) => s.id !== entry.id)
+              .map((s) => (
+                <li key={s.id} className="flex items-center justify-between">
+                  <Link href={`/admin/entries/${s.id}`} className="text-primary hover:underline">
+                    {s.localeCode.toUpperCase()} · {s.title.slice(0, 24)}
+                  </Link>
+                  <span className="text-xs text-muted">{s.status}</span>
+                </li>
+              ))}
+            {LOCALES.filter(
+              (lc) => !(entry.group?.entries ?? []).some((s) => s.localeCode === lc),
+            ).map((lc) => (
+              <li key={lc}>
+                <button
+                  type="button"
+                  onClick={() => void createTranslation(lc)}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  + {lc.toUpperCase()} çevirisi oluştur (kopya taslak)
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="rounded-lg border border-line bg-surface p-4">

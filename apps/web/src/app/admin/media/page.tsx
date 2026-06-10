@@ -83,13 +83,23 @@ export default function MediaPage(): ReactElement {
                   onFocus={(e) => e.target.select()}
                   className="w-full rounded border border-line px-2 py-1 text-xs text-ink-soft"
                 />
-                <button
-                  type="button"
-                  onClick={() => onDelete(m.id)}
-                  className="text-xs text-accent hover:underline"
-                >
-                  Sil
-                </button>
+                <div className="flex items-center gap-3">
+                  {/* Tekrar kullanim: URL'i bloklarin image.url alanina yapistirmak icin */}
+                  <button
+                    type="button"
+                    onClick={() => void navigator.clipboard.writeText(m.url)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    URL kopyala
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(m.id)}
+                    className="text-xs text-accent hover:underline"
+                  >
+                    Sil
+                  </button>
+                </div>
               </div>
             </div>
           ))}

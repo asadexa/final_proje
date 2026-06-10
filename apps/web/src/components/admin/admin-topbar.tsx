@@ -48,6 +48,26 @@ export function AdminTopbar(): ReactElement {
               >
                 Formlar
               </Link>
+              <Link
+                href="/admin/redirects"
+                className={
+                  pathname.startsWith("/admin/redirects")
+                    ? "font-medium text-primary"
+                    : "text-ink-soft hover:text-primary"
+                }
+              >
+                Yönlendirmeler
+              </Link>
+              <Link
+                href="/admin/audit"
+                className={
+                  pathname.startsWith("/admin/audit")
+                    ? "font-medium text-primary"
+                    : "text-ink-soft hover:text-primary"
+                }
+              >
+                Denetim
+              </Link>
             </nav>
             <button
               type="button"
