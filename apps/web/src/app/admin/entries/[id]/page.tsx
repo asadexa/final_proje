@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { type ReactElement, useCallback, useEffect, useState } from "react";
-import { adminFetch, getToken } from "@/lib/admin";
+import { BLOCK_FORMS, BlockForm } from "@/components/admin/block-form";
+import { MediaPicker } from "@/components/admin/media-picker";
+import { adminFetch, adminRequest, getToken } from "@/lib/admin";
 import type { BlockNode, EntryStatus, SeoData } from "@/lib/types";
 
 const BLOCK_TYPES = [
@@ -49,16 +51,18 @@ interface AdminEntry {
   blocks: BlockNode[];
   seo?: SeoData | null;
 }
-interface MediaItem {
-  id: string;
-  url: string;
-  mime: string;
-}
 const LOCALES = ["tr", "en"];
 interface BlockEdit {
   type: string;
   enabled: boolean;
+  // Varsayilan: form modu (son-kullanici); JSON modu guc kullanici icin saklanir.
+  mode: "form" | "json";
+  data: Record<string, unknown>;
   dataText: string;
+}
+interface Toast {
+  kind: "ok" | "err";
+  text: string;
 }
 interface VersionRow {
   version: number;
@@ -72,13 +76,19 @@ export default function EntryEditorPage(): ReactElement {
   const [entry, setEntry] = useState<AdminEntry | null>(null);
   const [blocks, setBlocks] = useState<BlockEdit[]>([]);
   const [versions, setVersions] = useState<VersionRow[]>([]);
-  const [msg, setMsg] = useState("");
+  const [toast, setToast] = useState<Toast | null>(null);
   const [saving, setSaving] = useState(false);
+  // Kaydedilmemis degisiklik takibi (Onizle akisi icin)
+  const [dirty, setDirty] = useState(false);
   // Kapak gorseli secimi: undefined = degismedi, "" = kaldir, id = sec
   const [coverSel, setCoverSel] = useState<string | undefined>(undefined);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+
+  // Belirgin geri bildirim: sag-ust toast, 4sn sonra kaybolur
+  const showToast = useCallback((kind: Toast["kind"], text: string) => {
+    setToast({ kind, text });
+    window.setTimeout(() => setToast(null), 4000);
+  }, []);
 
   const loadVersions = useCallback(async () => {
     const v = await adminFetch<VersionRow[]>(`/admin/entries/${id}/versions`);
@@ -91,10 +101,14 @@ export default function EntryEditorPage(): ReactElement {
       setEntry(e);
       setCoverSel(undefined);
       setCoverUrl(e.coverImage?.url ?? null);
+      setDirty(false);
       setBlocks(
         (e.blocks ?? []).map((b) => ({
           type: b.type,
           enabled: true,
+          // Tanimli form varsa form modu, yoksa JSON fallback
+          mode: BLOCK_FORMS[b.type] ? "form" : "json",
+          data: (b.data ?? {}) as Record<string, unknown>,
           dataText: JSON.stringify(b.data, null, 2),
         })),
       );
@@ -111,15 +125,19 @@ export default function EntryEditorPage(): ReactElement {
   }, [load]);
 
   function patchEntry(p: Partial<AdminEntry>): void {
+    setDirty(true);
     setEntry((prev) => (prev ? { ...prev, ...p } : prev));
   }
   function patchSeo(p: Partial<SeoData>): void {
+    setDirty(true);
     setEntry((prev) => (prev ? { ...prev, seo: { ...(prev.seo ?? {}), ...p } } : prev));
   }
   function setBlock(i: number, p: Partial<BlockEdit>): void {
+    setDirty(true);
     setBlocks((prev) => prev.map((b, j) => (j === i ? { ...b, ...p } : b)));
   }
   function moveBlock(i: number, dir: -1 | 1): void {
+    setDirty(true);
     setBlocks((prev) => {
       const next = [...prev];
       const j = i + dir;
@@ -129,28 +147,49 @@ export default function EntryEditorPage(): ReactElement {
     });
   }
   function removeBlock(i: number): void {
+    setDirty(true);
     setBlocks((prev) => prev.filter((_, j) => j !== i));
   }
   function addBlock(): void {
-    setBlocks((prev) => [...prev, { type: "RICH_TEXT", enabled: true, dataText: "{\n  \"html\": \"<p></p>\"\n}" }]);
+    setDirty(true);
+    setBlocks((prev) => [
+      ...prev,
+      { type: "RICH_TEXT", enabled: true, mode: "form", data: { html: "<p></p>" }, dataText: '{\n  "html": "<p></p>"\n}' },
+    ]);
+  }
+  // Form <-> JSON gecisi: gecerli tarafin verisini digerine tasir
+  function toggleMode(i: number): void {
+    setBlocks((prev) =>
+      prev.map((b, j) => {
+        if (j !== i) return b;
+        if (b.mode === "form") {
+          return { ...b, mode: "json", dataText: JSON.stringify(b.data, null, 2) };
+        }
+        try {
+          return { ...b, mode: "form", data: JSON.parse(b.dataText) as Record<string, unknown> };
+        } catch {
+          showToast("err", "JSON geçersiz — düzeltin, sonra form moduna geçin.");
+          return b;
+        }
+      }),
+    );
   }
 
-  async function save(): Promise<void> {
-    if (!entry) return;
+  async function save(): Promise<boolean> {
+    if (!entry) return false;
     setSaving(true);
-    setMsg("");
     let parsedBlocks;
     try {
       parsedBlocks = blocks.map((b, i) => ({
         type: b.type,
         order: i,
         enabled: b.enabled,
-        data: JSON.parse(b.dataText) as unknown,
+        data: b.mode === "form" ? b.data : (JSON.parse(b.dataText) as unknown),
       }));
     } catch {
       setSaving(false);
-      setMsg("Hata: bir bloğun JSON verisi geçersiz.");
-      return;
+      showToast("err", "Bir bloğun JSON verisi geçersiz — kaydedilmedi.");
+      return false;
     }
     const body = {
       title: entry.title,
@@ -172,34 +211,33 @@ export default function EntryEditorPage(): ReactElement {
       // Kapak gorseli yalnizca degistiyse gonderilir ("" = kaldir)
       ...(coverSel !== undefined ? { coverImageId: coverSel } : {}),
     };
-    const res = await adminFetch<AdminEntry>(`/admin/entries/${id}`, {
+    const res = await adminRequest<AdminEntry>(`/admin/entries/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });
     setSaving(false);
-    if (res) {
-      setMsg("Kaydedildi ✓");
+    if (res.ok) {
+      showToast("ok", "Kaydedildi ✓");
       await load();
-    } else {
-      setMsg("Kaydetme başarısız (validasyon hatası olabilir).");
+      return true;
     }
+    showToast("err", `Kaydetme başarısız: ${res.message ?? "bilinmeyen hata"}`);
+    return false;
   }
 
+  // Onizleme KAYDEDILMIS hali gosterir; kaydedilmemis degisiklik varsa once kaydetmeyi onerir.
   async function openPreview(): Promise<void> {
+    if (dirty) {
+      const ok = window.confirm(
+        "Kaydedilmemiş değişiklikler var. Önizleme kaydedilmiş hali gösterir.\nÖnce kaydedilsin mi?",
+      );
+      if (ok) {
+        const saved = await save();
+        if (!saved) return;
+      }
+    }
     const r = await adminFetch<{ path: string }>(`/admin/entries/${id}/preview`);
     if (r) window.open(r.path, "_blank");
-  }
-
-  // Medya kutuphanesinden kapak sec (Media iliskisiyle tekrar kullanim)
-  async function openPicker(): Promise<void> {
-    const d = await adminFetch<{ items: MediaItem[] }>("/admin/media?pageSize=48");
-    setMediaItems((d?.items ?? []).filter((m) => m.mime.startsWith("image/")));
-    setPickerOpen(true);
-  }
-  function pickCover(m: MediaItem): void {
-    setCoverSel(m.id);
-    setCoverUrl(m.url);
-    setPickerOpen(false);
   }
 
   // Eksik dildeki cevirisini ayni TranslationGroup'a kopya taslak olarak olusturur.
@@ -225,14 +263,14 @@ export default function EntryEditorPage(): ReactElement {
       }),
     });
     if (created) router.push(`/admin/entries/${created.id}`);
-    else setMsg("Çeviri oluşturulamadı (slug bu dilde zaten var olabilir).");
+    else showToast("err", "Çeviri oluşturulamadı (slug bu dilde zaten var olabilir).");
   }
 
   async function restore(version: number): Promise<void> {
     if (!window.confirm(`v${version} sürümüne geri dönülsün mü?`)) return;
     const r = await adminFetch(`/admin/entries/${id}/versions/${version}/restore`, { method: "POST" });
     if (r) {
-      setMsg(`v${version} geri yüklendi ✓`);
+      showToast("ok", `v${version} geri yüklendi ✓`);
       await load();
     }
   }
@@ -243,6 +281,15 @@ export default function EntryEditorPage(): ReactElement {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+      {/* Belirgin geri bildirim: sag-ust sabit toast */}
+      {toast && (
+        <div
+          role="status"
+          className={`fixed right-6 top-20 z-50 rounded-lg px-5 py-3 text-sm font-medium text-white shadow-lg ${toast.kind === "ok" ? "bg-green-600" : "bg-red-600"}`}
+        >
+          {toast.text}
+        </div>
+      )}
       {/* Ana sutun */}
       <div className="space-y-6">
         <div className="flex items-center gap-3">
@@ -286,7 +333,7 @@ export default function EntryEditorPage(): ReactElement {
           {entry.type === "POST" && (
             <div>
               <label className="mb-1 block text-sm font-medium text-ink-soft">Kapak görseli</label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-start gap-3">
                 {coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={coverUrl} alt="kapak" className="h-16 w-28 rounded border border-line object-cover" />
@@ -295,44 +342,31 @@ export default function EntryEditorPage(): ReactElement {
                     yok
                   </div>
                 )}
-                <div className="flex flex-col gap-1 text-sm">
-                  <button type="button" onClick={() => void openPicker()} className="text-left text-primary hover:underline">
-                    Kütüphaneden seç
-                  </button>
+                <div className="min-w-0 grow">
+                  {/* Kutuphaneden sec + bilgisayardan yukle (MediaPicker ikisini de sunar) */}
+                  <MediaPicker
+                    onPick={(m) => {
+                      setDirty(true);
+                      setCoverSel(m.id);
+                      setCoverUrl(m.url);
+                    }}
+                    label="Kütüphaneden seç / yükle"
+                  />
                   {coverUrl && (
                     <button
                       type="button"
                       onClick={() => {
+                        setDirty(true);
                         setCoverSel("");
                         setCoverUrl(null);
                       }}
-                      className="text-left text-accent hover:underline"
+                      className="ml-4 text-sm text-accent hover:underline"
                     >
                       Kaldır
                     </button>
                   )}
                 </div>
               </div>
-              {pickerOpen && (
-                <div className="mt-3 max-h-64 overflow-y-auto rounded-lg border border-line bg-surface-muted p-3">
-                  <div className="grid grid-cols-4 gap-2">
-                    {mediaItems.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => pickCover(m)}
-                        className="overflow-hidden rounded border border-line hover:border-primary"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={m.url} alt="" className="aspect-video w-full object-cover" />
-                      </button>
-                    ))}
-                    {mediaItems.length === 0 && (
-                      <p className="col-span-4 text-center text-xs text-muted">Kütüphanede görsel yok.</p>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -360,7 +394,17 @@ export default function EntryEditorPage(): ReactElement {
                     </option>
                   ))}
                 </select>
-                <div className="ml-auto flex gap-2 text-sm">
+                <div className="ml-auto flex items-center gap-3 text-sm">
+                  {BLOCK_FORMS[b.type] && (
+                    <button
+                      type="button"
+                      onClick={() => toggleMode(i)}
+                      className="rounded border border-line px-2 py-0.5 text-xs text-ink-soft hover:border-primary hover:text-primary"
+                      title="Form ve JSON görünümü arasında geçiş"
+                    >
+                      {b.mode === "form" ? "JSON" : "Form"}
+                    </button>
+                  )}
                   <button type="button" onClick={() => moveBlock(i, -1)} className="text-ink-soft hover:text-primary">
                     ↑
                   </button>
@@ -372,11 +416,15 @@ export default function EntryEditorPage(): ReactElement {
                   </button>
                 </div>
               </div>
-              <textarea
-                className="h-32 w-full rounded border border-line p-2 font-mono text-xs outline-none focus:border-primary"
-                value={b.dataText}
-                onChange={(e) => setBlock(i, { dataText: e.target.value })}
-              />
+              {b.mode === "form" && BLOCK_FORMS[b.type] ? (
+                <BlockForm type={b.type} data={b.data} onChange={(data) => setBlock(i, { data })} />
+              ) : (
+                <textarea
+                  className="h-32 w-full rounded border border-line p-2 font-mono text-xs outline-none focus:border-primary"
+                  value={b.dataText}
+                  onChange={(e) => setBlock(i, { dataText: e.target.value })}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -488,12 +536,14 @@ export default function EntryEditorPage(): ReactElement {
           </button>
           <button
             type="button"
-            onClick={openPreview}
+            onClick={() => void openPreview()}
             className="w-full rounded border border-line px-4 py-2 text-sm font-medium text-ink-soft hover:border-primary hover:text-primary"
           >
             Önizle
           </button>
-          {msg && <p className="text-center text-sm text-ink-soft">{msg}</p>}
+          {dirty && (
+            <p className="text-center text-xs text-amber-600">Kaydedilmemiş değişiklikler var</p>
+          )}
         </div>
 
         {/* Ceviri eslestirme: ayni TranslationGroup'taki kardesler + eksik dil olusturma */}

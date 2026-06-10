@@ -128,3 +128,12 @@
 | **Audit log sayfasi** | API (`GET /admin/audit`) Faz 3'ten beri vardi; gorsel yuzu yoktu | `/admin/audit` tablosu (zaman/aksiyon/varlik/meta) + topbar "Denetim" |
 | **NestJS modul dersi** | AdminRedirectsController eklenince api crash-loop: JwtAuthGuard'in JwtService'i modul kapsaminda yok | Guard kullanan HER modul `AuthModule` import etmeli (FormsModule kalibi); RedirectsModule'e eklendi |
 | **Lint kurali uyumu** | Yeni sayfalar 2 yeni eslint hatasi getirdi (pre-existing 3'e eklenmemeli) | `set-state-in-effect` -> effect'te `Promise.resolve().then(load)`; `window.location.href` atamasi -> `useRouter().push` |
+
+## Editor UX turu — kullanici geri bildirimi (2026-06-10)
+
+| Geri bildirim | Cozum |
+|------|-------|
+| "Localden de dosya yukleyebileyim" | `media-picker.tsx`: kutuphane gridi + "Bilgisayardan yukle" TEK panelde; kapak ve blok gorselleri ayni bileseni kullanir |
+| "Bloklar cok teknik (ham JSON)" | `block-form.tsx`: 16 blok tipinin tamami icin alan tanimlari (FieldSpec) + jenerik renderer (metin/select/link/gorsel-secicili-image/satir-listesi/ic-ice). Varsayilan FORM modu; "JSON" dugmesiyle guc-kullanici moduna gecis (gecersiz JSON'dan form'a gecis engellenir). Alan tanimlari @kron/shared Zod semalarinin UI izdusumu |
+| "Kaydet'te geri bildirim yok" | (Aslinda kucuk gri yazi vardi - gozden kacti.) Sag-ust sabit TOAST (yesil/kirmizi, 4sn) + `adminRequest` helper API hata MESAJINI tasir (adminFetch yutuyordu) |
+| "Onizleme hep ayni sayfa" | Teshis: link uretimi DOGRUYDU (icerik basina farkli, E2E ile kanitlandi). Iki gercek neden: (1) kullanicinin yeni actigi kayitlar bloksuz -> bos sablon; (2) onizleme KAYDEDILMIS hali gosterir, kaydetmeden Onizle = eski icerik. Cozum: dirty takibi + "Kaydedilmemis degisiklikler var" uyarisi + Onizle'de once-kaydet onayi |

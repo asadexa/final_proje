@@ -57,6 +57,36 @@ export async function adminFetch<T>(path: string, init?: RequestInit): Promise<T
   return (await res.json()) as T;
 }
 
+// adminFetch hata govdesini yutar; bu varyant API'nin dondurdugu mesaji da tasir
+// (editor "Kaydet" gibi kullaniciya neden gostermek isteyen yerler icin).
+export async function adminRequest<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<{ ok: boolean; data?: T; message?: string }> {
+  const token = getToken();
+  const res = await fetch(`${API}/api${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window !== "undefined") window.location.href = "/admin/login";
+    return { ok: false, message: "Oturum süresi doldu." };
+  }
+  const body = (await res.json().catch(() => null)) as
+    | (T & { message?: string | string[] })
+    | null;
+  if (!res.ok) {
+    const m = body?.message;
+    return { ok: false, message: Array.isArray(m) ? m.join("; ") : (m ?? `HTTP ${res.status}`) };
+  }
+  return { ok: true, data: (body ?? {}) as T };
+}
+
 // Bearer'li dosya indirme (CSV export) -> blob -> tarayicida indir.
 export async function adminDownload(path: string, filename: string): Promise<void> {
   const token = getToken();
