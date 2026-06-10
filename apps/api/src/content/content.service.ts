@@ -218,7 +218,16 @@ export class ContentService {
         seo: true,
         product: true,
         post: true,
+        coverImage: true,
         categories: { include: { category: true } },
+        // Ceviri eslestirme: ayni TranslationGroup'taki kardesler (admin paneli icin)
+        group: {
+          include: {
+            entries: {
+              select: { id: true, localeCode: true, title: true, slug: true, status: true },
+            },
+          },
+        },
       },
     });
     if (!entry) throw new NotFoundException('Icerik bulunamadi.');
@@ -250,6 +259,12 @@ export class ContentService {
     }
     if (dto.seo) {
       data.seo = { upsert: { create: dto.seo, update: dto.seo } };
+    }
+    // Medya tekrar kullanimi: kapak gorseli Media iliskisiyle baglanir ('' = kaldir)
+    if (dto.coverImageId !== undefined) {
+      data.coverImage = dto.coverImageId
+        ? { connect: { id: dto.coverImageId } }
+        : { disconnect: true };
     }
     const entry = await this.prisma.entry.update({
       where: { id },

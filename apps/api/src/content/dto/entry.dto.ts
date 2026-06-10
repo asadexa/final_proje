@@ -115,6 +115,11 @@ export class CreateEntryDto {
   @IsArray()
   @IsString({ each: true })
   categoryIds?: string[];
+
+  @ApiPropertyOptional({ description: 'Kapak gorseli (Media id; bos string = kaldir)' })
+  @IsOptional()
+  @IsString()
+  coverImageId?: string;
 }
 
 export class UpdateEntryDto extends PartialType(CreateEntryDto) {}

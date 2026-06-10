@@ -1,10 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Query, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { UpdateSubmissionDto } from './dto/form.dto';
+import {
+  CreateFormDefinitionDto,
+  UpdateFormDefinitionDto,
+  UpdateSubmissionDto,
+} from './dto/form.dto';
 import { FormsService } from './forms.service';
 
 @ApiTags('forms (admin)')
@@ -19,6 +23,20 @@ export class AdminFormsController {
   @ApiOperation({ summary: 'Form tanimlarini listele' })
   list() {
     return this.forms.listDefinitions();
+  }
+
+  @Post()
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Form tanimi olustur' })
+  createDefinition(@Body() dto: CreateFormDefinitionDto) {
+    return this.forms.createDefinition(dto);
+  }
+
+  @Patch(':key')
+  @Roles('ADMIN', 'EDITOR')
+  @ApiOperation({ summary: 'Form tanimini guncelle (alanlar/enable dahil)' })
+  updateDefinition(@Param('key') key: string, @Body() dto: UpdateFormDefinitionDto) {
+    return this.forms.updateDefinition(key, dto);
   }
 
   @Get(':key/submissions/export')

@@ -1,5 +1,15 @@
-import { IsBoolean, IsIn, IsObject, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsObject,
+  IsOptional,
+  IsString,
+  Matches,
+  ValidateNested,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
 export class SubmitFormDto {
   @ApiProperty({ description: 'Form alan degerleri (name -> value)' })
@@ -26,3 +36,51 @@ export class UpdateSubmissionDto {
   @IsIn(['NEW', 'READ', 'SPAM', 'ARCHIVED'])
   status!: string;
 }
+
+// ----------------------- Form tanimlama (admin) -----------------------
+
+export class FormFieldDto {
+  @ApiProperty({ example: 'email', description: 'Alan adi (data anahtari)' })
+  @IsString()
+  @Matches(/^[a-zA-Z][a-zA-Z0-9_-]*$/, { message: 'name harf ile baslamali, alfasayisal olmali' })
+  name!: string;
+
+  @ApiPropertyOptional({ example: 'E-posta' })
+  @IsOptional()
+  @IsString()
+  label?: string;
+
+  @ApiPropertyOptional({ enum: ['text', 'email', 'tel', 'textarea', 'select'], default: 'text' })
+  @IsOptional()
+  @IsIn(['text', 'email', 'tel', 'textarea', 'select'])
+  type?: string;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  required?: boolean;
+}
+
+export class CreateFormDefinitionDto {
+  @ApiProperty({ example: 'newsletter' })
+  @IsString()
+  @Matches(/^[a-z][a-z0-9-]*$/, { message: 'key kucuk-harf/kebab-case olmali' })
+  key!: string;
+
+  @ApiProperty({ example: 'Bulten Kaydi' })
+  @IsString()
+  name!: string;
+
+  @ApiProperty({ type: [FormFieldDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => FormFieldDto)
+  fields!: FormFieldDto[];
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+}
+
+export class UpdateFormDefinitionDto extends PartialType(CreateFormDefinitionDto) {}

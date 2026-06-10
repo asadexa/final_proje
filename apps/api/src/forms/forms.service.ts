@@ -90,6 +90,51 @@ export class FormsService {
     return this.prisma.formDefinition.findMany({ orderBy: { key: 'asc' } });
   }
 
+  // Form tanimlama (PDF "Form Yonetimi: Form tanimlama") — admin'den olustur/duzenle.
+  async createDefinition(dto: {
+    key: string;
+    name: string;
+    fields: FieldDef[];
+    enabled?: boolean;
+  }) {
+    const existing = await this.prisma.formDefinition.findUnique({ where: { key: dto.key } });
+    if (existing) throw new BadRequestException('Bu key ile bir form zaten var.');
+    this.validateFieldNames(dto.fields);
+    return this.prisma.formDefinition.create({
+      data: {
+        key: dto.key,
+        name: dto.name,
+        fields: dto.fields as unknown as Prisma.InputJsonValue,
+        enabled: dto.enabled ?? true,
+      },
+    });
+  }
+
+  async updateDefinition(
+    key: string,
+    dto: { name?: string; fields?: FieldDef[]; enabled?: boolean },
+  ) {
+    const existing = await this.prisma.formDefinition.findUnique({ where: { key } });
+    if (!existing) throw new NotFoundException('Form bulunamadi.');
+    if (dto.fields) this.validateFieldNames(dto.fields);
+    return this.prisma.formDefinition.update({
+      where: { key },
+      data: {
+        name: dto.name,
+        fields: dto.fields ? (dto.fields as unknown as Prisma.InputJsonValue) : undefined,
+        enabled: dto.enabled,
+      },
+    });
+  }
+
+  private validateFieldNames(fields: FieldDef[]): void {
+    if (fields.length === 0) throw new BadRequestException('En az bir alan gerekli.');
+    const names = fields.map((f) => f.name);
+    if (new Set(names).size !== names.length) {
+      throw new BadRequestException('Alan adlari benzersiz olmali.');
+    }
+  }
+
   async listSubmissions(key: string, page = 1, pageSize = 50) {
     const def = await this.prisma.formDefinition.findUnique({ where: { key } });
     if (!def) throw new NotFoundException('Form bulunamadi.');
