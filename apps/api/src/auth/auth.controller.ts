@@ -16,6 +16,10 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import type { AuthUser } from './types';
 
+interface CookieRequest extends Request {
+  cookies: Record<string, string>;
+}
+
 const isProd = process.env.NODE_ENV === 'production';
 
 @ApiTags('auth')
@@ -23,7 +27,11 @@ const isProd = process.env.NODE_ENV === 'production';
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
-  private setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
+  private setAuthCookies(
+    res: Response,
+    accessToken: string,
+    refreshToken: string,
+  ): void {
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       sameSite: 'lax',
@@ -56,14 +64,16 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @ApiOperation({ summary: 'Access token yenile (refresh cookie ile, rotation)' })
+  @ApiOperation({
+    summary: 'Access token yenile (refresh cookie ile, rotation)',
+  })
   async refresh(
-    @Req() req: Request,
+    @Req() req: CookieRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ accessToken: string }> {
-    const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
-    const body = req.body as { refreshToken?: string } | undefined;
-    const token = cookies?.['refresh_token'] ?? body?.refreshToken;
+    const token =
+      req.cookies?.['refresh_token'] ??
+      (req.body as { refreshToken?: string } | undefined)?.refreshToken;
     if (!token) throw new UnauthorizedException('Refresh token bulunamadi.');
     const { accessToken, refreshToken } = await this.auth.refresh(token);
     this.setAuthCookies(res, accessToken, refreshToken);
@@ -71,13 +81,14 @@ export class AuthController {
   }
 
   @Post('logout')
-  @ApiOperation({ summary: 'Cikis yap (refresh token revoke + cookie temizle)' })
+  @ApiOperation({
+    summary: 'Cikis yap (refresh token revoke + cookie temizle)',
+  })
   async logout(
-    @Req() req: Request,
+    @Req() req: CookieRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ success: true }> {
-    const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
-    await this.auth.logout(cookies?.['refresh_token']);
+    await this.auth.logout(req.cookies?.['refresh_token']);
     res.clearCookie('access_token', { path: '/' });
     res.clearCookie('refresh_token', { path: '/api/auth' });
     return { success: true };

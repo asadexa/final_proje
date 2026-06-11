@@ -35,7 +35,10 @@ export class BlockDto {
   @IsBoolean()
   enabled?: boolean;
 
-  @ApiProperty({ type: Object, description: 'Blok tipine gore data (Zod ile dogrulanir)' })
+  @ApiProperty({
+    type: Object,
+    description: 'Blok tipine gore data (Zod ile dogrulanir)',
+  })
   @IsObject()
   data!: Record<string, unknown>;
 }
@@ -116,7 +119,9 @@ export class CreateEntryDto {
   @IsString({ each: true })
   categoryIds?: string[];
 
-  @ApiPropertyOptional({ description: 'Kapak gorseli (Media id; bos string = kaldir)' })
+  @ApiPropertyOptional({
+    description: 'Kapak gorseli (Media id; bos string = kaldir)',
+  })
   @IsOptional()
   @IsString()
   coverImageId?: string;
@@ -144,7 +149,9 @@ export class ListQueryDto {
   @Min(1)
   pageSize?: number;
 
-  @ApiPropertyOptional({ description: 'Sadece featured (Highlights) icerikler' })
+  @ApiPropertyOptional({
+    description: 'Sadece featured (Highlights) icerikler',
+  })
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true' || value === '1')
   @IsBoolean()

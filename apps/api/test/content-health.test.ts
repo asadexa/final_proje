@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { checkContentHealth, type HealthInput } from '../src/content/content-health';
+import {
+  checkContentHealth,
+  type HealthInput,
+} from '../src/content/content-health';
 
 function base(over: Partial<HealthInput> = {}): HealthInput {
   return {
@@ -7,9 +10,15 @@ function base(over: Partial<HealthInput> = {}): HealthInput {
     title: 'Test Sayfasi',
     excerpt: 'ozet',
     blocks: [
-      { type: 'HERO', data: { title: 'Merhaba', cta: { label: 'Git', href: '/tr/contact' } } },
+      {
+        type: 'HERO',
+        data: { title: 'Merhaba', cta: { label: 'Git', href: '/tr/contact' } },
+      },
     ],
-    seo: { metaDescription: 'Elli karakterden uzun, makul uzunlukta bir meta aciklamasi ornegi.' },
+    seo: {
+      metaDescription:
+        'Elli karakterden uzun, makul uzunlukta bir meta aciklamasi ornegi.',
+    },
     ...over,
   };
 }
@@ -33,7 +42,9 @@ describe('checkContentHealth', () => {
   });
 
   it('uzun meta description uyarir', () => {
-    expect(codes(base({ seo: { metaDescription: 'x'.repeat(200) } }))).toContain('meta-desc-long');
+    expect(
+      codes(base({ seo: { metaDescription: 'x'.repeat(200) } })),
+    ).toContain('meta-desc-long');
   });
 
   it('noindex bilincli mi diye uyarir', () => {
@@ -44,14 +55,18 @@ describe('checkContentHealth', () => {
   it('goreli canonical error verir', () => {
     const seo = { metaDescription: 'x'.repeat(60), canonicalUrl: '/tr/sayfa' };
     const f = checkContentHealth(base({ seo }));
-    expect(f.find((x) => x.code === 'canonical-relative')?.severity).toBe('error');
+    expect(f.find((x) => x.code === 'canonical-relative')?.severity).toBe(
+      'error',
+    );
   });
 
   it('alt metinsiz gorseli ic ice veride bile bulur', () => {
     const blocks = [
       {
         type: 'PRODUCT_SHOWCASE',
-        data: { products: [{ name: 'P', href: '/x', image: { url: '/a.jpg' } }] },
+        data: {
+          products: [{ name: 'P', href: '/x', image: { url: '/a.jpg' } }],
+        },
       },
     ];
     const f = checkContentHealth(base({ blocks }));
@@ -79,6 +94,8 @@ describe('checkContentHealth', () => {
   });
 
   it('ozetsiz POST uyarir', () => {
-    expect(codes(base({ type: 'POST', excerpt: '' }))).toContain('excerpt-missing');
+    expect(codes(base({ type: 'POST', excerpt: '' }))).toContain(
+      'excerpt-missing',
+    );
   });
 });

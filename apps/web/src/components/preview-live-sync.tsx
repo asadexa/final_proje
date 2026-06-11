@@ -24,7 +24,9 @@ export function PreviewLiveSync({ slug, locale }: { slug: string; locale: string
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    const es = new EventSource(`${API}/api/events/content`);
+    // withCredentials: SSE ucu kimlik dogruluyor (httpOnly cookie). Giris yapmamis
+    // izleyicide baglanti reddedilir -> zarif dusus (durum: reconnecting), sayfa calisir.
+    const es = new EventSource(`${API}/api/events/content`, { withCredentials: true });
     esRef.current = es;
     es.onopen = () => setStatus("open");
     es.onerror = () => setStatus("reconnecting"); // EventSource kendisi tekrar baglanir

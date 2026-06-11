@@ -42,7 +42,22 @@ export class MediaController {
     },
   })
   @ApiOperation({ summary: 'Dosya yukle (S3/MinIO) + medya kaydi' })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      // DoS/bellek korumasi: multer memory storage kullaniyoruz, 10MB ust sinir.
+      limits: { fileSize: 10 * 1024 * 1024 },
+      // Ilk kapi: client'in bildirdigi mime image/* degilse reddet (asil dogrulama
+      // magic-byte ile servis katmaninda yapilir; bu hizli on-eleme).
+      fileFilter: (_req, file, cb) => {
+        if (/^image\//.test(file.mimetype)) cb(null, true);
+        else
+          cb(
+            new BadRequestException('Yalniz gorsel dosyalari yuklenebilir.'),
+            false,
+          );
+      },
+    }),
+  )
   upload(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: AuthUser,

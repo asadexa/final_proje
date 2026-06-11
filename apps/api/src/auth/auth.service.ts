@@ -57,7 +57,10 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async login(email: string, password: string): Promise<Tokens & { user: AuthUser }> {
+  async login(
+    email: string,
+    password: string,
+  ): Promise<Tokens & { user: AuthUser }> {
     const user = await this.validateUser(email, password);
     const tokens = await this.issueTokens(user);
     return { ...tokens, user };
@@ -67,9 +70,12 @@ export class AuthService {
   async refresh(refreshToken: string): Promise<Tokens> {
     let sub: string;
     try {
-      const payload = await this.jwt.verifyAsync<{ sub: string }>(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
-      });
+      const payload = await this.jwt.verifyAsync<{ sub: string }>(
+        refreshToken,
+        {
+          secret: process.env.JWT_REFRESH_SECRET,
+        },
+      );
       sub = payload.sub;
     } catch {
       throw new UnauthorizedException('Gecersiz refresh token.');
@@ -79,7 +85,9 @@ export class AuthService {
       where: { tokenHash: this.hashToken(refreshToken) },
     });
     if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh token gecersiz veya suresi dolmus.');
+      throw new UnauthorizedException(
+        'Refresh token gecersiz veya suresi dolmus.',
+      );
     }
     await this.prisma.refreshToken.update({
       where: { id: stored.id },
@@ -88,7 +96,11 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { id: sub } });
     if (!user) throw new UnauthorizedException('Kullanici bulunamadi.');
-    return this.issueTokens({ id: user.id, email: user.email, role: user.role });
+    return this.issueTokens({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
   }
 
   async logout(refreshToken: string | undefined): Promise<void> {

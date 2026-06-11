@@ -9,7 +9,11 @@ import { PublishScheduler } from './publish.scheduler';
 // AuthModule: admin uclari icin JwtAuthGuard + RolesGuard (JwtService bagimliligi).
 @Module({
   imports: [AuthModule],
-  controllers: [ContentController, AdminContentController, AdminAuditController],
+  controllers: [
+    ContentController,
+    AdminContentController,
+    AdminAuditController,
+  ],
   providers: [ContentService, PublishScheduler],
   exports: [ContentService],
 })

@@ -20,7 +20,9 @@ export class SubmitFormDto {
   @IsBoolean()
   consent!: boolean;
 
-  @ApiPropertyOptional({ description: 'Honeypot (gizli alan; bot doldurursa spam)' })
+  @ApiPropertyOptional({
+    description: 'Honeypot (gizli alan; bot doldurursa spam)',
+  })
   @IsOptional()
   @IsString()
   hp?: string;
@@ -42,7 +44,9 @@ export class UpdateSubmissionDto {
 export class FormFieldDto {
   @ApiProperty({ example: 'email', description: 'Alan adi (data anahtari)' })
   @IsString()
-  @Matches(/^[a-zA-Z][a-zA-Z0-9_-]*$/, { message: 'name harf ile baslamali, alfasayisal olmali' })
+  @Matches(/^[a-zA-Z][a-zA-Z0-9_-]*$/, {
+    message: 'name harf ile baslamali, alfasayisal olmali',
+  })
   name!: string;
 
   @ApiPropertyOptional({ example: 'E-posta' })
@@ -50,7 +54,10 @@ export class FormFieldDto {
   @IsString()
   label?: string;
 
-  @ApiPropertyOptional({ enum: ['text', 'email', 'tel', 'textarea', 'select'], default: 'text' })
+  @ApiPropertyOptional({
+    enum: ['text', 'email', 'tel', 'textarea', 'select'],
+    default: 'text',
+  })
   @IsOptional()
   @IsIn(['text', 'email', 'tel', 'textarea', 'select'])
   type?: string;
@@ -60,7 +67,10 @@ export class FormFieldDto {
   @IsBoolean()
   required?: boolean;
 
-  @ApiPropertyOptional({ type: [String], description: 'select tipi icin secenekler' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'select tipi icin secenekler',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -89,4 +99,6 @@ export class CreateFormDefinitionDto {
   enabled?: boolean;
 }
 
-export class UpdateFormDefinitionDto extends PartialType(CreateFormDefinitionDto) {}
+export class UpdateFormDefinitionDto extends PartialType(
+  CreateFormDefinitionDto,
+) {}

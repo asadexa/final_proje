@@ -9,7 +9,9 @@ export class ContentController {
   constructor(private readonly content: ContentService) {}
 
   @Get('preview/:locale/:slug')
-  @ApiOperation({ summary: 'Onizleme: imzali jetonla taslak dahil icerik (cache yok)' })
+  @ApiOperation({
+    summary: 'Onizleme: imzali jetonla taslak dahil icerik (cache yok)',
+  })
   preview(
     @Param('locale') locale: string,
     @Param('slug') slug: string,
@@ -19,13 +21,17 @@ export class ContentController {
   }
 
   @Get(':locale')
-  @ApiOperation({ summary: 'Yayindaki icerikleri listele (tip filtreli: blog/urun)' })
+  @ApiOperation({
+    summary: 'Yayindaki icerikleri listele (tip filtreli: blog/urun)',
+  })
   list(@Param('locale') locale: string, @Query() query: ListQueryDto) {
     return this.content.listPublic(locale, query);
   }
 
   @Get(':locale/:slug')
-  @ApiOperation({ summary: 'Slug ile yayindaki icerigi cozumle (bloklar + seo + hreflang)' })
+  @ApiOperation({
+    summary: 'Slug ile yayindaki icerigi cozumle (bloklar + seo + hreflang)',
+  })
   resolve(@Param('locale') locale: string, @Param('slug') slug: string) {
     return this.content.resolve(locale, slug);
   }

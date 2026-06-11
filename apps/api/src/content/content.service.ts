@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { validateBlockData } from '@kron/shared';
+import { sanitizeBlockData } from './html-sanitize';
 import { BlockType, Prisma } from '../generated/prisma/client';
 import { checkContentHealth } from './content-health';
 import { EventsService } from '../events/events.service';
@@ -33,7 +34,9 @@ export class ContentService {
     for (const b of blocks ?? []) {
       const result = validateBlockData(b.type, b.data);
       if (!result.success) {
-        throw new BadRequestException(`Blok (${b.type}) gecersiz: ${result.error}`);
+        throw new BadRequestException(
+          `Blok (${b.type}) gecersiz: ${result.error}`,
+        );
       }
     }
   }
@@ -45,7 +48,8 @@ export class ContentService {
       type: b.type,
       order: b.order,
       enabled: b.enabled ?? true,
-      data: b.data as Prisma.InputJsonValue,
+      // Zod kapisindan sonra ikinci kapi: HTML alanlarini temizle (XSS savunmasi).
+      data: sanitizeBlockData(b.type, b.data) as Prisma.InputJsonValue,
     }));
   }
 
@@ -57,7 +61,8 @@ export class ContentService {
   // Next ISR cache'ini tag bazli temizler (publish'te anlik tazeleme). Best-effort.
   private async revalidateWeb(tags: string[]): Promise<void> {
     const url = process.env.WEB_INTERNAL_URL ?? 'http://web:3000';
-    const secret = process.env.REVALIDATE_SECRET ?? 'change-me-revalidate-secret';
+    const secret =
+      process.env.REVALIDATE_SECRET ?? 'change-me-revalidate-secret';
     try {
       await fetch(`${url}/api/revalidate`, {
         method: 'POST',
@@ -72,10 +77,19 @@ export class ContentService {
   // --- Versiyonlama + audit (yayin akisi) ---
 
   // Mevcut entry'nin (blok + seo dahil) anlik goruntusunu yeni bir versiyon olarak saklar.
-  private async snapshotVersion(entryId: string, userId?: string, note?: string): Promise<void> {
+  private async snapshotVersion(
+    entryId: string,
+    userId?: string,
+    note?: string,
+  ): Promise<void> {
     const full = await this.prisma.entry.findUnique({
       where: { id: entryId },
-      include: { blocks: { orderBy: { order: 'asc' } }, seo: true, product: true, post: true },
+      include: {
+        blocks: { orderBy: { order: 'asc' } },
+        seo: true,
+        product: true,
+        post: true,
+      },
     });
     if (!full) return;
     const last = await this.prisma.contentVersion.findFirst({
@@ -85,7 +99,13 @@ export class ContentService {
     });
     const snapshot = JSON.parse(JSON.stringify(full)) as Prisma.InputJsonValue;
     await this.prisma.contentVersion.create({
-      data: { entryId, version: (last?.version ?? 0) + 1, snapshot, note, createdById: userId },
+      data: {
+        entryId,
+        version: (last?.version ?? 0) + 1,
+        snapshot,
+        note,
+        createdById: userId,
+      },
     });
   }
 
@@ -182,7 +202,11 @@ export class ContentService {
         blocks: { create: this.toBlockCreate(dto.blocks) },
         seo: dto.seo ? { create: dto.seo } : undefined,
         categories: dto.categoryIds
-          ? { create: dto.categoryIds.map((id) => ({ category: { connect: { id } } })) }
+          ? {
+              create: dto.categoryIds.map((id) => ({
+                category: { connect: { id } },
+              })),
+            }
           : undefined,
       },
       include: { blocks: { orderBy: { order: 'asc' } }, seo: true },
@@ -194,14 +218,21 @@ export class ContentService {
       status: entry.status,
     });
     await this.invalidatePublicCache();
-    this.events.emit({ action: 'create', entryId: entry.id, slug: entry.slug, localeCode: entry.localeCode });
+    this.events.emit({
+      action: 'create',
+      entryId: entry.id,
+      slug: entry.slug,
+      localeCode: entry.localeCode,
+    });
     return entry;
   }
 
   async findAll(q: ListQueryDto) {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 20;
-    const where: Prisma.EntryWhereInput = { ...(q.type ? { type: q.type } : {}) };
+    const where: Prisma.EntryWhereInput = {
+      ...(q.type ? { type: q.type } : {}),
+    };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.entry.findMany({
         where,
@@ -229,7 +260,13 @@ export class ContentService {
         group: {
           include: {
             entries: {
-              select: { id: true, localeCode: true, title: true, slug: true, status: true },
+              select: {
+                id: true,
+                localeCode: true,
+                title: true,
+                slug: true,
+                status: true,
+              },
             },
           },
         },
@@ -242,7 +279,10 @@ export class ContentService {
   // Onay akisi (lite): EDITOR yayinlayamaz/zamanlayamaz — REVIEW'a gonderir; ADMIN onaylar.
   private assertCanSetStatus(status: string | undefined, role?: string): void {
     if (!status || !role) return;
-    if (role !== 'ADMIN' && (status === 'PUBLISHED' || status === 'SCHEDULED')) {
+    if (
+      role !== 'ADMIN' &&
+      (status === 'PUBLISHED' || status === 'SCHEDULED')
+    ) {
       throw new ForbiddenException(
         "Yayınlama yetkisi ADMIN'de. İçeriği 'REVIEW' durumuyla onaya gönderin.",
       );
@@ -251,12 +291,23 @@ export class ContentService {
 
   // Seed/dogrudan-DB ile gelen iceriklerin surumu yoktur; ILK duzenlemeden once
   // mevcut (duzenleme ONCESI) hal v1 olarak saklanir — orijinal asla kaybolmaz.
-  private async ensureBaselineSnapshot(entryId: string, userId?: string): Promise<void> {
-    const count = await this.prisma.contentVersion.count({ where: { entryId } });
-    if (count === 0) await this.snapshotVersion(entryId, userId, 'ilk hal (duzenleme oncesi)');
+  private async ensureBaselineSnapshot(
+    entryId: string,
+    userId?: string,
+  ): Promise<void> {
+    const count = await this.prisma.contentVersion.count({
+      where: { entryId },
+    });
+    if (count === 0)
+      await this.snapshotVersion(entryId, userId, 'ilk hal (duzenleme oncesi)');
   }
 
-  async update(id: string, dto: UpdateEntryDto, userId?: string, userRole?: string) {
+  async update(
+    id: string,
+    dto: UpdateEntryDto,
+    userId?: string,
+    userRole?: string,
+  ) {
     await this.findOne(id);
     this.assertBlocksValid(dto.blocks);
     this.assertCanSetStatus(dto.status, userRole);
@@ -375,7 +426,11 @@ export class ContentService {
       }
     };
 
-    const links: Array<{ source: string; target: string; kind: 'link' | 'translation' }> = [];
+    const links: Array<{
+      source: string;
+      target: string;
+      kind: 'link' | 'translation';
+    }> = [];
     const seen = new Set<string>();
     for (const e of entries) {
       const hrefs: string[] = [];
@@ -503,7 +558,12 @@ export class ContentService {
     });
     if (!v) throw new NotFoundException('Versiyon bulunamadi.');
 
-    type SnapBlock = { type: string; order: number; enabled?: boolean; data: unknown };
+    type SnapBlock = {
+      type: string;
+      order: number;
+      enabled?: boolean;
+      data: unknown;
+    };
     type SnapSeo = {
       metaTitle?: string | null;
       metaDescription?: string | null;
@@ -530,17 +590,29 @@ export class ContentService {
     const currentSig = this.contentSignature({
       title: current.title,
       excerpt: current.excerpt,
-      blocks: current.blocks.map((b) => ({ type: b.type, order: b.order, data: b.data })),
-      seo: current.seo as Record<string, unknown> | null,
+      blocks: current.blocks.map((b) => ({
+        type: b.type,
+        order: b.order,
+        data: b.data,
+      })),
+      seo: current.seo,
     });
     const targetSig = this.contentSignature({
       title: snap.title,
       excerpt: snap.excerpt,
-      blocks: (snap.blocks ?? []).map((b) => ({ type: b.type, order: b.order, data: b.data })),
-      seo: (snap.seo ?? null) as Record<string, unknown> | null,
+      blocks: (snap.blocks ?? []).map((b) => ({
+        type: b.type,
+        order: b.order,
+        data: b.data,
+      })),
+      seo: snap.seo ?? null,
     });
     if (currentSig === targetSig) {
-      return { alreadyAtVersion: true, version, entry: await this.findOne(entryId) };
+      return {
+        alreadyAtVersion: true,
+        version,
+        entry: await this.findOne(entryId),
+      };
     }
 
     const seoData = snap.seo
@@ -567,35 +639,77 @@ export class ContentService {
             type: b.type as BlockType,
             order: b.order,
             enabled: b.enabled ?? true,
-            data: b.data as Prisma.InputJsonValue,
+            // Eski (fix oncesi) snapshot'lar ham HTML icerebilir; geri yazarken de temizle.
+            data: sanitizeBlockData(b.type, b.data) as Prisma.InputJsonValue,
           })),
         },
-        ...(seoData ? { seo: { upsert: { create: seoData, update: seoData } } } : {}),
+        ...(seoData
+          ? { seo: { upsert: { create: seoData, update: seoData } } }
+          : {}),
       },
     });
 
     await this.snapshotVersion(entryId, userId, `restored from v${version}`);
-    await this.audit('entry.restore', entryId, userId, { fromVersion: version });
+    await this.audit('entry.restore', entryId, userId, {
+      fromVersion: version,
+    });
     await this.invalidatePublicCache();
-    this.events.emit({ action: 'restore', entryId, slug: current.slug, localeCode: current.localeCode });
-    return { alreadyAtVersion: false, version, entry: await this.findOne(entryId) };
+    this.events.emit({
+      action: 'restore',
+      entryId,
+      slug: current.slug,
+      localeCode: current.localeCode,
+    });
+    return {
+      alreadyAtVersion: false,
+      version,
+      entry: await this.findOne(entryId),
+    };
   }
 
   // ----------------------------- PREVIEW (imzali jeton) -----------------------------
 
-  previewToken(locale: string, slug: string): string {
-    const secret = process.env.PREVIEW_SECRET ?? 'change-me-preview-secret';
-    return createHmac('sha256', secret).update(`${locale}:${slug}`).digest('hex');
+  private previewSecret(): string {
+    // Prod'da bootstrap (main.ts) bu secret'in tanimli oldugunu garanti eder
+    // (fail-fast); buradaki varsayilan yalniz local gelistirme icindir.
+    return process.env.PREVIEW_SECRET ?? 'change-me-preview-secret';
   }
 
-  private verifyPreviewToken(locale: string, slug: string, token: string): boolean {
-    const expected = Buffer.from(this.previewToken(locale, slug));
-    const got = Buffer.from(token ?? '');
+  // Imzali jeton: `<expMs>.<hmac>` — hem icerige (locale+slug) hem son kullanma
+  // zamanina baglidir. Boylece sizan bir link sonsuza kadar gecerli kalmaz.
+  previewToken(locale: string, slug: string): string {
+    const ttlMs = Number(process.env.PREVIEW_TTL ?? 7200) * 1000; // varsayilan 2 saat
+    const exp = Date.now() + ttlMs;
+    const sig = createHmac('sha256', this.previewSecret())
+      .update(`${locale}:${slug}:${exp}`)
+      .digest('hex');
+    return `${exp}.${sig}`;
+  }
+
+  private verifyPreviewToken(
+    locale: string,
+    slug: string,
+    token: string,
+  ): boolean {
+    const [expStr, sig] = (token ?? '').split('.');
+    const exp = Number(expStr);
+    if (!expStr || !sig || !Number.isFinite(exp)) return false;
+    if (Date.now() > exp) return false; // suresi dolmus
+    const expected = Buffer.from(
+      createHmac('sha256', this.previewSecret())
+        .update(`${locale}:${slug}:${exp}`)
+        .digest('hex'),
+    );
+    const got = Buffer.from(sig);
     return expected.length === got.length && timingSafeEqual(expected, got);
   }
 
   // Imzali jetonla taslak dahil icerigi cozer (status filtresi YOK, cache YOK).
-  async resolvePreview(locale: string, slug: string, token: string): Promise<unknown> {
+  async resolvePreview(
+    locale: string,
+    slug: string,
+    token: string,
+  ): Promise<unknown> {
     if (!this.verifyPreviewToken(locale, slug, token)) {
       throw new ForbiddenException('Gecersiz onizleme jetonu.');
     }
@@ -621,6 +735,9 @@ export class ContentService {
   async previewLink(id: string): Promise<{ token: string; path: string }> {
     const entry = await this.findOne(id);
     const token = this.previewToken(entry.localeCode, entry.slug);
-    return { token, path: `/${entry.localeCode}/preview/${entry.slug}?token=${token}` };
+    return {
+      token,
+      path: `/${entry.localeCode}/preview/${entry.slug}?token=${token}`,
+    };
   }
 }

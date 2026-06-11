@@ -14,7 +14,9 @@ export class CacheService implements OnModuleDestroy {
     this.redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
       maxRetriesPerRequest: 3,
     });
-    this.redis.on('error', (e: Error) => this.logger.warn(`Redis: ${e.message}`));
+    this.redis.on('error', (e: Error) =>
+      this.logger.warn(`Redis: ${e.message}`),
+    );
   }
 
   async get<T = unknown>(key: string): Promise<T | null> {

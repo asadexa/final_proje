@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CacheService } from '../redis/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -37,12 +41,23 @@ export class RedirectsService {
   }
 
   private validate(dto: RedirectInput): void {
-    if (!dto.source?.startsWith('/')) throw new BadRequestException("source '/' ile baslamali.");
-    if (!dto.destination?.startsWith('/') && !dto.destination?.startsWith('http')) {
-      throw new BadRequestException("destination '/' veya 'http' ile baslamali.");
+    if (!dto.source?.startsWith('/'))
+      throw new BadRequestException("source '/' ile baslamali.");
+    if (
+      !dto.destination?.startsWith('/') &&
+      !dto.destination?.startsWith('http')
+    ) {
+      throw new BadRequestException(
+        "destination '/' veya 'http' ile baslamali.",
+      );
     }
-    if (dto.source === dto.destination) throw new BadRequestException('source ve destination ayni olamaz.');
-    if (dto.statusCode !== undefined && dto.statusCode !== 301 && dto.statusCode !== 302) {
+    if (dto.source === dto.destination)
+      throw new BadRequestException('source ve destination ayni olamaz.');
+    if (
+      dto.statusCode !== undefined &&
+      dto.statusCode !== 301 &&
+      dto.statusCode !== 302
+    ) {
       throw new BadRequestException('statusCode 301 veya 302 olmali.');
     }
   }
@@ -65,7 +80,10 @@ export class RedirectsService {
     const existing = await this.prisma.redirect.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Yonlendirme bulunamadi.');
     this.validate({ ...existing, ...dto });
-    const updated = await this.prisma.redirect.update({ where: { id }, data: dto });
+    const updated = await this.prisma.redirect.update({
+      where: { id },
+      data: dto,
+    });
     await this.cache.del(CACHE_KEY);
     return updated;
   }

@@ -109,6 +109,14 @@ export default function EntryEditorPage(): ReactElement {
   const [coverSel, setCoverSel] = useState<string | undefined>(undefined);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
 
+  // AI Yardımcısı states
+  const [aiTab, setAiTab] = useState<"seo" | "editorial" | "translate">("seo");
+  const [aiSuggestions, setAiSuggestions] = useState<Array<{ severity: string; message: string; recommendation: string }> | null>(null);
+  const [aiSuggestionsBusy, setAiSuggestionsBusy] = useState(false);
+  const [aiReadability, setAiReadability] = useState<{ readabilityScore: number; tone: string; suggestions: string[] } | null>(null);
+  const [aiReadabilityBusy, setAiReadabilityBusy] = useState(false);
+  const [aiTranslating, setAiTranslating] = useState<string | null>(null);
+
   // Belirgin geri bildirim: sag-ust toast, 4sn sonra kaybolur
   const showToast = useCallback((kind: Toast["kind"], text: string) => {
     setToast({ kind, text });
@@ -163,7 +171,8 @@ export default function EntryEditorPage(): ReactElement {
   // editor kendini tazeler — "restore ettim ama editor eski hali gosteriyor" sorunu biter.
   useEffect(() => {
     const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-    const es = new EventSource(`${api}/api/events/content`);
+    // withCredentials: SSE ucu artik kimlik dogruluyor; httpOnly cookie gonderilir.
+    const es = new EventSource(`${api}/api/events/content`, { withCredentials: true });
     es.onmessage = (m) => {
       try {
         const e = JSON.parse(m.data as string) as { entryId?: string; action?: string };
@@ -386,6 +395,67 @@ export default function EntryEditorPage(): ReactElement {
           : `v${version} geri yüklendi ✓`,
       );
       await load();
+    }
+  }
+
+  // AI SEO suggestions
+  async function runAiSeo(): Promise<void> {
+    if (dirty) {
+      showToast("err", "AI Analizi kaydedilmiş hal üzerinde çalışır — önce kaydedin.");
+      return;
+    }
+    setAiSuggestionsBusy(true);
+    const res = await adminFetch<{ suggestions: Array<{ severity: string; message: string; recommendation: string }> }>(
+      `/admin/ai/entries/${id}/health-suggestions`
+    );
+    setAiSuggestions(res?.suggestions ?? []);
+    setAiSuggestionsBusy(false);
+  }
+
+  // AI Content / Editorial Analysis
+  async function runAiEditorial(): Promise<void> {
+    if (dirty) {
+      showToast("err", "AI Analizi kaydedilmiş hal üzerinde çalışır — önce kaydedin.");
+      return;
+    }
+    setAiReadabilityBusy(true);
+    const res = await adminFetch<{ readabilityScore: number; tone: string; suggestions: string[] }>(
+      `/admin/ai/entries/${id}/analyze`
+    );
+    setAiReadability(res ?? null);
+    setAiReadabilityBusy(false);
+  }
+
+  // AI Translation Assistant
+  async function runAiTranslate(localeCode: string): Promise<void> {
+    if (dirty) {
+      const ok = window.confirm(
+        "Kaydedilmemiş değişiklikler var. AI çevirisi kaydedilmiş en son hali kullanır.\nÖnce kaydedilsin mi?",
+      );
+      if (ok) {
+        const saved = await save();
+        if (!saved) return;
+      }
+    }
+    setAiTranslating(localeCode);
+    try {
+      const res = await adminFetch<{ entryId: string; slug: string }>(
+        `/admin/ai/entries/${id}/translate`,
+        {
+          method: "POST",
+          body: JSON.stringify({ targetLocale: localeCode }),
+        }
+      );
+      if (res && res.entryId) {
+        showToast("ok", "AI çeviri taslağı başarıyla oluşturuldu.");
+        router.push(`/admin/entries/${res.entryId}`);
+      } else {
+        showToast("err", "AI çeviri taslağı oluşturulamadı.");
+      }
+    } catch {
+      showToast("err", "AI çeviri hatası.");
+    } finally {
+      setAiTranslating(null);
     }
   }
 
@@ -760,6 +830,147 @@ export default function EntryEditorPage(): ReactElement {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+
+        {/* AI Asistanı */}
+        <div className="rounded-lg border border-line bg-surface p-4">
+          <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
+            <h3 className="text-sm font-semibold text-dark flex items-center gap-1.5">
+              <span>🤖</span> AI Asistanı
+            </h3>
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+              Claude 3.5
+            </span>
+          </div>
+
+          {/* Tab Seçimi */}
+          <div className="mb-3 grid grid-cols-3 gap-1 rounded bg-line/20 p-0.5 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setAiTab("seo")}
+              className={`rounded py-1 text-center font-medium ${aiTab === "seo" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"}`}
+            >
+              SEO
+            </button>
+            <button
+              type="button"
+              onClick={() => setAiTab("editorial")}
+              className={`rounded py-1 text-center font-medium ${aiTab === "editorial" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"}`}
+            >
+              Okunurluk
+            </button>
+            <button
+              type="button"
+              onClick={() => setAiTab("translate")}
+              className={`rounded py-1 text-center font-medium ${aiTab === "translate" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"}`}
+            >
+              Çeviri
+            </button>
+          </div>
+
+          {/* Tab İçerikleri */}
+          {aiTab === "seo" && (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => void runAiSeo()}
+                disabled={aiSuggestionsBusy}
+                className="w-full rounded bg-primary/10 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
+              >
+                {aiSuggestionsBusy ? "Öneriler Alınıyor..." : "AI SEO Önerileri Al"}
+              </button>
+              {aiSuggestions === null ? (
+                <p className="text-[11px] text-muted">SEO optimizasyonu için qualitative öneriler üretin.</p>
+              ) : aiSuggestions.length === 0 ? (
+                <p className="text-[11px] font-medium text-green-700">✓ AI ek bir SEO sorunu tespit etmedi.</p>
+              ) : (
+                <ul className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {aiSuggestions.map((s, idx) => (
+                    <li
+                      key={idx}
+                      className={`rounded p-2 text-xs border ${s.severity === "error" ? "bg-red-50/50 border-red-100 text-red-900" : s.severity === "warning" ? "bg-amber-50/50 border-amber-100 text-amber-900" : "bg-blue-50/50 border-blue-100 text-blue-900"}`}
+                    >
+                      <div className="font-semibold">{s.message}</div>
+                      <div className="mt-1 text-[10px] opacity-85">💡 {s.recommendation}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {aiTab === "editorial" && (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => void runAiEditorial()}
+                disabled={aiReadabilityBusy}
+                className="w-full rounded bg-primary/10 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
+              >
+                {aiReadabilityBusy ? "Analiz Ediliyor..." : "Editoryal Analiz Çalıştır"}
+              </button>
+              {aiReadability === null ? (
+                <p className="text-[11px] text-muted">Okunabilirlik skoru ve içerik tonunu analiz edin.</p>
+              ) : (
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between items-center bg-line/10 p-2 rounded">
+                    <span className="text-muted">Okunurluk Skoru:</span>
+                    <span className={`font-bold ${aiReadability.readabilityScore >= 80 ? "text-green-600" : aiReadability.readabilityScore >= 60 ? "text-amber-600" : "text-red-600"}`}>
+                      {aiReadability.readabilityScore} / 100
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center bg-line/10 p-2 rounded">
+                    <span className="text-muted">İçerik Tonu:</span>
+                    <span className="font-bold text-ink">{aiReadability.tone}</span>
+                  </div>
+                  {aiReadability.suggestions.length > 0 && (
+                    <div className="mt-2">
+                      <div className="font-semibold text-ink-soft mb-1">Öneriler:</div>
+                      <ul className="list-disc list-inside space-y-1 text-[11px] text-muted pl-1">
+                        {aiReadability.suggestions.map((sug, idx) => (
+                          <li key={idx} className="leading-snug">{sug}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {aiTab === "translate" && (
+            <div className="space-y-3">
+              <p className="text-[11px] text-muted leading-relaxed">
+                Eksik dil alternatifini sayfa yapısını bozmadan AI ile çevirerek oluşturun.
+              </p>
+              <ul className="space-y-1.5">
+                {LOCALES.filter(
+                  (lc) => !(entry.group?.entries ?? []).some((s) => s.localeCode === lc),
+                ).map((lc) => (
+                  <li key={lc}>
+                    <button
+                      type="button"
+                      disabled={aiTranslating !== null}
+                      onClick={() => void runAiTranslate(lc)}
+                      className="w-full text-left rounded border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink hover:border-primary hover:text-primary transition-all disabled:opacity-50 flex items-center justify-between"
+                    >
+                      <span>{lc.toUpperCase()} diline AI ile Çevir</span>
+                      {aiTranslating === lc ? (
+                        <span className="text-[10px] text-muted animate-pulse">Çevriliyor...</span>
+                      ) : (
+                        <span>✨</span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+                {LOCALES.filter(
+                  (lc) => !(entry.group?.entries ?? []).some((s) => s.localeCode === lc),
+                ).length === 0 && (
+                  <p className="text-[11px] font-medium text-green-700">✓ Tüm dil alternatifleri zaten mevcut.</p>
+                )}
+              </ul>
+            </div>
           )}
         </div>
 

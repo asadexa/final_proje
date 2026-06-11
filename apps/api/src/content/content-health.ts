@@ -25,7 +25,11 @@ export interface HealthInput {
 }
 
 // data icindeki tum {url, alt} ciftlerini bul (gorsel erisilebilirlik denetimi)
-function findImages(v: unknown, path: string, out: Array<{ path: string; url: string; alt?: string }>): void {
+function findImages(
+  v: unknown,
+  path: string,
+  out: Array<{ path: string; url: string; alt?: string }>,
+): void {
   if (!v || typeof v !== 'object') return;
   if (Array.isArray(v)) {
     v.forEach((item, i) => findImages(item, `${path}.${i}`, out));
@@ -33,9 +37,14 @@ function findImages(v: unknown, path: string, out: Array<{ path: string; url: st
   }
   const obj = v as Record<string, unknown>;
   if (typeof obj.url === 'string' && obj.url.trim() !== '') {
-    out.push({ path, url: obj.url, alt: typeof obj.alt === 'string' ? obj.alt : undefined });
+    out.push({
+      path,
+      url: obj.url,
+      alt: typeof obj.alt === 'string' ? obj.alt : undefined,
+    });
   }
-  for (const [k, val] of Object.entries(obj)) findImages(val, `${path}.${k}`, out);
+  for (const [k, val] of Object.entries(obj))
+    findImages(val, `${path}.${k}`, out);
 }
 
 // data icinde herhangi bir dolu href var mi (CTA varligi denetimi)
@@ -53,9 +62,17 @@ export function checkContentHealth(entry: HealthInput): HealthFinding[] {
 
   // --- yapi ---
   if (entry.blocks.length === 0) {
-    findings.push({ severity: 'error', code: 'no-blocks', message: 'İçerikte hiç blok yok — sayfa boş render olur.' });
+    findings.push({
+      severity: 'error',
+      code: 'no-blocks',
+      message: 'İçerikte hiç blok yok — sayfa boş render olur.',
+    });
   }
-  if ((entry.type === 'PAGE' || entry.type === 'PRODUCT') && entry.blocks[0] && entry.blocks[0].type !== 'HERO') {
+  if (
+    (entry.type === 'PAGE' || entry.type === 'PRODUCT') &&
+    entry.blocks[0] &&
+    entry.blocks[0].type !== 'HERO'
+  ) {
     findings.push({
       severity: 'info',
       code: 'no-hero-first',
@@ -67,24 +84,53 @@ export function checkContentHealth(entry: HealthInput): HealthFinding[] {
   // --- SEO ---
   const md = seo.metaDescription?.trim() ?? '';
   if (md === '') {
-    findings.push({ severity: 'warning', code: 'meta-desc-missing', message: 'Meta description boş — arama sonucu snippet’i Google’a kalır.' });
+    findings.push({
+      severity: 'warning',
+      code: 'meta-desc-missing',
+      message: 'Meta description boş — arama sonucu snippet’i Google’a kalır.',
+    });
   } else if (md.length < 50) {
-    findings.push({ severity: 'info', code: 'meta-desc-short', message: `Meta description kısa (${md.length} kr; öneri 50–160).` });
+    findings.push({
+      severity: 'info',
+      code: 'meta-desc-short',
+      message: `Meta description kısa (${md.length} kr; öneri 50–160).`,
+    });
   } else if (md.length > 160) {
-    findings.push({ severity: 'warning', code: 'meta-desc-long', message: `Meta description uzun (${md.length} kr) — arama sonucunda kesilir.` });
+    findings.push({
+      severity: 'warning',
+      code: 'meta-desc-long',
+      message: `Meta description uzun (${md.length} kr) — arama sonucunda kesilir.`,
+    });
   }
   const mt = (seo.metaTitle ?? entry.title).trim();
   if (mt.length > 60) {
-    findings.push({ severity: 'warning', code: 'title-long', message: `Başlık ${mt.length} karakter — arama sonucunda ~60’ta kesilir.` });
+    findings.push({
+      severity: 'warning',
+      code: 'title-long',
+      message: `Başlık ${mt.length} karakter — arama sonucunda ~60’ta kesilir.`,
+    });
   }
   if (seo.robotsIndex === false) {
-    findings.push({ severity: 'warning', code: 'noindex', message: 'Sayfa NOINDEX — arama motorlarına kapalı. Bilinçli mi?' });
+    findings.push({
+      severity: 'warning',
+      code: 'noindex',
+      message: 'Sayfa NOINDEX — arama motorlarına kapalı. Bilinçli mi?',
+    });
   }
   if (seo.canonicalUrl && !seo.canonicalUrl.startsWith('http')) {
-    findings.push({ severity: 'error', code: 'canonical-relative', message: 'Canonical URL mutlak (https://...) olmalı.' });
+    findings.push({
+      severity: 'error',
+      code: 'canonical-relative',
+      message: 'Canonical URL mutlak (https://...) olmalı.',
+    });
   }
   if (entry.type === 'POST' && !(entry.excerpt ?? '').trim()) {
-    findings.push({ severity: 'warning', code: 'excerpt-missing', message: 'Özet (excerpt) boş — blog listesinde ve OG açıklamasında kullanılır.' });
+    findings.push({
+      severity: 'warning',
+      code: 'excerpt-missing',
+      message:
+        'Özet (excerpt) boş — blog listesinde ve OG açıklamasında kullanılır.',
+    });
   }
 
   // --- erisilebilirlik: alt metinsiz gorseller ---
@@ -109,7 +155,12 @@ export function checkContentHealth(entry: HealthInput): HealthFinding[] {
     entry.blocks.length > 0 &&
     !entry.blocks.some((b) => hasLink(b.data))
   ) {
-    findings.push({ severity: 'warning', code: 'no-cta', message: 'Sayfada hiç bağlantı/CTA yok — ziyaretçi için sonraki adım tanımsız.' });
+    findings.push({
+      severity: 'warning',
+      code: 'no-cta',
+      message:
+        'Sayfada hiç bağlantı/CTA yok — ziyaretçi için sonraki adım tanımsız.',
+    });
   }
 
   // --- GEO ---
@@ -117,19 +168,22 @@ export function checkContentHealth(entry: HealthInput): HealthFinding[] {
     findings.push({
       severity: 'info',
       code: 'no-faq',
-      message: 'FAQ bloğu yok — FAQPage structured data üretilmiyor (GEO/LLM görünürlüğü için önerilir).',
+      message:
+        'FAQ bloğu yok — FAQPage structured data üretilmiyor (GEO/LLM görünürlüğü için önerilir).',
     });
   }
 
   // --- HTML hijyeni: RICH_TEXT icinde h1 (sayfada cift h1 riski) ---
   for (const [i, b] of entry.blocks.entries()) {
     if (b.type === 'RICH_TEXT') {
-      const html = String((b.data as Record<string, unknown> | undefined)?.html ?? '');
+      const rawHtml = (b.data as Record<string, unknown> | undefined)?.html;
+      const html = typeof rawHtml === 'string' ? rawHtml : '';
       if (/<h1[\s>]/i.test(html)) {
         findings.push({
           severity: 'warning',
           code: 'rich-text-h1',
-          message: 'RICH_TEXT içinde <h1> var — sayfada çift h1 oluşur (h2/h3 kullanın).',
+          message:
+            'RICH_TEXT içinde <h1> var — sayfada çift h1 oluşur (h2/h3 kullanın).',
           where: `blok #${i + 1}`,
         });
       }

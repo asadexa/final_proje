@@ -16,8 +16,14 @@ export class FormsController {
   }
 
   @Post(':key/submit')
-  @ApiOperation({ summary: 'Form gonder (sunucu validasyon + honeypot + KVKK)' })
-  submit(@Param('key') key: string, @Body() dto: SubmitFormDto, @Req() req: Request) {
+  @ApiOperation({
+    summary: 'Form gonder (sunucu validasyon + honeypot + KVKK)',
+  })
+  submit(
+    @Param('key') key: string,
+    @Body() dto: SubmitFormDto,
+    @Req() req: Request,
+  ) {
     const fwd = req.headers['x-forwarded-for'];
     const ip =
       (typeof fwd === 'string' ? fwd.split(',')[0]?.trim() : undefined) ||

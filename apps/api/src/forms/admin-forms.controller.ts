@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -35,7 +45,10 @@ export class AdminFormsController {
   @Patch(':key')
   @Roles('ADMIN', 'EDITOR')
   @ApiOperation({ summary: 'Form tanimini guncelle (alanlar/enable dahil)' })
-  updateDefinition(@Param('key') key: string, @Body() dto: UpdateFormDefinitionDto) {
+  updateDefinition(
+    @Param('key') key: string,
+    @Body() dto: UpdateFormDefinitionDto,
+  ) {
     return this.forms.updateDefinition(key, dto);
   }
 
@@ -45,7 +58,10 @@ export class AdminFormsController {
   async export(@Param('key') key: string, @Res() res: Response): Promise<void> {
     const csv = await this.forms.exportCsv(key);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${key}-submissions.csv"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${key}-submissions.csv"`,
+    );
     res.send(csv);
   }
 
@@ -57,12 +73,18 @@ export class AdminFormsController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
-    return this.forms.listSubmissions(key, page ? Number(page) : 1, pageSize ? Number(pageSize) : 50);
+    return this.forms.listSubmissions(
+      key,
+      page ? Number(page) : 1,
+      pageSize ? Number(pageSize) : 50,
+    );
   }
 
   @Patch('submissions/:id')
   @Roles('ADMIN', 'EDITOR')
-  @ApiOperation({ summary: 'Gonderim durumunu guncelle (NEW/READ/SPAM/ARCHIVED)' })
+  @ApiOperation({
+    summary: 'Gonderim durumunu guncelle (NEW/READ/SPAM/ARCHIVED)',
+  })
   updateStatus(@Param('id') id: string, @Body() dto: UpdateSubmissionDto) {
     return this.forms.updateStatus(id, dto.status);
   }

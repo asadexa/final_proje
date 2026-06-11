@@ -1,5 +1,10 @@
 import { createHash } from 'node:crypto';
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, SubmissionStatus } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { SubmitFormDto } from './dto/form.dto';
@@ -37,20 +42,29 @@ export class FormsService {
     const isSpam = typeof dto.hp === 'string' && dto.hp.trim().length > 0;
 
     if (!isSpam) {
-      if (!dto.consent) throw new BadRequestException('KVKK acik riza onayi gerekli.');
+      if (!dto.consent)
+        throw new BadRequestException('KVKK acik riza onayi gerekli.');
       // Sunucu tarafi zorunlu alan dogrulamasi (tanima gore).
       for (const f of asFields(def.fields)) {
         if (f.required) {
           const v = dto.data?.[f.name];
-          if (v === undefined || v === null || String(v).trim() === '') {
-            throw new BadRequestException(`Zorunlu alan eksik: ${f.label ?? f.name}`);
+          if (
+            v === undefined ||
+            v === null ||
+            (typeof v === 'string' && v.trim() === '')
+          ) {
+            throw new BadRequestException(
+              `Zorunlu alan eksik: ${f.label ?? f.name}`,
+            );
           }
         }
       }
     }
 
     // KVKK: ham IP saklamayiz; hash'li tutariz.
-    const ipHash = ip ? createHash('sha256').update(ip).digest('hex').slice(0, 32) : null;
+    const ipHash = ip
+      ? createHash('sha256').update(ip).digest('hex').slice(0, 32)
+      : null;
 
     await this.prisma.formSubmission.create({
       data: {
@@ -76,7 +90,11 @@ export class FormsService {
       await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ form: formKey, data, at: new Date().toISOString() }),
+        body: JSON.stringify({
+          form: formKey,
+          data,
+          at: new Date().toISOString(),
+        }),
       });
       this.logger.log(`Form webhook gonderildi: ${formKey}`);
     } catch {
@@ -88,7 +106,9 @@ export class FormsService {
 
   listDefinitions() {
     // En yeni tanim ustte (kullanici beklentisi: yeni olusturulan listede ilk gorunsun)
-    return this.prisma.formDefinition.findMany({ orderBy: { createdAt: 'desc' } });
+    return this.prisma.formDefinition.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   // Form tanimlama (PDF "Form Yonetimi: Form tanimlama") — admin'den olustur/duzenle.
@@ -98,8 +118,11 @@ export class FormsService {
     fields: FieldDef[];
     enabled?: boolean;
   }) {
-    const existing = await this.prisma.formDefinition.findUnique({ where: { key: dto.key } });
-    if (existing) throw new BadRequestException('Bu key ile bir form zaten var.');
+    const existing = await this.prisma.formDefinition.findUnique({
+      where: { key: dto.key },
+    });
+    if (existing)
+      throw new BadRequestException('Bu key ile bir form zaten var.');
     this.validateFieldNames(dto.fields);
     return this.prisma.formDefinition.create({
       data: {
@@ -115,21 +138,26 @@ export class FormsService {
     key: string,
     dto: { name?: string; fields?: FieldDef[]; enabled?: boolean },
   ) {
-    const existing = await this.prisma.formDefinition.findUnique({ where: { key } });
+    const existing = await this.prisma.formDefinition.findUnique({
+      where: { key },
+    });
     if (!existing) throw new NotFoundException('Form bulunamadi.');
     if (dto.fields) this.validateFieldNames(dto.fields);
     return this.prisma.formDefinition.update({
       where: { key },
       data: {
         name: dto.name,
-        fields: dto.fields ? (dto.fields as unknown as Prisma.InputJsonValue) : undefined,
+        fields: dto.fields
+          ? (dto.fields as unknown as Prisma.InputJsonValue)
+          : undefined,
         enabled: dto.enabled,
       },
     });
   }
 
   private validateFieldNames(fields: FieldDef[]): void {
-    if (fields.length === 0) throw new BadRequestException('En az bir alan gerekli.');
+    if (fields.length === 0)
+      throw new BadRequestException('En az bir alan gerekli.');
     const names = fields.map((f) => f.name);
     if (new Set(names).size !== names.length) {
       throw new BadRequestException('Alan adlari benzersiz olmali.');
@@ -166,14 +194,26 @@ export class FormsService {
       orderBy: { createdAt: 'desc' },
     });
     const fields = asFields(def.fields);
-    const headers = ['createdAt', 'status', 'consent', ...fields.map((f) => f.name)];
+    const headers = [
+      'createdAt',
+      'status',
+      'consent',
+      ...fields.map((f) => f.name),
+    ];
     const rows = subs.map((s) => {
       const data = (s.data ?? {}) as Record<string, unknown>;
       return [
         s.createdAt.toISOString(),
         s.status,
         String(s.consent),
-        ...fields.map((f) => String(data[f.name] ?? '')),
+        ...fields.map((f) => {
+          const val = data[f.name];
+          return typeof val === 'string'
+            ? val
+            : val == null
+              ? ''
+              : JSON.stringify(val);
+        }),
       ]
         .map(csvCell)
         .join(',');
@@ -183,5 +223,10 @@ export class FormsService {
 }
 
 function csvCell(v: string): string {
-  return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  // CSV formul enjeksiyonu korumasi: Excel/Sheets, =,+,-,@ (ve tab/CR) ile baslayan
+  // hucreyi formul sanir. Public form gonderimi guvenilmez veri oldugu icin bu
+  // karakterlerle baslayan degerin onune tek tirnak koyup metin olmaya zorlariz.
+  let cell = v;
+  if (/^[=+\-@\t\r]/.test(cell)) cell = `'${cell}`;
+  return /[",\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
 }

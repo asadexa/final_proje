@@ -42,7 +42,9 @@ export class AdminContentController {
   // NOT: 'graph' statik yolu ':id'den ONCE tanimlanmali (NestJS bildirim sirasina bakar)
   @Get('graph')
   @Roles('ADMIN', 'EDITOR')
-  @ApiOperation({ summary: 'Icerik iliski grafigi (dugumler + ic link/ceviri kenarlari)' })
+  @ApiOperation({
+    summary: 'Icerik iliski grafigi (dugumler + ic link/ceviri kenarlari)',
+  })
   graph() {
     return this.content.contentGraph();
   }
@@ -56,8 +58,14 @@ export class AdminContentController {
 
   @Patch(':id')
   @Roles('ADMIN', 'EDITOR')
-  @ApiOperation({ summary: 'Icerik guncelle (bloklar verildiyse degistirilir)' })
-  update(@Param('id') id: string, @Body() dto: UpdateEntryDto, @CurrentUser() user: AuthUser) {
+  @ApiOperation({
+    summary: 'Icerik guncelle (bloklar verildiyse degistirilir)',
+  })
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateEntryDto,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.content.update(id, dto, user.id, user.role);
   }
 
@@ -70,14 +78,18 @@ export class AdminContentController {
 
   @Get(':id/health')
   @Roles('ADMIN', 'EDITOR')
-  @ApiOperation({ summary: 'Icerik saglik denetimi (kural tabanli SEO/erisilebilirlik/UX)' })
+  @ApiOperation({
+    summary: 'Icerik saglik denetimi (kural tabanli SEO/erisilebilirlik/UX)',
+  })
   health(@Param('id') id: string) {
     return this.content.healthCheck(id);
   }
 
   @Get(':id/versions/:version')
   @Roles('ADMIN', 'EDITOR')
-  @ApiOperation({ summary: 'Tek surumun tam snapshot detayi (Time Machine onizleme/diff)' })
+  @ApiOperation({
+    summary: 'Tek surumun tam snapshot detayi (Time Machine onizleme/diff)',
+  })
   version(@Param('id') id: string, @Param('version') version: string) {
     return this.content.getVersion(id, Number(version));
   }
