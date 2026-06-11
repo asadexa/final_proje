@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { flatten, diffMaps, diffBlocks, diffMeta, diffSnapshots } from "../src/lib/diff";
+import { flatten, diffMaps, diffBlocks, diffSnapshots } from "../src/lib/diff";
 
 describe("diff engine", () => {
   describe("flatten", () => {

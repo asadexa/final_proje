@@ -3,12 +3,9 @@ import {
   absoluteUrl,
   pathForEntry,
   metadataFromEntry,
-  staticPageMetadata,
   organizationJsonLd,
   websiteJsonLd,
   breadcrumbJsonLd,
-  productJsonLd,
-  articleJsonLd,
   faqJsonLd
 } from "../src/lib/seo";
 import type { PublicEntry } from "../src/lib/types";
