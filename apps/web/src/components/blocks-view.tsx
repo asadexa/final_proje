@@ -250,20 +250,29 @@ function ValueProp({ data }: BlockProps): ReactElement {
   const cta = data.cta as Cta | undefined;
   const img = data.image as ImageData | undefined;
   return (
-    // krontech "Why Kron?" mavi band: koyu diyagonal mavi zemin + beyaz metin
+    // krontech "Why Kron?" mavi band: koyu diyagonal mavi zemin + ince doku + beyaz metin
     <section
-      className="text-white"
+      className="relative overflow-hidden text-white"
       style={{ background: "linear-gradient(115deg, #1563FF 0%, #103aa0 55%, #0a2a6e 100%)" }}
     >
-      <Container wide className="py-20">
+      {/* ince diyagonal doku (krontech bg-sec hissi, asset'siz) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-10"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(115deg, transparent 0 40px, rgba(255,255,255,0.6) 40px 41px)",
+        }}
+      />
+      <Container wide className="relative py-24">
         <div className="grid items-center gap-12 md:grid-cols-2">
           <div>
             <h2
-              className="text-[2rem] font-light leading-tight md:text-[2.75rem] [&_b]:font-normal [&_b]:text-white"
+              className="text-[2.25rem] font-light leading-[1.15] md:text-[3rem] [&_b]:font-normal [&_b]:text-white"
               dangerouslySetInnerHTML={{ __html: str(data.title) }}
             />
             {str(data.body) && (
-              <p className="mt-6 max-w-xl text-[1.25rem] leading-8 text-white/80">{str(data.body)}</p>
+              <p className="mt-6 max-w-lg text-[1.2rem] leading-8 text-white/80">{str(data.body)}</p>
             )}
             {cta?.href && (
               <Link
@@ -274,10 +283,10 @@ function ValueProp({ data }: BlockProps): ReactElement {
               </Link>
             )}
           </div>
-          <div>
+          <div className="flex justify-center">
             {img?.url ? (
               // next/image: otomatik WebP/AVIF + lazy + CLS korumasi (Core Web Vitals)
-              <Image src={img.url} alt={img.alt ?? ""} width={800} height={600} className="h-auto w-full" />
+              <Image src={img.url} alt={img.alt ?? ""} width={800} height={600} className="h-auto w-full max-w-[520px]" />
             ) : (
               <div className="aspect-[4/3] w-full rounded-lg bg-white/10" />
             )}

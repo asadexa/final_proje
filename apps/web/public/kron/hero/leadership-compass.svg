@@ -1,0 +1,23 @@
+<svg width="560" height="560" viewBox="0 0 560 560" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Leadership Compass">
+  <!-- dis halka -->
+  <circle cx="280" cy="280" r="232" stroke="#ffffff" stroke-width="6" opacity="0.95"/>
+  <circle cx="280" cy="280" r="208" stroke="#ffffff" stroke-width="1.5" opacity="0.35"/>
+  <!-- 8-uclu pusula yildizi -->
+  <g>
+    <!-- dikey ana uclar -->
+    <path d="M280 70 L300 270 L280 290 L260 270 Z" fill="#ffffff"/>
+    <path d="M280 490 L260 290 L280 270 L300 290 Z" fill="#ffffff" opacity="0.85"/>
+    <!-- yatay ana uclar -->
+    <path d="M70 280 L270 260 L290 280 L270 300 Z" fill="#ffffff" opacity="0.9"/>
+    <path d="M490 280 L290 300 L270 280 L290 260 Z" fill="#ffffff" opacity="0.75"/>
+    <!-- diyagonal kisa uclar -->
+    <path d="M133 133 L272 268 L268 272 Z" fill="#e23744" opacity="0.85"/>
+    <path d="M427 133 L292 268 L288 272 Z" fill="#ffffff" opacity="0.5"/>
+    <path d="M133 427 L268 292 L272 288 Z" fill="#ffffff" opacity="0.5"/>
+    <path d="M427 427 L288 292 L292 288 Z" fill="#e23744" opacity="0.7"/>
+  </g>
+  <!-- merkez -->
+  <circle cx="280" cy="280" r="14" fill="#ffffff"/>
+  <!-- alt etiket -->
+  <text x="280" y="540" text-anchor="middle" fill="#ffffff" font-family="Roboto, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="3">LEADERSHIP COMPASS 2025</text>
+</svg>

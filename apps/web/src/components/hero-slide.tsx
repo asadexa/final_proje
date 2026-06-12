@@ -52,8 +52,14 @@ export function HeroSlide({ slide }: { slide: HeroSlideData }): ReactElement {
         <div className="grid w-full items-center gap-8 md:grid-cols-2">
           {text}
           <div className="hidden justify-center md:flex">
-            {/* hero grafigi LCP adayi: priority ile erken yuklenir */}
-            <Image src={graphic.url} alt="" width={600} height={600} priority className="h-auto w-full max-w-[600px]" />
+            {/* hero grafigi LCP adayi: priority. SVG'ler next/image yerine duz img
+                (next/image SVG icin dangerouslyAllowSVG ister; statik SVG icin gereksiz). */}
+            {graphic.url.endsWith(".svg") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={graphic.url} alt="" className="h-auto w-full max-w-[560px]" />
+            ) : (
+              <Image src={graphic.url} alt="" width={600} height={600} priority className="h-auto w-full max-w-[600px]" />
+            )}
           </div>
         </div>
       ) : (
