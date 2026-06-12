@@ -3,6 +3,7 @@ import { Roboto } from "next/font/google";
 import type { ReactElement, ReactNode } from "react";
 import { AdminTopbar } from "@/components/admin/admin-topbar";
 import { CommandPalette } from "@/components/admin/command-palette";
+import { IdleLogout } from "@/components/admin/idle-logout";
 import "../globals.css";
 
 // Admin paneli kendi kok layout'u (public header/footer YOK, locale YOK, noindex).
@@ -25,6 +26,8 @@ export default function AdminLayout({ children }: { children: ReactNode }): Reac
         <AdminTopbar />
         {/* Ctrl+K global komut paleti */}
         <CommandPalette />
+        {/* 15 dk hareketsizlikte sessiz logout (yuksek-yetkili panel sertlestirmesi) */}
+        <IdleLogout />
         <main className="mx-auto max-w-[1140px] px-4 py-8 sm:px-6">{children}</main>
       </body>
     </html>
