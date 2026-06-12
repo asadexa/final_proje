@@ -43,7 +43,11 @@ export class MediaService {
 
   constructor(private readonly prisma: PrismaService) {
     this.bucket = process.env.S3_BUCKET ?? 'kron-media';
-    this.publicUrl = process.env.S3_PUBLIC_URL ?? 'http://localhost:9000';
+    // Varsayilan GORELI taban (/media): web ayni origin'den sunar (rewrite ->
+    // MinIO). Mutlak URL (http://localhost:9000) split-horizon yaratiyordu:
+    // tarayici erisir ama next/image optimizer CONTAINER ICINDEN fetch eder,
+    // orada localhost = web container'i -> kapak gorselleri kirik (bug).
+    this.publicUrl = process.env.S3_PUBLIC_URL ?? '/media';
     this.s3 = new S3Client({
       region: process.env.S3_REGION ?? 'us-east-1',
       endpoint: process.env.S3_ENDPOINT ?? 'http://minio:9000',
@@ -74,7 +78,11 @@ export class MediaService {
         ContentType: detectedMime,
       }),
     );
-    const url = `${this.publicUrl}/${this.bucket}/${key}`;
+    // Mutlak taban (prod CDN/S3): bucket yolda kalir. Goreli taban (/media):
+    // bucket'i web rewrite ekler -> URL tek origin, optimizer sorunsuz fetch eder.
+    const url = this.publicUrl.startsWith('http')
+      ? `${this.publicUrl}/${this.bucket}/${key}`
+      : `${this.publicUrl}/${key}`;
     return this.prisma.media.create({
       data: {
         key,

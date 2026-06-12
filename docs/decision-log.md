@@ -242,3 +242,15 @@ Kullanici admin'den POST olusturup HERO template (baslik + butonlar + bilgisayar
 E2E dogrulama (reseed'siz, gercek akis): login -> GIF upload (magic-byte image/gif kabul) -> HERO'lu (variant=product, gif zemin, 2 buton) + RICH_TEXT'li POST create -> publish -> public sayfada hero/gif/butonlar/govde OK + preview birebir ayni; test verisi API'den DELETE ile temizlendi.
 
 NOT (kullaniciya aciklama): blog liste/anasayfa karti gorseli HERO'dan degil entry'nin **Kapak (coverImage)** alanindan gelir — kartta gorsel istenirse editorde Kapak secilmeli.
+
+## Bug fix — yuklenen medya kapaklari kirik: next/image split-horizon (2026-06-12, kullanici bulgusu)
+
+Kullanici GIF'i Kapak olarak secti; blog listesi + Highlights'ta gorsel KIRIK cikti. Kok neden: medya URL'leri mutlak `http://localhost:9000/...` idi — tarayici erisir AMA `next/image` optimizer gorseli WEB CONTAINER ICINDEN fetch eder; orada localhost=web container'i, MinIO degil (split-horizon). HERO zemini CSS background oldugu (tarayici dogrudan yukledigi) icin ayni GIF orada calisiyor, kapakta calismiyordu — yaniltici belirti.
+
+| Karar | Nasil |
+|------|-------|
+| **Tek origin: goreli /media tabani** | API artik `/media/<key>` uretir (S3_PUBLIC_URL varsayilani `/media`); web `rewrites()` ile `/media/:path*` -> `S3_INTERNAL_URL/bucket/:path*` (minio:9000) proxy'ler. Tarayici VE optimizer ayni kapidan gecer |
+| **Prod yolu korunur** | S3_PUBLIC_URL'e mutlak CDN/S3 girilirse eski davranis: URL mutlak, remotePatterns + CSP origin otomatik, rewrite devre disi |
+| **Env degisikligi** | .env/.env.example: S3_PUBLIC_URL=/media + S3_INTERNAL_URL (docker disi dev icin http://localhost:9000 notu). Hatirlatma: env degisikligi `restart` ile degil `up -d` ile uygulanir |
+
+E2E: GIF upload -> url `/media/uploads/...` -> dogrudan GET 200 + `/_next/image` 200 (onceden kirik) -> kapakli post publish -> blog listesi + sidebar'da gorsel OK; testler 8+38 yesil. NOT: kullanicinin gordugu "ABC" karti reseed'le silinmis icerigin BAYAT ISR render'iydi (hayalet); revalidate ile kendiliginden gider.
