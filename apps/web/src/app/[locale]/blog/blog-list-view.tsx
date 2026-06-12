@@ -1,22 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { formatBlogDate, HighlightsSidebar } from "@/components/blog-shared";
 import { listEntries } from "@/lib/api";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import type { EntryListItem } from "@/lib/types";
 
 // Krontech blog listesi: 5 yazi/sayfa (olculen), sag kolonda Highlights.
 export const BLOG_PAGE_SIZE = 5;
-
-// Krontech tarih bicimi: "May 12, 2026" / "Şub 17, 2026" (ay kisaltma + gun, yil).
-function formatBlogDate(locale: Locale, iso: string): string {
-  const d = new Date(iso);
-  const month = new Intl.DateTimeFormat(locale === "tr" ? "tr-TR" : "en-US", {
-    month: "short",
-  }).format(d);
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${month} ${day}, ${d.getUTCFullYear()}`;
-}
 
 // Bootstrap benzeri sayfalama dizisi: 1 2 3 4 ... N (krontech deseni).
 function pageNumbers(total: number): (number | "...")[] {
@@ -123,48 +114,9 @@ export async function BlogListView({
             )}
           </div>
 
-          {/* Highlights: sticky widget, 150x87 luminosity gorseller */}
+          {/* Highlights: sticky widget, 150x87 luminosity gorseller (paylasilan) */}
           <aside>
-            <div className="sticky top-[140px] bg-surface px-5 py-[33px] shadow-[0_6px_12px_-4px_rgba(37,38,41,0.12)]">
-              {/* krontech bgblueb: ikinci kelime mavi cipli (TR "Öne Çıkanlar") */}
-              <h3 className="mb-[15px] text-lg font-medium text-dark">
-                {dict.blog.highlights}
-                {dict.blog.highlightsAccent && (
-                  <>
-                    {" "}
-                    <b className="bg-primary px-[3px] font-medium text-white">
-                      {dict.blog.highlightsAccent}
-                    </b>
-                  </>
-                )}
-              </h3>
-              <div>
-                {featured.map((post) => (
-                  <div key={post.id} className="clear-both min-h-[111px] pb-3">
-                    <Link href={`/${locale}/${post.slug}`} className="group block">
-                      {post.coverImage?.url && (
-                        <Image
-                          src={post.coverImage.url}
-                          alt={post.title}
-                          width={150}
-                          height={87}
-                          className="float-left mb-3 mr-[15px] h-[87px] w-[150px] object-cover mix-blend-luminosity group-hover:mix-blend-normal"
-                        />
-                      )}
-                      <p className="text-sm font-medium leading-[19px] text-dark group-hover:text-primary">
-                        {post.title}
-                      </p>
-                      {post.publishedAt && (
-                        <p className="text-xs text-dark opacity-50">
-                          {formatBlogDate(locale, post.publishedAt)}
-                        </p>
-                      )}
-                      <span className="clear-both block" aria-hidden />
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <HighlightsSidebar posts={featured} locale={locale} />
           </aside>
         </div>
       </section>

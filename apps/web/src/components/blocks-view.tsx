@@ -189,19 +189,36 @@ function FeatureGrid({ data }: BlockProps): ReactElement {
   );
 }
 
+// FAQ — krontech .collapse-general akordeonu birebir: col-10 offset (~950px),
+// kart basligi #fbfbfc, soru 14px/600 #333 (hover mavi), govde 33px ic bosluk.
+// details/summary: JS'siz, erisilebilir, FAQPage JSON-LD ile uyumlu.
 function Faq({ data }: BlockProps): ReactElement {
   const items = arr<{ question?: string; answer?: string }>(data.items);
   return (
-    <section className="bg-surface">
-      <Container className="py-16">
-        {str(data.title) && <h2 className="mb-8 text-2xl font-bold text-dark">{str(data.title)}</h2>}
-        <div className="divide-y divide-line border-y border-line">
+    <section className="mb-5 bg-surface">
+      <Container className="py-8">
+        <div className="mx-auto max-w-[950px]">
+          {str(data.title) && (
+            <h2 className="mb-6 text-2xl font-bold text-dark">{str(data.title)}</h2>
+          )}
           {items.map((it, i) => (
-            <details key={i} className="group py-4">
-              <summary className="cursor-pointer list-none font-medium text-dark">
+            <details key={i} className="group text-[14px]">
+              <summary className="flex cursor-pointer list-none items-center justify-between bg-[#fbfbfc] px-[33px] py-3 font-semibold text-[#333] transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
                 {it.question}
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden
+                  className="h-[19px] w-[19px] shrink-0 transition-transform group-open:rotate-180"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </summary>
-              <p className="mt-3 text-sm text-ink-soft">{it.answer}</p>
+              <p className="px-[33px] pb-[7px] pt-2 leading-6 text-ink-soft">{it.answer}</p>
             </details>
           ))}
         </div>
@@ -210,12 +227,16 @@ function Faq({ data }: BlockProps): ReactElement {
   );
 }
 
+// Makale tipografisi — blog detayinda (col-8 icinde Container'siz) da kullanilir.
+export const RICH_TEXT_PROSE =
+  "text-base leading-7 text-ink [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-line [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-soft [&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-dark [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-dark [&_li]:mb-1 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6";
+
 function RichText({ data }: BlockProps): ReactElement {
   return (
     <section className="bg-surface">
       <Container className="py-12">
         <div
-          className="mx-auto max-w-3xl text-base leading-7 text-ink [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-line [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-soft [&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-dark [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-dark [&_li]:mb-1 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6"
+          className={`mx-auto max-w-3xl ${RICH_TEXT_PROSE}`}
           dangerouslySetInnerHTML={{ __html: str(data.html) }}
         />
       </Container>

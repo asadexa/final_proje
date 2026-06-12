@@ -85,6 +85,12 @@ http://localhost:3000/en. Sol: krontech (referans), sag: rebuild.
 |---|---|
 | ![krontech blog](img/comparison/blog-krontech.png) | ![rebuild blog](img/comparison/blog-ours.png) |
 
+**Blog detay (phishing yazisi)** — col-8 makale (kapak ustte, h1, 12px tarih, paylasim ikonlari, tam govde) + col-4 sticky Highlights + makale alti FAQ akordeonu (collapse-general):
+
+| krontech.com/what-is-phishing... | Rebuild /en/what-is-phishing... |
+|---|---|
+| ![krontech blog detay](img/comparison/blogdetail-krontech.png) | ![rebuild blog detay](img/comparison/blogdetail-ours.png) |
+
 **Urun detay (Kron PAM)** — banner + ikonlu sekmeler + donusumlu bolumler + mavi referans slider'i + Sekerbank video hikayesi:
 
 | krontech.com/kron-pam | Rebuild /en/kron-pam |

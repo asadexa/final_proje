@@ -213,3 +213,17 @@ Kullanici: "product detay sayfasi korkunc durumda, orijinal tasarimi aktarir mis
 | **Testimonial tasmasi** | `!overflow-visible` komsu slide'i mavi bandin disina tasiriyordu. Overflow kapatildi; krontech'in `bottom:-80px` pagination'i swiper padding-bottom 80px + section pb 64px olarak yeniden dengelendi (gorsel sonuc ayni: dot'lar icerigin 80px altinda) |
 | **Ana sayfa ilk slide** | Pusula SVG mockup yerine krontech orijinali `685x650_kuppinger_logo.png` (18KB) indirildi → `/kron/hero/products/kuppinger-logo.png` |
 | **Gorseller** | 33 adet (banner/bolum/testimonial/sekme ikonu) sharp ile display-aware optimize: ~3.9MB → ~1MB (`public/kron/products/`) |
+
+## Blog detay 1:1 turu — phishing yazisi (2026-06-12)
+
+Kullanici krontech'in phishing yazisiyla bizimkini yan yana koydu: "tasarim cok farkli". Iki kok neden: (1) onceki "blog detay yeniden tasarim" KENDI tasarimimizdi (mavi band + tek kolon + Related Posts) — krontech ise beyaz iki-kolon; (2) seed govdesi 1 paragrafti, krontech tam makale + FAQ akordeonu.
+
+| Konu | Karar / Nasil |
+|------|-------|
+| **Duzen krontech #blog-detail birebir** | col-8 makale (kapak USTTE, h1 32/600, `.blog-terms` 12px tarih, `.blog-socials` 22px paylasim ikonlari — gercek share URL'leri, inline SVG) + col-4 sticky Highlights (liste sayfasindaki widget `blog-shared.tsx`'e cikarilip PAYLASILDI). Mavi band + Related Posts izgarasi kaldirildi |
+| **FAQ = collapse-general** | Global FAQ blogu krontech akordeonuna cevrildi (max-w 950, baslik #fbfbfc, 14px/600, chevron; details/summary = JS'siz + FAQPage JSON-LD zaten vardi). Makale altinda tam genislik render |
+| **Tam icerik** | EN govde krontech'ten scrape (5 h2 bolum + ic linkler; PSM linki bizde sayfa olmadigindan /kron-pam'a baglandi) + 7 soruluk FAQ; TR govde + FAQ tam ceviri (krontech blogun TR'si yine Ingilizce — ayni bilincli sapma). BLOG_ARCHIVE'a opsiyonel `faq` alani + loop FAQ blok uretimi |
+| **TOC atlandi** | krontech makale basinda anchor'li icindekiler var; sanitizer (whitelist, NITELIKSIZ etiket politikasi) h2 id'lerini soyacagi icin anchor'lar calismaz — TOC bilinçli atlandi (sanitizer'i gevsetmeye degmez) |
+| **RICH_TEXT_PROSE export** | Makale tipografisi blocks-view'dan export edildi; blog detayinda Container'siz, col-8 genisliginde ayni siniflar (tek kaynak) |
+| **Cift breadcrumb fixi** | PRODUCT_TABS'li sayfalar (urun + sekme stub'lari) kendi breadcrumb'ini cizer -> [slug] genel breadcrumb'i tip yerine BLOK varligina gore bastiriyor (stub'lar PAGE tipinde oldugundan tip kontrolu yetmiyordu) |
+| **Yazar alani yok** | krontech "May 11, 2026 / Erhan YILMAZ" gosteriyor; modelimizde author alani yok -> yalniz tarih (migration'a degmez; istenirse PostDetail.author eklenir) |
