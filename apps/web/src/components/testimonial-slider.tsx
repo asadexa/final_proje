@@ -24,13 +24,14 @@ export function TestimonialSlider({ items }: { items: TestimonialItem[] }): Reac
       className="text-white"
       style={{ backgroundImage: "linear-gradient(180deg, #1596FF 0%, #1563FF 100%)" }}
     >
-      <div className="mx-auto max-w-[1140px] px-4 pb-[144px] pt-[100px] sm:px-6">
+      {/* krontech pt-100/pb-144; pb'nin 80px'i swiper padding'inde (pagination) */}
+      <div className="mx-auto max-w-[1140px] px-4 pb-[64px] pt-[100px] sm:px-6">
         <Swiper
           modules={[Pagination, Autoplay]}
           slidesPerView={1}
           pagination={{ clickable: true }}
           autoplay={{ delay: 7000, disableOnInteraction: false }}
-          className="testimonial-slider !overflow-visible"
+          className="testimonial-slider"
         >
           {items.map((it, i) => (
             <SwiperSlide key={i}>

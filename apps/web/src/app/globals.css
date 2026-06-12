@@ -98,12 +98,14 @@
 }
 
 /* Musteri referans slider'i (krontech .blue-bg-slider): beyaz noktalar,
-   pagination icerigin ~80px altinda (alt padding alaninda) */
+   pagination icerigin ~80px altinda (krontech bottom:-80px; biz tasan slide'i
+   gizlemek icin payi swiper padding'ine aliyoruz — gorsel sonuc ayni) */
 .testimonial-slider {
   --swiper-theme-color: #ffffff;
+  padding-bottom: 80px;
 }
 .testimonial-slider .swiper-pagination {
-  bottom: -80px;
+  bottom: 0;
 }
 .testimonial-slider .swiper-pagination-bullet {
   background: #ffffff;

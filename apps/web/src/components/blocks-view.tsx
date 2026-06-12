@@ -42,41 +42,47 @@ function Container({
 
 export type BlockProps = { data: Record<string, unknown> };
 
-// Urun sayfasi banner'i — krontech .product-banner birebir: bg gorseli (cover),
-// .display-3 .bgblueb h1 + .lead + outline butonlar (mavi cerceve, beyaz metin).
+// Urun sayfasi banner'i — krontech .gradient-header/.product-banner OLCUMLE birebir:
+// 400px, bg gorseli (cover) + soldan mavi gradyan overlay (270deg, .8),
+// h1 40px/700 (.gradient-header h1 display-3'u ezer) + .lead max-w 530px/mb-35
+// + beyaz cerceveli 48px outline butonlar (hover: mavi gradyan dolgu).
 function ProductBanner({ data }: BlockProps): ReactElement {
   const img = data.image as ImageData | undefined;
   const buttons = arr<Cta>(data.buttons);
+  const btn =
+    "inline-flex h-12 items-center rounded border border-white px-8 text-[15px] font-normal text-white transition-[background] hover:[background-image:linear-gradient(180deg,#1596ff_0%,#1563ff_100%)]";
   return (
     <section
-      className="bg-[#0a1733] bg-cover bg-center text-white"
+      className="relative flex min-h-[400px] items-center bg-[#0a1733] bg-cover bg-center text-white"
       style={img?.url ? { backgroundImage: `url('${img.url}')` } : undefined}
     >
-      <Container className="py-16">
+      {/* krontech .gradient-header::after — soldan mavi, saga dogru seffaf */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-80"
+        style={{
+          backgroundImage:
+            "linear-gradient(270deg, rgba(47,156,255,0) 0%, rgba(21,99,255,0.75) 100%)",
+        }}
+      />
+      <Container className="relative z-[4] w-full py-12">
         <h1
-          className="text-4xl font-light leading-[1.1] md:text-5xl lg:text-[4.5rem] [&_b]:bg-primary [&_b]:px-[3px] [&_b]:font-light [&_b]:text-white"
+          className="mb-4 text-[32px] font-bold leading-tight md:text-[40px] [&_b]:bg-primary [&_b]:px-[3px] [&_b]:text-white"
           dangerouslySetInnerHTML={{ __html: str(data.title) }}
         />
         {str(data.subtitle) && (
-          <p className="mt-6 max-w-3xl text-[1.25rem] leading-8">{str(data.subtitle)}</p>
+          <p className="mb-[35px] max-w-[530px] text-[1.25rem] leading-8">{str(data.subtitle)}</p>
         )}
         {buttons.length > 0 && (
-          <div className="mt-12 flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {buttons.map((b, i) =>
               b.href ? (
-                <Link
-                  key={i}
-                  href={b.href}
-                  className="inline-block rounded-none border-2 border-primary px-[30px] py-2.5 text-[15px] font-medium text-white transition-colors hover:bg-primary"
-                >
+                <Link key={i} href={b.href} className={btn}>
                   {b.label ?? ""}
                 </Link>
               ) : (
-                // krontech'te datasheet butonu modal acar; alt kapsam disi -> tiklanamaz
-                <span
-                  key={i}
-                  className="inline-block cursor-default rounded-none border-2 border-primary px-[30px] py-2.5 text-[15px] font-medium text-white"
-                >
+                // href'siz buton (krontech'te modal acar) -> gorsel parite, tiklanamaz
+                <span key={i} className={`${btn} cursor-default`}>
                   {b.label ?? ""}
                 </span>
               ),
@@ -335,7 +341,7 @@ function CaseStudy({ data }: BlockProps): ReactElement {
 
 // Urun sayfasi: banner alti breadcrumb (11px, son oge bold) + ikonlu sekme cubugu
 // (krontech #nav-tabs-wrapper: 64px, 14px/500, #a7a7a8, aktifte mavi alt cizgi + renkli ikon).
-// Alt sayfalar kapsam disi -> href'i olmayan sekme tiklanamaz (bilincli sapma, decision-log).
+// Sekmeler gercek sayfalara gider (stub PAGE entry'leri seed'de); href'siz sekme tiklanamaz.
 function ProductTabs({ data }: BlockProps): ReactElement {
   const crumbs = arr<string>(data.breadcrumb);
   const tabs = arr<{ label?: string; href?: string; icon?: string; active?: boolean }>(data.tabs);
@@ -356,6 +362,9 @@ function ProductTabs({ data }: BlockProps): ReactElement {
           {tabs.map((t, i) => {
             const base =
               "flex h-16 w-full items-center justify-center border-b-[3px] px-3 text-[14px] font-medium uppercase";
+            const state = t.active
+              ? "border-primary bg-surface text-[#333]"
+              : "border-transparent text-[#a7a7a8] hover:text-[#333]";
             const icon = t.icon && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -368,13 +377,13 @@ function ProductTabs({ data }: BlockProps): ReactElement {
             );
             return (
               <li key={i} className="grow">
-                {t.active && t.href ? (
-                  <Link href={t.href} className={`${base} border-primary bg-surface text-[#333]`}>
+                {t.href ? (
+                  <Link href={t.href} className={`${base} ${state}`}>
                     {icon}
                     {t.label}
                   </Link>
                 ) : (
-                  <span className={`${base} cursor-default border-transparent text-[#a7a7a8]`}>
+                  <span className={`${base} cursor-default ${state}`}>
                     {icon}
                     {t.label}
                   </span>

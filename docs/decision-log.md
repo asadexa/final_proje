@@ -198,3 +198,18 @@ Kullanici guvenlik denetimi istedi ama bulgulari guvenlik-acigi dili yerine BUG 
 | **6 — Secret fallback + token suresiz** | PREVIEW/REVALIDATE secret'lari `?? 'change-me-...'` sabit varsayilana dusuyor; preview token = HMAC(locale,slug) icerik-bagsiz+suresiz. (Iyi: JWT secret'larinda fallback YOKTU.) Cozum: `assertProdSecrets` bootstrap fail-fast (prod'da bos/varsayilan ise acilista HATA) + preview token'a `exp` (PREVIEW_TTL, vars. 2sa) |
 | **6b — SSE auth yok** | `/api/events/content` guard'siz; yonetim-ici kanal public. Cozum: `JwtAuthGuard` (zaten httpOnly access_token cookie'sini okuyor — EventSource header gonderemez ama cookie gonderir) + EventsModule AuthModule import + iki EventSource'a `withCredentials`. Anonim baglanamaz; istemci zarif dusus (kirmizi nokta). Canli: oncesi 200 -> sonrasi 401 |
 | **Windows dersi** | `nest --watch` bind-mount degisikligini algilamadi; SSE'yi ilk denedigimde 200 dondu (container eski kodu calistiriyordu). `docker compose restart api` ZORUNLU. Deployment notuna eklenecek aday |
+
+## Urun detay 1:1 turu — 5 urun + sekme stub'lari (2026-06-12)
+
+Kullanici: "product detay sayfasi korkunc durumda, orijinal tasarimi aktarir misin" + ana sayfa ilk slide'a orijinal gorsel. Kapsam karari kullanicidan: 5 urun TEK SEFERDE + sekme cubugu 1:1 + stub sayfalar.
+
+| Konu | Karar / Nasil |
+|------|-------|
+| **Icerik kaynagi** | 10 sayfa (5 urun × en/tr) `scripts/extract-product-pages.py` ile cikarildi (hero/lead/sekmeler/bolumler/testimonial + gorsel URL'leri). Mojibake (™, ı) elle duzeltildi |
+| **KESIF: krontech /tr urun sayfalari Ingilizce** | Govde metni cevrilmemis (yalniz nav TR). Bilincli sapma: biz TR'yi GERCEK ceviriyle veriyoruz — CMS cok-dilliligi (TranslationGroup + hreflang) gosteriliyor; "birebir kopya degil dogru CMS" hikayesine uygun |
+| **Sekme stub sayfalari** | krontech'te her sekme AYRI sayfa (orn. /kron-pam-key-benefits). 18 stub PAGE entry (×2 dil): ayni urun banner'i + sekme cubugu (ilgili sekme aktif) + kisa RICH_TEXT. Nav'daki olu `kron-pam-resources` linki de boylece cozuldu |
+| **Telemetry slug** | `kron-telemetry-pipeline` → `telemetry-pipeline` (krontech gercek URL'i + nav.ts zaten boyleydi → olu link kapandi). Ana sayfa hero/showcase href'leri guncellendi |
+| **Banner olcumleri** | `.gradient-header`: 400px, overlay `linear-gradient(270deg, rgba(47,156,255,0), rgba(21,99,255,.75))` op .8, h1 40px/700, lead max-w 530px, 2 beyaz outline buton 48px (hover mavi gradyan). Datasheet butonu krontech'te modal acar — biz /resources'a yonlendirdik (canli demoda olu buton olmasin) |
+| **Testimonial tasmasi** | `!overflow-visible` komsu slide'i mavi bandin disina tasiriyordu. Overflow kapatildi; krontech'in `bottom:-80px` pagination'i swiper padding-bottom 80px + section pb 64px olarak yeniden dengelendi (gorsel sonuc ayni: dot'lar icerigin 80px altinda) |
+| **Ana sayfa ilk slide** | Pusula SVG mockup yerine krontech orijinali `685x650_kuppinger_logo.png` (18KB) indirildi → `/kron/hero/products/kuppinger-logo.png` |
+| **Gorseller** | 33 adet (banner/bolum/testimonial/sekme ikonu) sharp ile display-aware optimize: ~3.9MB → ~1MB (`public/kron/products/`) |
