@@ -133,6 +133,47 @@ http://localhost:3000/en. Sol: krontech (referans), sag: rebuild.
 kolaydir; degerli ve degerlendirilen kisim **gorunmeyen sistemdir** (icerik modeli, API,
 auth, yayin akisi, cache) — bizim insa ettigimiz tam da bu.
 
+### Yetenek karsilastirmasi — ornekli (admin + gelismis ozellikler)
+
+Yukaridaki tablo *stack*'i karsilastirir; burada **ne yapilabildigi** karsilastirilir.
+krontech'in yonetim katmani disaridan **gorunmez** oldugu icin eksen: "biz = kanitli /
+krontech = gorunmez ya da yok". Her satirda sunumda **canli gosterilebilecek somut bir
+senaryo** var.
+
+#### Odev-gerekli yonetim yetenekleri
+
+| Yetenek | krontech | Rebuild — somut ornek (demoda goster) |
+|---------|----------|----------------------------------------|
+| Icerik + blok siralama | gorunmez | Ana sayfada "Why Kron?" blogunu yukari tasi → ANINDA onizlemede yansir (`visual-editor.tsx`) |
+| Blog & urun yonetimi | gorunmez | `/admin/entries/new` → tip POST → baslik → bloklar → yayinla → `/tr/blog`'da cikar |
+| Medya: yukleme + reuse | `/_upload/...` (cikarim) | Bir gorseli bir kez yukle → 3 sayfada `coverImageId` ile yeniden kullan; "URL kopyala" |
+| SEO/GEO yonetimi | gorunmez | `/kron-pam`: canonical `https://...`, robots=noindex, OG gorseli → `view-source`'ta meta + JSON-LD; `/sitemap.xml` otomatik guncellenir |
+| Yayin sureci | gorunmez | Taslak kaydet → **3 gun sonraya zamanla** (SCHEDULED) → **preview link** ile paydasa goster → yayinla (cron 30sn'de yayinlar) |
+| Versiyonlama | gorunmez | Basligi degistir → kaydet → **Zaman Tuneli**'nde v1↔v2 **diff** → v1'e **restore** (ayni surume 2. restore kopya ALMAZ) |
+| Redirect (SEO koruma) | gorunmez | `/eski-pam` → **301** → `/tr/kron-pam` (admin'de tanimli, Redis cache) |
+| Cok dil eslestirme | TR/EN ayri | TR sayfada "Ceviriler" paneli → "EN cevirisi olustur" → ayni `TranslationGroup` → hreflang otomatik baglanir |
+| Form yonetimi | reCAPTCHA + gorunmez | Admin'de "demo" formu tanimla (ad/email/sirket) → sayfaya CONTACT_FORM blogu → gonder → admin'de gor → **CSV indir** |
+| Yetkilendirme (RBAC) | gorunmez | `editor@kron.local` ile gir → yayin secenegi YOK → REVIEW'a gonder → admin onaylar (**sunucuda 403 ile zorlanir**) |
+| API + dokumantasyon | gorunmez | `http://localhost:4000/docs` Swagger — her ucu dene; **rate limit** aktif |
+
+#### Gelismis ozellikler (odev-ustu; krontech'te YOK)
+
+| Ozellik | Somut ornek (demoda goster) |
+|---------|------------------------------|
+| 🎨 Gorsel editor | Bloga tikla → basligi degistir → ANINDA yansir → Ctrl+Z; masaustu/mobil gorunum |
+| ⏪ Time Machine + Diff | 2 surum sec → yan yana git-tarzi fark → tek tik restore |
+| ⚡ SSE canli senkron | Iki sekme: editorde kaydet → onizleme sekmesi KENDINI tazeler (yesil nokta) |
+| ✨ AI Mimar | "MFA neden onemli, blog yazisi" → **makale sablonu** (HERO yok, RICH_TEXT agirlikli) + taslak metin → editorde rotusla |
+| 🤖 AI asistan | SEO sekmesi → "Oneriler Al" → onerilen meta'yi **Forma Uygula**; Ceviri → TR→EN gercek Claude |
+| 🩺 Saglik Denetimi | "Denetle" → **0-100 skor** + kategori cipleri (SEO/Erisilebilirlik/UX/GEO) + gecen kontroller |
+| ⌨️ Komut Paleti | Ctrl+K → "kron pam" → Enter |
+| 🕸️ Iliski Grafigi | Sayfa/link/ceviri haritasi → **yetim sayfa** (gelen linki olmayan) kirmizi halka |
+| ✅ Onay akisi | (yukarida) EDITOR → REVIEW → ADMIN |
+
+**Okuma:** Frontend kopyalanabilir; ama bu yetenek katmani krontech'te disaridan
+**gorunmez ya da yok**. Odevin "gorsel klon degil, butuncul sistem" sartinin somut kaniti
+tam burasidir.
+
 ---
 
 ## 3. Performans / agirlik notu
@@ -213,3 +254,82 @@ profilinde** (34'e karsi 4 script; 25'e karsi 0 ucuncu-parti). Rebuild gorseller
   (bizde ayri `/contact` sayfasi). Anasayfa + urun/blog **detay** parity'si tamam — gercek krontech
   asset'leriyle (productslider gorselleri, banka vaka, Why-Kron, ikonlar, hero zemini, blog kapaklari).
 - **Olcum kaynagi:** krontech.com ana sayfa (2026-06), 145 HTTP islemi (network log) + `style.css`.
+- **Guvenlik sertlestirme turu** (bug-cercevesiyle, `decision-log.md`): XSS sanitize
+  (escape-then-allowlist), CSV formul-enjeksiyon korumasi, guvenlik basliklari (CSP/HSTS/nosniff),
+  CORS fail-closed, upload limit + magic-byte, SSE auth, admin **idle timeout** (15 dk). Ilginc:
+  krontech'in CSP/HSTS'i vardi (Cloudflare), bizde yoktu — eklendi.
+- **AI gercek mod:** `ANTHROPIC_API_KEY` tanimliyken AI Mimar/asistan **gercek Claude (Opus 4.8)**
+  ile calisir (anahtarsiz: deterministik fallback). Opus 4.8 **adaptive thinking** gerektirir
+  (eski `thinking.enabled` -> 400; tespit edilip duzeltildi).
+
+---
+
+## 6. Sunum rehberi (ornekli)
+
+Odevin **"Sunum"** bolumu uc sey istiyor; her biri icin hazir cumleler ve ornekler. Bu bolum
+dogrudan sunumda kullanilabilir.
+
+### 6.1 Canli demo gosterimi
+Tam akis: [`demo-senaryosu.md`](demo-senaryosu.md) (~12 dk). Pusula: **her durakta bir
+karsilastirma cumlesi** ("krontech'te bu disaridan gorunmez/yok"). Onerilen sira:
+
+1. **`/tr` ana sayfa** — "Tasarim krontech'ten **olculen** CSS degerleriyle birebir; tahmin degil
+   introspection. Kanit: Bolum 1 ekran goruntuleri."
+2. **Gorsel editor** (Ctrl+K → Gorsel Duzenle) — bloga tikla, basligi degistir, ANINDA yansir,
+   Ctrl+Z. "Onizleme uretimle birebir, cunku AYNI React bilesenleri — ayri sablon motoru yok."
+3. **Iki sekme + SSE** — editorde kaydet, onizleme sekmesi kendini tazeler. "Figma hissi; WebSocket
+   degil **SSE** — tek yonlu yayin yeterli, native reconnect."
+4. **Zaman Tuneli** — iki surum sec → diff → restore. "Her kayit snapshot; restore **idempotent**
+   — ayni surume ikinci donus kopya almaz."
+5. **Saglik Denetimi** — Denetle → 0-100 skor + kategoriler. "Kural-tabanli, **AI'siz**,
+   deterministik — bu yuzden test edilebilir (15 birim test)."
+6. **Onay akisi** — `editor@kron.local` ile gir, yayin secenegi yok → REVIEW → admin onaylar.
+   "Rol **sunucuda 403 ile** zorlanir; UI sadece yansitir."
+7. **AI Mimar** — "MFA neden onemli, blog yazisi" → makale sablonu. "Tip-bazli hazir sablon;
+   her blok **Zod kapisindan** gecmeden DB'ye giremez."
+8. **SEO/GEO kaniti** — `view-source`: canonical/hreflang/OG/**JSON-LD (FAQPage)**; `/sitemap.xml`,
+   `/robots.txt`; `/eski-pam` → **301**.
+9. **Swagger `/docs`** + `npm test` → **61 test** (api 38 + web 15 + shared 8).
+
+> **Yedek plan:** Canli ortam riski varsa local demo + Bolum 1 ekran goruntuleri. Sunum oncesi
+> taze reseed (`demo-senaryosu.md`'de komut) + iki tarayici penceresi hazir.
+
+### 6.2 Mimari ve teknik kararlarin sozlu aktarimi
+Her karari **karar + gerekce + trade-off** uclusuyle anlat (degerlendirme kriteri:
+"trade-off farkindaligi"):
+
+- **Neden NestJS, Spring degil?** Frontend TS zorunlu → **tek dil**, sema FE+BE paylasimi
+  (`@kron/shared`). Spring ikinci dil (Java) + ayri tip dunyasi getirir, paylasilan sema
+  avantajini oldururdu.
+- **Neden REST, GraphQL degil?** Icerik okuma desenleri basit + HTTP cache/CDN dostu + Swagger
+  sarti. Trade-off: over-fetch riski — ama blok modeli zaten sayfa-bazli okunuyor.
+- **Neden tek `Entry` tablosu?** krontech'te **flat kok slug** gozlemledik (`/kron-pam`, nesting
+  yok) → tek slug cozumleyici. Analiz → karar zinciri: `site-analysis.md`. (Cikarsama degil olcum.)
+- **Neden blok + Zod?** Icerik HTML'e gomulu degil, **yapisal ve tipli**; LLM/kullanici verisi
+  Zod kapisindan gecmeden DB'ye giremez. Ornek: AI Mimar 8 blok uretti, **hepsi sema-gecerli**,
+  0 dustu.
+- **Neden SSE, WebSocket degil?** Tek yonlu yayin yeterli; EventSource **native reconnect**;
+  HTTP/proxy/CORS dostu. Cift yonlu gerekmedi.
+- **Neden httpOnly refresh + idle timeout?** Refresh **httpOnly** → XSS calamaz; access kisa
+  omurlu (15 dk); admin icin **15 dk hareketsizlik logout** (yuksek-yetki sertlestirmesi).
+- **Cache neden 3 katman?** Redis (API yanit) + Next ISR (publish'te `revalidateTag` → aninda) +
+  CDN-hazir. "Publish edince hangi katman etkilenir" sorusunun cevabi: API → web revalidate → ISR.
+
+Detay/kayit: [`adr/`](adr/) (0001 teknoloji, 0002 icerik modeli, 0003 auth) + `decision-log.md`.
+
+### 6.3 AI'in gelistirme surecine katkisi
+AI bu projede **arac degil, yontem** — odev: "AI gelistirmenin merkezinde, uretilen ciktilar
+degerlendirilip iyilestirilmeli":
+
+- **Olcum-tabanli parite:** Tasarim "goz karari" degil; krontech CSS'i **introspection** ile
+  cikarildi (`#1563ff`, body 14px, `.display-3` 4.5rem/300...) ve AI ile uygulandi. Kanit: Bolum 1.
+- **Karar gunlugu:** Her gelistirme turu `decision-log.md`'ye **AI katkisi + gerekce** ile islendi
+  — surec seffaf.
+- **AI urunun ICINDE:** AI Mimar (prompt → tip-bazli sablon), AI asistan (SEO oto-doldur / ceviri /
+  okunabilirlik). Hepsi **Zod kapisindan** gecer — "AI'a sema dayatiyoruz".
+- **Cikti degerlendirme (en onemlisi):** AI ciktisini korumadan kabul etmedik. Ornekler: (1) AI
+  ceviri anahtarsiz modda her kelimeye "(EN)" ekliyordu → fark edildi, gercek Claude'a baglandi +
+  sozluk fallback'i yazildi; (2) Opus 4.8'in `thinking.enabled`'i desteklemedigi **API 400'den**
+  tespit edildi → adaptive thinking'e gecildi; (3) Saglik Denetimi/analiz bos donuyordu (thinking
+  token bogmasi) → ortak saglam `callClaudeJson` ile cozuldu. Yani AI ciktisi **olculdu, hata
+  bulundu, iyilestirildi**.
