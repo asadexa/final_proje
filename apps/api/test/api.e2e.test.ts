@@ -129,7 +129,7 @@ describe('redirect yonetimi (entegrasyon)', () => {
 });
 
 describe('saglik denetimi (entegrasyon)', () => {
-  it('bulgu listesi doner (dizi)', async () => {
+  it('skor + findings + kategori doner', async () => {
     const admin = await login('admin@kron.local', 'Admin123!');
     const list = await request(API)
       .get('/api/admin/entries?type=PRODUCT&pageSize=1')
@@ -139,7 +139,9 @@ describe('saglik denetimi (entegrasyon)', () => {
       .get(`/api/admin/entries/${id}/health`)
       .set('Authorization', `Bearer ${admin}`);
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(typeof res.body.score).toBe('number');
+    expect(Array.isArray(res.body.findings)).toBe(true);
+    expect(Array.isArray(res.body.categories)).toBe(true);
   });
 });
 
