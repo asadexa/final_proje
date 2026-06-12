@@ -106,8 +106,15 @@ export class AiService {
     let note: string | undefined;
 
     if (apiKey) {
-      draft = await this.generateWithClaude(apiKey, prompt, localeCode);
-      usedAi = true;
+      const ai = await this.generateWithClaude(apiKey, prompt, localeCode);
+      if (ai) {
+        draft = ai;
+        usedAi = true;
+      } else {
+        draft = this.templateFallback(prompt, localeCode);
+        note =
+          'AI uretimi basarisiz oldu — deterministik sablon modu kullanildi.';
+      }
     } else {
       draft = this.templateFallback(prompt, localeCode);
       note =
@@ -160,8 +167,7 @@ export class AiService {
     apiKey: string,
     prompt: string,
     localeCode: string,
-  ): Promise<DraftPage> {
-    const client = new Anthropic({ apiKey });
+  ): Promise<DraftPage | null> {
     const lang = localeCode === 'tr' ? 'Turkce' : 'Ingilizce';
     const system = [
       "Kurumsal bir siber guvenlik sirketi (Kron Technologies benzeri) CMS'i icin sayfa tasarlayan bir mimar asistansin.",
@@ -174,43 +180,20 @@ export class AiService {
         '/contact gibi yerel yollara isaret etsin.',
     ].join('\n\n');
 
-    try {
-      const response = await client.messages.create({
-        model: process.env.AI_MODEL ?? 'claude-opus-4-8',
-        max_tokens: 16000,
-        thinking: { type: 'enabled', budget_tokens: 10000 },
-        system,
-        messages: [{ role: 'user', content: prompt }],
-      });
-      const textBlocks = response.content.filter(
-        (b): b is TextBlock => b.type === 'text',
-      );
-      const text = textBlocks.map((b) => b.text).join('');
-      return this.parseDraft(text);
-    } catch (err: unknown) {
-      if (err instanceof Anthropic.APIError) {
-        this.logger.error(
-          `Claude API hatasi ${String(err.status)}: ${err.message}`,
-        );
-        throw new BadRequestException(
-          `AI uretimi basarisiz (API ${String(err.status)}). Sablon modu icin key'i kaldirin.`,
-        );
-      }
-      throw err;
-    }
-  }
-
-  private parseDraft(text: string): DraftPage {
-    // Olasi markdown citlerini temizle, ilk { ... son } arasini al
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start < 0 || end <= start)
-      throw new BadRequestException('AI ciktisi JSON degil.');
-    const parsed = JSON.parse(text.slice(start, end + 1)) as DraftPage;
-    if (!parsed.title || !Array.isArray(parsed.blocks)) {
-      throw new BadRequestException('AI ciktisinda title/blocks eksik.');
-    }
-    return parsed;
+    // Opus 4.8 ADAPTIVE thinking ister (eski thinking.enabled/budget_tokens -> 400).
+    // callClaudeJson think:true ile adaptive + output_config.effort kullanir; basarisizsa
+    // null doner ve cagiran (architect) sablon moduna zarifce duser (400 atmaz).
+    const parsed = await this.callClaudeJson<DraftPage>(
+      apiKey,
+      system,
+      prompt,
+      {
+        maxTokens: 16000,
+        think: true,
+      },
+    );
+    if (parsed && parsed.title && Array.isArray(parsed.blocks)) return parsed;
+    return null;
   }
 
   // --------------------------- Sablon fallback ---------------------------
@@ -855,7 +838,11 @@ export class AiService {
         system,
         messages: [{ role: 'user', content: userContent }],
         ...(opts.think
-          ? { thinking: { type: 'enabled' as const, budget_tokens: 4000 } }
+          ? {
+              // Opus 4.8: adaptive thinking (eski enabled/budget_tokens desteklenmiyor).
+              thinking: { type: 'adaptive' as const },
+              output_config: { effort: 'high' as const },
+            }
           : {}),
       });
       const text = response.content
