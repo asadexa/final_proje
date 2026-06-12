@@ -35,7 +35,7 @@ export function ProductCarousel({
       pagination={{ clickable: true }}
       navigation
       autoplay={{ delay: 3000, disableOnInteraction: false }} /* krontech olcum: 3000ms */
-      className="product-carousel pb-12"
+      className="product-carousel px-2 pb-16"
     >
       {products.map((p, i) => {
         const features = p.features ?? [];

@@ -6,11 +6,11 @@ type FLink = { label: string; href: string };
 function FooterCol({ title, items }: { title: string; items: FLink[] }) {
   return (
     <div>
-      <p className="mb-4 text-sm font-semibold text-white">{title}</p>
-      <ul className="space-y-2.5 text-sm">
+      <p className="mb-5 text-base font-bold text-white">{title}</p>
+      <ul className="space-y-3 text-[15px]">
         {items.map((i) => (
           <li key={i.label}>
-            <Link href={i.href} className="text-white/65 transition-colors hover:text-white">
+            <Link href={i.href} className="text-white/70 transition-colors hover:text-white">
               {i.label}
             </Link>
           </li>
@@ -56,27 +56,27 @@ export function SiteFooter({ locale, dict }: { locale: Locale; dict: Dictionary 
       {/* Footer ustu mavi bar */}
       <div className="h-1.5 w-full bg-primary" />
 
-      <div className="bg-[#0a1733] text-white">
-        <div className="mx-auto max-w-[1140px] px-4 py-20 sm:px-6">
-          <div className="grid gap-10 md:grid-cols-5">
+      <div className="bg-black text-white">
+        <div className="mx-auto max-w-[1200px] px-4 py-24 sm:px-6">
+          <div className="grid gap-12 md:grid-cols-5">
             <div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/kron-logo-light.png" alt="Kron Technologies" className="h-8 w-auto" />
-              <p className="mt-4 max-w-xs text-sm text-white/60">{dict.footer.tagline}</p>
+              <img src="/kron-logo-light.png" alt="Kron Technologies" className="h-10 w-auto" />
+              <p className="mt-5 max-w-xs text-[15px] leading-7 text-white/65">{dict.footer.tagline}</p>
             </div>
             <FooterCol title={dict.nav.products} items={products} />
             <FooterCol title={dict.footer.sectors} items={sectors} />
             <FooterCol title={dict.nav.about} items={about} />
             <div>
-              <p className="mb-4 text-sm font-semibold text-white">{dict.footer.social}</p>
-              <ul className="space-y-2.5 text-sm">
+              <p className="mb-5 text-base font-bold text-white">{dict.footer.social}</p>
+              <ul className="space-y-3 text-[15px]">
                 {social.map((s) => (
                   <li key={s.label}>
                     <a
                       href={s.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white/65 transition-colors hover:text-white"
+                      className="text-white/70 transition-colors hover:text-white"
                     >
                       {s.label}
                     </a>
@@ -87,8 +87,8 @@ export function SiteFooter({ locale, dict }: { locale: Locale; dict: Dictionary 
           </div>
         </div>
 
-        {/* Alt bar: copyright + yasal */}
-        <div className="border-t border-white/10">
+        {/* Alt bar: copyright + yasal (krontech .subfooter #0f1010) */}
+        <div className="border-t border-white/10 bg-[#0f1010]">
           <div className="mx-auto flex max-w-[1140px] flex-col gap-3 px-4 py-5 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <p>© 2007 - {year} Kron. {dict.footer.rights}</p>
             <nav className="flex flex-wrap gap-4">

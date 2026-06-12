@@ -94,7 +94,7 @@ export default async function ResourcesPage({ params }: PageProps<"/[locale]/res
             {cards.map((c) => (
               <div
                 key={c.title}
-                className="kron-notch mt-4 bg-surface p-5 shadow-[0_6px_12px_-4px_rgba(37,38,41,0.12)]"
+                className="kron-notch mt-4 flex h-full flex-col bg-surface p-5 shadow-[0_6px_12px_-4px_rgba(37,38,41,0.12)]"
               >
                 {/* gorsel kart kenarina tasar (krontech -20px margin + gradyan) */}
                 <div className="kron-gradient-img -mx-5 -mt-5">
@@ -111,7 +111,8 @@ export default async function ResourcesPage({ params }: PageProps<"/[locale]/res
                   )}
                 </h4>
                 <p className="mt-3 text-ink-soft">{c.desc}</p>
-                <div className="mt-5">
+                {/* buton her zaman kartin altina hizalanir (orta kart kaymasi cozumu) */}
+                <div className="mt-auto pt-5">
                   {c.href ? (
                     <Link
                       href={c.href}
