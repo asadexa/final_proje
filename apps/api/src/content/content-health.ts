@@ -103,7 +103,8 @@ function findImages(
       alt: typeof obj.alt === 'string' ? obj.alt : undefined,
     });
   }
-  for (const [k, val] of Object.entries(obj)) findImages(val, `${path}.${k}`, out);
+  for (const [k, val] of Object.entries(obj))
+    findImages(val, `${path}.${k}`, out);
 }
 
 // data icinde herhangi bir dolu href var mi (CTA varligi denetimi)
@@ -121,7 +122,12 @@ function countWords(blocks: HealthInput['blocks']): number {
   const walk = (v: unknown): void => {
     if (typeof v === 'string') {
       const s = v.trim();
-      if (s && !s.startsWith('/') && !s.startsWith('http') && !/^[a-z0-9_-]+$/.test(s)) {
+      if (
+        s &&
+        !s.startsWith('/') &&
+        !s.startsWith('http') &&
+        !/^[a-z0-9_-]+$/.test(s)
+      ) {
         parts.push(s.replace(/<[^>]+>/g, ' '));
       }
     } else if (Array.isArray(v)) v.forEach(walk);
@@ -147,7 +153,12 @@ const CHECKS: CheckDef[] = [
     label: 'Sayfada blok var',
     run: (e) =>
       e.blocks.length === 0
-        ? [{ severity: 'error', message: 'İçerikte hiç blok yok — sayfa boş render olur.' }]
+        ? [
+            {
+              severity: 'error',
+              message: 'İçerikte hiç blok yok — sayfa boş render olur.',
+            },
+          ]
         : [],
   },
   {
@@ -176,7 +187,12 @@ const CHECKS: CheckDef[] = [
     run: (e) => {
       const t = (e.seo?.metaTitle ?? e.title).trim();
       if (t === '')
-        return [{ severity: 'warning', message: 'Başlık boş — arama sonucunda görünmez.' }];
+        return [
+          {
+            severity: 'warning',
+            message: 'Başlık boş — arama sonucunda görünmez.',
+          },
+        ];
       if (t.length < 15)
         return [
           {
@@ -209,7 +225,10 @@ const CHECKS: CheckDef[] = [
         ];
       if (md.length < 50)
         return [
-          { severity: 'info', message: `Meta description kısa (${md.length} kr; öneri 50–160).` },
+          {
+            severity: 'info',
+            message: `Meta description kısa (${md.length} kr; öneri 50–160).`,
+          },
         ];
       if (md.length > 160)
         return [
@@ -246,7 +265,12 @@ const CHECKS: CheckDef[] = [
     run: (e) => {
       const c = e.seo?.canonicalUrl;
       if (c && !c.startsWith('http'))
-        return [{ severity: 'error', message: 'Canonical URL mutlak (https://...) olmalı.' }];
+        return [
+          {
+            severity: 'error',
+            message: 'Canonical URL mutlak (https://...) olmalı.',
+          },
+        ];
       return [];
     },
   },
@@ -274,7 +298,8 @@ const CHECKS: CheckDef[] = [
         ? [
             {
               severity: 'warning',
-              message: 'Özet (excerpt) boş — blog listesinde ve OG açıklamasında kullanılır.',
+              message:
+                'Özet (excerpt) boş — blog listesinde ve OG açıklamasında kullanılır.',
             },
           ]
         : [];
@@ -293,7 +318,8 @@ const CHECKS: CheckDef[] = [
         if (/<h1[\s>]/i.test(html))
           out.push({
             severity: 'warning',
-            message: 'RICH_TEXT içinde <h1> var — sayfada çift h1 oluşur (h2/h3 kullanın).',
+            message:
+              'RICH_TEXT içinde <h1> var — sayfada çift h1 oluşur (h2/h3 kullanın).',
             where: `blok #${i + 1}`,
           });
       });
@@ -335,7 +361,8 @@ const CHECKS: CheckDef[] = [
         ? [
             {
               severity: 'warning',
-              message: 'Sayfada hiç bağlantı/CTA yok — ziyaretçi için sonraki adım tanımsız.',
+              message:
+                'Sayfada hiç bağlantı/CTA yok — ziyaretçi için sonraki adım tanımsız.',
             },
           ]
         : [];
@@ -415,7 +442,10 @@ export function checkContentHealth(entry: HealthInput): HealthResult {
     ux: 0,
     geo: 0,
   };
-  const catApplied: Record<HealthCategory, { passed: number; findings: number }> = {
+  const catApplied: Record<
+    HealthCategory,
+    { passed: number; findings: number }
+  > = {
     structure: { passed: 0, findings: 0 },
     seo: { passed: 0, findings: 0 },
     a11y: { passed: 0, findings: 0 },
@@ -427,7 +457,11 @@ export function checkContentHealth(entry: HealthInput): HealthResult {
     const out = check.run(entry);
     if (out === null) continue; // uygulanamaz
     if (out.length === 0) {
-      passed.push({ category: check.category, code: check.code, label: check.label });
+      passed.push({
+        category: check.category,
+        code: check.code,
+        label: check.label,
+      });
       catApplied[check.category].passed += 1;
       continue;
     }

@@ -13,7 +13,10 @@ function base(over: Partial<HealthInput> = {}): HealthInput {
     blocks: [
       {
         type: 'HERO',
-        data: { title: 'Merhaba dünya', cta: { label: 'İletişime geçin', href: '/tr/contact' } },
+        data: {
+          title: 'Merhaba dünya',
+          cta: { label: 'İletişime geçin', href: '/tr/contact' },
+        },
       },
       { type: 'SECTION_HEADING', data: { title: 'Neden biz' } },
       {
@@ -24,7 +27,10 @@ function base(over: Partial<HealthInput> = {}): HealthInput {
             'birkac cumle daha eklenmistir boylece ince icerik uyarisi tetiklenmez ve okuyucuya gercek bir deger sunar.</p>',
         },
       },
-      { type: 'FAQ', data: { items: [{ question: 'Soru?', answer: 'Cevap metni.' }] } },
+      {
+        type: 'FAQ',
+        data: { items: [{ question: 'Soru?', answer: 'Cevap metni.' }] },
+      },
     ],
     seo: {
       metaTitle: 'Kurumsal Siber Güvenlik Çözümleri | Kron',
@@ -52,7 +58,9 @@ describe('checkContentHealth', () => {
 
   it('bloksuz icerikte error verir + skor dusurur', () => {
     const r = checkContentHealth(base({ blocks: [] }));
-    expect(r.findings.find((x) => x.code === 'has-blocks')?.severity).toBe('error');
+    expect(r.findings.find((x) => x.code === 'has-blocks')?.severity).toBe(
+      'error',
+    );
     expect(r.score).toBeLessThan(100);
   });
 
@@ -79,25 +87,34 @@ describe('checkContentHealth', () => {
   });
 
   it('OG alanlari eksikse info verir (yeni kural)', () => {
-    expect(
-      codes(base({ seo: { metaDescription: 'x'.repeat(60) } })),
-    ).toContain('og-fields');
+    expect(codes(base({ seo: { metaDescription: 'x'.repeat(60) } }))).toContain(
+      'og-fields',
+    );
   });
 
   it('ince icerik uyarir (yeni kural)', () => {
-    const blocks = [{ type: 'HERO', data: { title: 'Tek', cta: { label: 'Git', href: '/x' } } }];
+    const blocks = [
+      {
+        type: 'HERO',
+        data: { title: 'Tek', cta: { label: 'Git', href: '/x' } },
+      },
+    ];
     expect(codes(base({ blocks }))).toContain('thin-content');
   });
 
   it('noindex bilincli mi diye uyarir', () => {
     expect(
-      codes(base({ seo: { metaDescription: 'x'.repeat(60), robotsIndex: false } })),
+      codes(
+        base({ seo: { metaDescription: 'x'.repeat(60), robotsIndex: false } }),
+      ),
     ).toContain('indexable');
   });
 
   it('goreli canonical error verir', () => {
     const f = checkContentHealth(
-      base({ seo: { metaDescription: 'x'.repeat(60), canonicalUrl: '/tr/sayfa' } }),
+      base({
+        seo: { metaDescription: 'x'.repeat(60), canonicalUrl: '/tr/sayfa' },
+      }),
     ).findings.find((x) => x.code === 'canonical');
     expect(f?.severity).toBe('error');
   });
@@ -106,7 +123,9 @@ describe('checkContentHealth', () => {
     const blocks = [
       {
         type: 'PRODUCT_SHOWCASE',
-        data: { products: [{ name: 'P', href: '/x', image: { url: '/a.jpg' } }] },
+        data: {
+          products: [{ name: 'P', href: '/x', image: { url: '/a.jpg' } }],
+        },
       },
     ];
     const f = checkContentHealth(base({ blocks })).findings.find(
@@ -124,7 +143,9 @@ describe('checkContentHealth', () => {
   });
 
   it('FAQ olmayan SAYFADA da GEO onerisi verir (kapsam genisledi)', () => {
-    const blocks = [{ type: 'HERO', data: { title: 'T', cta: { label: 'G', href: '/x' } } }];
+    const blocks = [
+      { type: 'HERO', data: { title: 'T', cta: { label: 'G', href: '/x' } } },
+    ];
     expect(codes(base({ type: 'PAGE', blocks }))).toContain('faq');
     expect(codes(base({ type: 'PRODUCT', blocks }))).toContain('faq');
   });
