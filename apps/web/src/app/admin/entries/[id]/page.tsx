@@ -117,6 +117,8 @@ export default function EntryEditorPage(): ReactElement {
   const [aiReadability, setAiReadability] = useState<{ readabilityScore: number; tone: string; suggestions: string[]; metrics?: { words: number; sentences: number; avgSentence: number; paragraphs: number } } | null>(null);
   const [aiReadabilityBusy, setAiReadabilityBusy] = useState(false);
   const [aiTranslating, setAiTranslating] = useState<string | null>(null);
+  const [aiProgress, setAiProgress] = useState<number | null>(null);
+  const aiProgressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Belirgin geri bildirim: sag-ust toast, 4sn sonra kaybolur
   const showToast = useCallback((kind: Toast["kind"], text: string) => {
@@ -194,6 +196,13 @@ export default function EntryEditorPage(): ReactElement {
     };
     return () => es.close();
   }, [id, load, showToast]);
+
+  // AI ilerleme cubugu zamanlayicisini unmount'ta temizle (sizinti olmasin)
+  useEffect(() => {
+    return () => {
+      if (aiProgressTimer.current) clearInterval(aiProgressTimer.current);
+    };
+  }, []);
 
   function patchEntry(p: Partial<AdminEntry>): void {
     setDirty(true);
@@ -399,6 +408,28 @@ export default function EntryEditorPage(): ReactElement {
     }
   }
 
+  // AI cagrisi sirasinda zaman-tahminli ilerleme cubugu. LLM gercek ilerleme
+  // (stream progress) vermez; ~9sn sabitiyle %92'ye yumusak yaklasir, yanit
+  // gelince %100 -> kisa sure sonra gizlenir. Yani "tahmin", sahte kesinlik degil.
+  function startAiProgress(): () => void {
+    let tick = 0;
+    setAiProgress(6);
+    if (aiProgressTimer.current) clearInterval(aiProgressTimer.current);
+    aiProgressTimer.current = setInterval(() => {
+      tick += 1;
+      const t = tick * 0.2; // saniye
+      setAiProgress(Math.min(92, Math.round(92 * (1 - Math.exp(-t / 9)))));
+    }, 200);
+    return () => {
+      if (aiProgressTimer.current) {
+        clearInterval(aiProgressTimer.current);
+        aiProgressTimer.current = null;
+      }
+      setAiProgress(100);
+      window.setTimeout(() => setAiProgress(null), 600);
+    };
+  }
+
   // AI SEO suggestions
   async function runAiSeo(): Promise<void> {
     if (dirty) {
@@ -406,13 +437,18 @@ export default function EntryEditorPage(): ReactElement {
       return;
     }
     setAiSuggestionsBusy(true);
-    const res = await adminFetch<{
-      suggestions: Array<{ severity: string; message: string; recommendation: string }>;
-      proposed: { metaTitle: string; metaDescription: string; ogTitle: string; ogDescription: string };
-    }>(`/admin/ai/entries/${id}/health-suggestions`);
-    setAiSuggestions(res?.suggestions ?? []);
-    setAiProposed(res?.proposed ?? null);
-    setAiSuggestionsBusy(false);
+    const done = startAiProgress();
+    try {
+      const res = await adminFetch<{
+        suggestions: Array<{ severity: string; message: string; recommendation: string }>;
+        proposed: { metaTitle: string; metaDescription: string; ogTitle: string; ogDescription: string };
+      }>(`/admin/ai/entries/${id}/health-suggestions`);
+      setAiSuggestions(res?.suggestions ?? []);
+      setAiProposed(res?.proposed ?? null);
+    } finally {
+      done();
+      setAiSuggestionsBusy(false);
+    }
   }
 
   // AI Content / Editorial Analysis
@@ -422,11 +458,16 @@ export default function EntryEditorPage(): ReactElement {
       return;
     }
     setAiReadabilityBusy(true);
-    const res = await adminFetch<{ readabilityScore: number; tone: string; suggestions: string[]; metrics?: { words: number; sentences: number; avgSentence: number; paragraphs: number } }>(
-      `/admin/ai/entries/${id}/analyze`
-    );
-    setAiReadability(res ?? null);
-    setAiReadabilityBusy(false);
+    const done = startAiProgress();
+    try {
+      const res = await adminFetch<{ readabilityScore: number; tone: string; suggestions: string[]; metrics?: { words: number; sentences: number; avgSentence: number; paragraphs: number } }>(
+        `/admin/ai/entries/${id}/analyze`
+      );
+      setAiReadability(res ?? null);
+    } finally {
+      done();
+      setAiReadabilityBusy(false);
+    }
   }
 
   // AI Translation Assistant
@@ -441,6 +482,7 @@ export default function EntryEditorPage(): ReactElement {
       }
     }
     setAiTranslating(localeCode);
+    const done = startAiProgress();
     try {
       const res = await adminFetch<{ entryId: string; slug: string }>(
         `/admin/ai/entries/${id}/translate`,
@@ -458,6 +500,7 @@ export default function EntryEditorPage(): ReactElement {
     } catch {
       showToast("err", "AI çeviri hatası.");
     } finally {
+      done();
       setAiTranslating(null);
     }
   }
@@ -843,7 +886,7 @@ export default function EntryEditorPage(): ReactElement {
               <span>🤖</span> AI Asistanı
             </h3>
             <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-              Claude 3.5
+              Claude Opus 4.8
             </span>
           </div>
 
@@ -871,6 +914,21 @@ export default function EntryEditorPage(): ReactElement {
               Çeviri
             </button>
           </div>
+
+          {aiProgress !== null && (
+            <div className="mb-3 space-y-1">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/30">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-200 ease-out"
+                  style={{ width: `${aiProgress}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted">
+                <span className="animate-pulse">Claude analiz ediyor…</span>
+                <span className="font-medium tabular-nums text-primary">%{aiProgress}</span>
+              </div>
+            </div>
+          )}
 
           {/* Tab İçerikleri */}
           {aiTab === "seo" && (
