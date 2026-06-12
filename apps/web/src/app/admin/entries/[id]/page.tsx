@@ -113,7 +113,8 @@ export default function EntryEditorPage(): ReactElement {
   const [aiTab, setAiTab] = useState<"seo" | "editorial" | "translate">("seo");
   const [aiSuggestions, setAiSuggestions] = useState<Array<{ severity: string; message: string; recommendation: string }> | null>(null);
   const [aiSuggestionsBusy, setAiSuggestionsBusy] = useState(false);
-  const [aiReadability, setAiReadability] = useState<{ readabilityScore: number; tone: string; suggestions: string[] } | null>(null);
+  const [aiProposed, setAiProposed] = useState<{ metaTitle: string; metaDescription: string; ogTitle: string; ogDescription: string } | null>(null);
+  const [aiReadability, setAiReadability] = useState<{ readabilityScore: number; tone: string; suggestions: string[]; metrics?: { words: number; sentences: number; avgSentence: number; paragraphs: number } } | null>(null);
   const [aiReadabilityBusy, setAiReadabilityBusy] = useState(false);
   const [aiTranslating, setAiTranslating] = useState<string | null>(null);
 
@@ -405,10 +406,12 @@ export default function EntryEditorPage(): ReactElement {
       return;
     }
     setAiSuggestionsBusy(true);
-    const res = await adminFetch<{ suggestions: Array<{ severity: string; message: string; recommendation: string }> }>(
-      `/admin/ai/entries/${id}/health-suggestions`
-    );
+    const res = await adminFetch<{
+      suggestions: Array<{ severity: string; message: string; recommendation: string }>;
+      proposed: { metaTitle: string; metaDescription: string; ogTitle: string; ogDescription: string };
+    }>(`/admin/ai/entries/${id}/health-suggestions`);
     setAiSuggestions(res?.suggestions ?? []);
+    setAiProposed(res?.proposed ?? null);
     setAiSuggestionsBusy(false);
   }
 
@@ -419,7 +422,7 @@ export default function EntryEditorPage(): ReactElement {
       return;
     }
     setAiReadabilityBusy(true);
-    const res = await adminFetch<{ readabilityScore: number; tone: string; suggestions: string[] }>(
+    const res = await adminFetch<{ readabilityScore: number; tone: string; suggestions: string[]; metrics?: { words: number; sentences: number; avgSentence: number; paragraphs: number } }>(
       `/admin/ai/entries/${id}/analyze`
     );
     setAiReadability(res ?? null);
@@ -897,6 +900,49 @@ export default function EntryEditorPage(): ReactElement {
                   ))}
                 </ul>
               )}
+
+              {aiProposed && (
+                <div className="rounded border border-primary/30 bg-primary/5 p-2.5 space-y-2">
+                  <div className="text-[11px] font-semibold text-primary">✨ Önerilen meta alanları</div>
+                  <div className="space-y-1.5 text-[11px]">
+                    <div>
+                      <div className="text-muted">Meta Title <span className="opacity-60">({aiProposed.metaTitle.length} kr)</span></div>
+                      <div className="font-medium text-ink">{aiProposed.metaTitle}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted">Meta Description <span className="opacity-60">({aiProposed.metaDescription.length} kr)</span></div>
+                      <div className="text-ink">{aiProposed.metaDescription}</div>
+                    </div>
+                    {aiProposed.ogTitle && (
+                      <div>
+                        <div className="text-muted">OG Title</div>
+                        <div className="text-ink">{aiProposed.ogTitle}</div>
+                      </div>
+                    )}
+                    {aiProposed.ogDescription && (
+                      <div>
+                        <div className="text-muted">OG Description</div>
+                        <div className="text-ink">{aiProposed.ogDescription}</div>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      patchSeo({
+                        metaTitle: aiProposed.metaTitle,
+                        metaDescription: aiProposed.metaDescription,
+                        ogTitle: aiProposed.ogTitle,
+                        ogDescription: aiProposed.ogDescription,
+                      });
+                      showToast("ok", "Önerilen meta alanları forma uygulandı — kaydetmeyi unutmayın.");
+                    }}
+                    className="w-full rounded bg-primary py-1.5 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
+                  >
+                    Forma Uygula
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -924,6 +970,22 @@ export default function EntryEditorPage(): ReactElement {
                     <span className="text-muted">İçerik Tonu:</span>
                     <span className="font-bold text-ink">{aiReadability.tone}</span>
                   </div>
+                  {aiReadability.metrics && (
+                    <div className="grid grid-cols-3 gap-1 text-center">
+                      <div className="rounded bg-line/10 p-1.5">
+                        <div className="font-bold text-ink">{aiReadability.metrics.words}</div>
+                        <div className="text-[9px] text-muted">kelime</div>
+                      </div>
+                      <div className="rounded bg-line/10 p-1.5">
+                        <div className="font-bold text-ink">{aiReadability.metrics.sentences}</div>
+                        <div className="text-[9px] text-muted">cümle</div>
+                      </div>
+                      <div className="rounded bg-line/10 p-1.5">
+                        <div className="font-bold text-ink">{aiReadability.metrics.avgSentence}</div>
+                        <div className="text-[9px] text-muted">ort. kel/cümle</div>
+                      </div>
+                    </div>
+                  )}
                   {aiReadability.suggestions.length > 0 && (
                     <div className="mt-2">
                       <div className="font-semibold text-ink-soft mb-1">Öneriler:</div>

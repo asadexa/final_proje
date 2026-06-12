@@ -351,120 +351,76 @@ export class AiService {
       message: string;
       recommendation: string;
     }>;
+    proposed: {
+      metaTitle: string;
+      metaDescription: string;
+      ogTitle: string;
+      ogDescription: string;
+    };
   }> {
     const rawEntry = await this.content.findOne(id);
     const entry = rawEntry as unknown as EntryWithBlocksAndSeo;
     const apiKey = process.env.ANTHROPIC_API_KEY;
+    const baseProposed = this.deriveSeo(entry);
 
     if (apiKey) {
-      return this.healthSuggestionsWithClaude(apiKey, entry);
-    }
-
-    // Fallback: Deterministik öneriler
-    const suggestions: Array<{
-      severity: 'info' | 'warning' | 'error';
-      message: string;
-      recommendation: string;
-    }> = [];
-    const isTr = entry.localeCode === 'tr';
-
-    if (entry.type === 'PRODUCT') {
-      suggestions.push({
-        severity: 'info',
-        message: isTr
-          ? 'Ürün detayları için teknik özellikler tablosu veya şema eklenebilir.'
-          : 'Technical specs table or schema can be added for product details.',
-        recommendation: isTr
-          ? 'Ürün özelliklerini detaylandıran bir FEATURE_GRID veya RICH_TEXT tablosu ekleyin.'
-          : 'Add a FEATURE_GRID or RICH_TEXT table detailing product features.',
-      });
-      suggestions.push({
-        severity: 'warning',
-        message: isTr
-          ? 'Sayfa içi görsel zenginlik yetersiz görünüyor.'
-          : 'On-page visual richness seems insufficient.',
-        recommendation: isTr
-          ? 'Sayfanın değer teklifini desteklemek için en az bir adet MEDIA_TEXT bloğu ekleyin.'
-          : 'Add at least one MEDIA_TEXT block to support the page value proposition.',
-      });
-    } else if (entry.type === 'PAGE') {
-      suggestions.push({
-        severity: 'info',
-        message: isTr
-          ? 'Sayfa akışı referanslarla zenginleştirilebilir.'
-          : 'Page flow can be enriched with references.',
-        recommendation: isTr
-          ? 'Ziyaretçi güvenini artırmak için referans veya TESTIMONIAL bloğu eklemeyi düşünün.'
-          : 'Consider adding a reference or TESTIMONIAL block to increase visitor trust.',
-      });
-    } else if (entry.type === 'POST') {
-      suggestions.push({
-        severity: 'info',
-        message: isTr
-          ? 'Okuyucu etkileşimi artırılabilir.'
-          : 'Reader engagement can be increased.',
-        recommendation: isTr
-          ? 'Yazının sonuna ilgili diğer blog yazılarına yönlendiren bir BLOG_CAROUSEL ekleyin.'
-          : 'Add a BLOG_CAROUSEL directing to other related blog posts at the end.',
-      });
-    }
-
-    return { suggestions };
-  }
-
-  private async healthSuggestionsWithClaude(
-    apiKey: string,
-    entry: EntryWithBlocksAndSeo,
-  ): Promise<{
-    suggestions: Array<{
-      severity: 'info' | 'warning' | 'error';
-      message: string;
-      recommendation: string;
-    }>;
-  }> {
-    const client = new Anthropic({ apiKey });
-    const system = [
-      'Kurumsal siber guvenlik web sitesi icin SEO ve erisilebilirlik uzmanisin.',
-      'Verilen sayfa icerigini (baslik, ozet, seo alanlari ve bloklar) analiz et ve qualitative SEO, erisilebilirlik ve okunabilirlik onerileri uret.',
-      'Cikti formatı JSON formatinda olmalidir. Yanitta baska hicbir metin olmamalidir.',
-      'Format:',
-      '{ "suggestions": [ { "severity": "info"|"warning"|"error", "message": "Sorunun aciklamasi", "recommendation": "Nasil duzeltilecegine dair cozum onerisi" } ] }',
-    ].join('\n\n');
-
-    const inputData = {
-      title: entry.title,
-      excerpt: entry.excerpt,
-      seo: entry.seo,
-      blocks: entry.blocks.map((b) => ({ type: b.type, data: b.data })),
-    };
-
-    try {
-      const response = await client.messages.create({
-        model: process.env.AI_MODEL ?? 'claude-opus-4-8',
-        max_tokens: 4000,
-        thinking: { type: 'enabled', budget_tokens: 2000 },
-        system,
-        messages: [
-          { role: 'user', content: JSON.stringify(inputData, null, 2) },
-        ],
-      });
-      const textBlocks = response.content.filter(
-        (b): b is TextBlock => b.type === 'text',
+      const isTr = entry.localeCode === 'tr';
+      const system = [
+        'Kurumsal siber guvenlik web sitesi icin SEO ve GEO uzmanisin.',
+        `Hedef dil: ${isTr ? 'Turkce' : 'Ingilizce'}. Marka: Kron Technologies.`,
+        'Verilen sayfayi analiz et: (1) bu icerige OZGU somut SEO/erisilebilirlik/GEO onerileri uret, (2) optimize edilmis meta alanlari ONER.',
+        'metaTitle <= 60 karakter; metaDescription 120-155 karakter, anahtar kelime dogal, tiklama-dostu.',
+        'ogTitle/ogDescription sosyal paylasim icin cekici olmali (meta ile ayni olabilir).',
+        'Onerileri ve meta degerlerini HEDEF DILDE yaz.',
+        'YALNIZ gecerli JSON dondur (markdown citi yok, aciklama yok):',
+        '{ "suggestions": [{ "severity": "info|warning|error", "message": "", "recommendation": "" }], "proposed": { "metaTitle": "", "metaDescription": "", "ogTitle": "", "ogDescription": "" } }',
+      ].join('\n\n');
+      const userContent = JSON.stringify(
+        {
+          title: entry.title,
+          excerpt: entry.excerpt,
+          type: entry.type,
+          locale: entry.localeCode,
+          currentSeo: entry.seo,
+          blocks: entry.blocks.map((b) => ({ type: b.type, data: b.data })),
+        },
+        null,
+        2,
       );
-      const text = textBlocks.map((b) => b.text).join('');
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
-      if (start < 0 || end <= start) return { suggestions: [] };
-      return JSON.parse(text.slice(start, end + 1)) as {
+      const ai = await this.callClaudeJson<{
         suggestions: Array<{
           severity: 'info' | 'warning' | 'error';
           message: string;
           recommendation: string;
         }>;
-      };
-    } catch {
-      return { suggestions: [] };
+        proposed: Partial<{
+          metaTitle: string;
+          metaDescription: string;
+          ogTitle: string;
+          ogDescription: string;
+        }>;
+      }>(apiKey, system, userContent, { maxTokens: 4000 });
+      if (ai && Array.isArray(ai.suggestions)) {
+        return {
+          suggestions: ai.suggestions,
+          proposed: {
+            metaTitle: ai.proposed?.metaTitle?.trim() || baseProposed.metaTitle,
+            metaDescription:
+              ai.proposed?.metaDescription?.trim() ||
+              baseProposed.metaDescription,
+            ogTitle: ai.proposed?.ogTitle?.trim() || baseProposed.ogTitle,
+            ogDescription:
+              ai.proposed?.ogDescription?.trim() || baseProposed.ogDescription,
+          },
+        };
+      }
+      // Claude basarisiz -> deterministik onerilere + turetilmis meta'ya dus
     }
+
+    return {
+      suggestions: this.deterministicSeoAdvice(entry),
+      proposed: baseProposed,
+    };
   }
 
   // --------------------------- 2. AI Çeviri Yardımı ---------------------------
@@ -488,40 +444,34 @@ export class AiService {
         targetLocale,
       );
     } else {
+      // Anahtarsiz mod: "(EN)" eklemez — terim sozlugu + birebir kopya taslagi.
       translated = {
-        title:
-          targetLocale === 'en'
-            ? `${original.title} (EN)`
-            : `${original.title} (TR)`,
+        title: this.glossaryTranslate(original.title, targetLocale),
         excerpt: original.excerpt
-          ? targetLocale === 'en'
-            ? `${original.excerpt} (Translated)`
-            : `${original.excerpt} (Çevrildi)`
+          ? this.glossaryTranslate(original.excerpt, targetLocale)
           : null,
         seo: original.seo
           ? {
               metaTitle: original.seo.metaTitle
-                ? targetLocale === 'en'
-                  ? `${original.seo.metaTitle} (EN)`
-                  : `${original.seo.metaTitle} (TR)`
+                ? this.glossaryTranslate(original.seo.metaTitle, targetLocale)
                 : undefined,
               metaDescription: original.seo.metaDescription
-                ? targetLocale === 'en'
-                  ? `${original.seo.metaDescription} (EN)`
-                  : `${original.seo.metaDescription} (TR)`
+                ? this.glossaryTranslate(
+                    original.seo.metaDescription,
+                    targetLocale,
+                  )
                 : undefined,
               canonicalUrl: original.seo.canonicalUrl ?? undefined,
               robotsIndex: original.seo.robotsIndex,
               robotsFollow: original.seo.robotsFollow,
               ogTitle: original.seo.ogTitle
-                ? targetLocale === 'en'
-                  ? `${original.seo.ogTitle} (EN)`
-                  : `${original.seo.ogTitle} (TR)`
+                ? this.glossaryTranslate(original.seo.ogTitle, targetLocale)
                 : undefined,
               ogDescription: original.seo.ogDescription
-                ? targetLocale === 'en'
-                  ? `${original.seo.ogDescription} (EN)`
-                  : `${original.seo.ogDescription} (TR)`
+                ? this.glossaryTranslate(
+                    original.seo.ogDescription,
+                    targetLocale,
+                  )
                 : undefined,
             }
           : undefined,
@@ -596,7 +546,6 @@ export class AiService {
     original: EntryWithBlocksAndSeo,
     targetLocale: string,
   ): Promise<TranslatedData> {
-    const client = new Anthropic({ apiKey });
     const targetLang = targetLocale === 'tr' ? 'Turkce' : 'Ingilizce';
     const sourceLang = targetLocale === 'tr' ? 'Ingilizce' : 'Turkce';
 
@@ -604,7 +553,7 @@ export class AiService {
       "Kurumsal bir siber guvenlik sirketi CMS'i icin ceviri asistanisin.",
       `Kaynak dil: ${sourceLang}, Hedef dil: ${targetLang}.`,
       'Sana verilen JSON icerigindeki tum kullaniciya acik metinleri (basliklar, aciklamalar, buton metinleri, meta alanlari) hedef dile cevir.',
-      "YAPI KURALI: JSON yapisini, anahtarlarini (keys), id'leri, URL'leri, gorsel yollarini ve tip alanlarini (type, order) KESINLIKLE degistirme. Yalnızca metin iceriklerini cevir.",
+      "YAPI KURALI: JSON yapisini, anahtarlarini (keys), id'leri, URL'leri, gorsel yollarini ve tip alanlarini (type, order) KESINLIKLE degistirme. Yalnizca metin iceriklerini cevir.",
       'YANIT KURALI: YALNIZ gecerli JSON dondur (markdown cit yok, aciklama yok):',
       '{ "title": "...", "excerpt": "...", "seo": { "metaTitle": "...", "metaDescription": "..." }, "blocks": [{ "type": "...", "data": { ... } }] }',
     ].join('\n\n');
@@ -620,60 +569,62 @@ export class AiService {
             ogDescription: original.seo.ogDescription,
           }
         : null,
-      blocks: original.blocks.map((b) => ({
-        type: b.type,
-        data: b.data,
-      })),
+      blocks: original.blocks.map((b) => ({ type: b.type, data: b.data })),
     };
 
-    try {
-      const response = await client.messages.create({
-        model: process.env.AI_MODEL ?? 'claude-opus-4-8',
-        max_tokens: 16000,
-        thinking: { type: 'enabled', budget_tokens: 10000 },
-        system,
-        messages: [
-          { role: 'user', content: JSON.stringify(inputData, null, 2) },
-        ],
-      });
-      const textBlocks = response.content.filter(
-        (b): b is TextBlock => b.type === 'text',
-      );
-      const text = textBlocks.map((b) => b.text).join('');
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
-      if (start < 0 || end <= start)
-        throw new BadRequestException('AI ceviri ciktisi JSON degil.');
-      const parsed = JSON.parse(text.slice(start, end + 1)) as TranslatedData;
-      if (!parsed.title || !Array.isArray(parsed.blocks)) {
-        throw new BadRequestException(
-          'AI ceviri ciktisinda title/blocks eksik.',
-        );
-      }
+    const parsed = await this.callClaudeJson<TranslatedData>(
+      apiKey,
+      system,
+      JSON.stringify(inputData, null, 2),
+      { maxTokens: 16000 },
+    );
+    if (parsed && parsed.title && Array.isArray(parsed.blocks)) {
       return parsed;
-    } catch (err: unknown) {
-      this.logger.error(
-        `Claude ceviri hatasi: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      throw new BadRequestException(
-        'AI ile ceviri islemi basarisiz oldu. Sablon modu kullanilabilir.',
-      );
     }
+    // Claude basarisiz/gecersiz -> 400 atma; sozluk + birebir kopya taslagina dus.
+    this.logger.warn(
+      'AI ceviri ciktisi gecersiz — sozluk fallback taslagi kullanildi.',
+    );
+    return {
+      title: this.glossaryTranslate(original.title, targetLocale),
+      excerpt: original.excerpt
+        ? this.glossaryTranslate(original.excerpt, targetLocale)
+        : null,
+      seo: original.seo
+        ? {
+            metaTitle: original.seo.metaTitle
+              ? this.glossaryTranslate(original.seo.metaTitle, targetLocale)
+              : undefined,
+            metaDescription: original.seo.metaDescription
+              ? this.glossaryTranslate(
+                  original.seo.metaDescription,
+                  targetLocale,
+                )
+              : undefined,
+            canonicalUrl: original.seo.canonicalUrl ?? undefined,
+            robotsIndex: original.seo.robotsIndex,
+            robotsFollow: original.seo.robotsFollow,
+            ogTitle: original.seo.ogTitle
+              ? this.glossaryTranslate(original.seo.ogTitle, targetLocale)
+              : undefined,
+            ogDescription: original.seo.ogDescription
+              ? this.glossaryTranslate(original.seo.ogDescription, targetLocale)
+              : undefined,
+          }
+        : undefined,
+      blocks: original.blocks.map((b) => ({
+        type: b.type,
+        data: this.translateValue(b.data, targetLocale) as Record<
+          string,
+          unknown
+        >,
+      })),
+    };
   }
 
   private translateValue(val: unknown, target: string): unknown {
     if (typeof val === 'string') {
-      const s = val.trim();
-      if (
-        s === '' ||
-        s.startsWith('/') ||
-        s.startsWith('http') ||
-        s.includes('.') ||
-        s.length < 3
-      ) {
-        return val;
-      }
-      return target === 'en' ? `${s} (EN)` : `${s} (TR)`;
+      return this.glossaryTranslate(val, target);
     }
     if (Array.isArray(val)) {
       return val.map((v) => this.translateValue(v, target));
@@ -709,93 +660,339 @@ export class AiService {
     readabilityScore: number;
     tone: string;
     suggestions: string[];
+    metrics: {
+      words: number;
+      sentences: number;
+      avgSentence: number;
+      paragraphs: number;
+    };
   }> {
     const rawEntry = await this.content.findOne(id);
     const entry = rawEntry as unknown as EntryWithBlocksAndSeo;
     const apiKey = process.env.ANTHROPIC_API_KEY;
-
-    if (apiKey) {
-      return this.analyzeContentWithClaude(apiKey, entry);
-    }
-
-    // Fallback: Basit analiz
-    const isTr = entry.localeCode === 'tr';
-    let textLength = 0;
-    for (const b of entry.blocks) {
-      const text = JSON.stringify(b.data);
-      textLength += text.length;
-    }
-
-    const readabilityScore =
-      textLength < 200 ? 88 : textLength < 1000 ? 76 : 65;
-    const tone = isTr ? 'Profesyonel & Kurumsal' : 'Professional & Corporate';
-
-    const suggestions = isTr
-      ? [
-          'Okunabilirliği artırmak için uzun paragrafları (150+ kelime) bölün.',
-          'Daha fazla listeleme ve kalın (bold) vurgu kullanarak taranabilirliği artırın.',
-          'Teknik siber güvenlik terimlerinin yanına kısa açıklamalar ekleyin.',
-        ]
-      : [
-          'Break down long paragraphs (150+ words) to improve readability.',
-          'Use more bulleted lists and bold highlights to increase scannability.',
-          'Provide brief explanations next to technical cybersecurity terms.',
-        ];
-
-    return { readabilityScore, tone, suggestions };
-  }
-
-  private async analyzeContentWithClaude(
-    apiKey: string,
-    entry: EntryWithBlocksAndSeo,
-  ): Promise<{
-    readabilityScore: number;
-    tone: string;
-    suggestions: string[];
-  }> {
-    const client = new Anthropic({ apiKey });
-    const system = [
-      'Kurumsal siber guvenlik web sitesi icin editoryal analiz uzmanisin.',
-      'Verilen sayfa icerigini (baslik, ozet ve bloklar) editoryal ton, okunabilirlik ve cumle yapisi acisindan analiz et.',
-      'Okunabilirlik skoru (readabilityScore) 0-100 arasinda bir sayi olmalidir.',
-      "Ton (tone) ozetleyici bir ifade olmalidir (orn. 'Profesyonel & Guvenlik Odakli').",
-      'Cozum onerileri (suggestions) dizisi 3 adet editoryal tavsiye icermelidir.',
-      'Cikti formatı JSON formatinda olmalidir. Yanitta baska hicbir metin olmamalidir.',
-      'Format:',
-      '{ "readabilityScore": 85, "tone": "...", "suggestions": ["...", "...", "..."] }',
-    ].join('\n\n');
-
-    const inputData = {
-      title: entry.title,
-      excerpt: entry.excerpt,
-      blocks: entry.blocks.map((b) => ({ type: b.type, data: b.data })),
+    const m = this.textMetrics(this.collectText(entry));
+    const metrics = {
+      words: m.words,
+      sentences: m.sentences,
+      avgSentence: Math.round(m.avgSentence * 10) / 10,
+      paragraphs: m.paragraphs,
     };
 
-    try {
-      const response = await client.messages.create({
-        model: process.env.AI_MODEL ?? 'claude-opus-4-8',
-        max_tokens: 4000,
-        thinking: { type: 'enabled', budget_tokens: 2000 },
-        system,
-        messages: [
-          { role: 'user', content: JSON.stringify(inputData, null, 2) },
-        ],
-      });
-      const textBlocks = response.content.filter(
-        (b): b is TextBlock => b.type === 'text',
+    if (apiKey) {
+      const isTr = entry.localeCode === 'tr';
+      const system = [
+        'Kurumsal siber guvenlik web sitesi icin editoryal analiz uzmanisin.',
+        `Hedef dil: ${isTr ? 'Turkce' : 'Ingilizce'}.`,
+        'Sana sayfanin metin metrikleri ve icerigi verilir; editoryal ton, okunabilirlik ve cumle yapisini degerlendir.',
+        'readabilityScore: 0-100 (yuksek = daha kolay okunur).',
+        "tone: kisa ozet ifade (orn. 'Profesyonel ve guven odakli').",
+        'suggestions: bu icerige OZGU, somut 3-5 editoryal tavsiye. Genel klise YAZMA; gercek cumlelere/bloklara/uzun paragraflara atifta bulun.',
+        'YALNIZ gecerli JSON dondur (markdown citi yok, aciklama yok):',
+        '{ "readabilityScore": 0, "tone": "", "suggestions": ["", ""] }',
+      ].join('\n\n');
+      const userContent = JSON.stringify(
+        {
+          metrics,
+          title: entry.title,
+          excerpt: entry.excerpt,
+          locale: entry.localeCode,
+          blocks: entry.blocks.map((b) => ({ type: b.type, data: b.data })),
+        },
+        null,
+        2,
       );
-      const text = textBlocks.map((b) => b.text).join('');
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
-      if (start < 0 || end <= start)
-        return { readabilityScore: 70, tone: 'Profesyonel', suggestions: [] };
-      return JSON.parse(text.slice(start, end + 1)) as {
+      const ai = await this.callClaudeJson<{
         readabilityScore: number;
         tone: string;
         suggestions: string[];
-      };
-    } catch {
-      return { readabilityScore: 70, tone: 'Profesyonel', suggestions: [] };
+      }>(apiKey, system, userContent, { maxTokens: 4000 });
+      if (ai && Array.isArray(ai.suggestions) && ai.suggestions.length > 0) {
+        return {
+          readabilityScore: Math.max(0, Math.min(100, ai.readabilityScore)),
+          tone: ai.tone,
+          suggestions: ai.suggestions,
+          metrics,
+        };
+      }
+      // Claude basarisiz/bos -> deterministik analize dus (asla bos donme)
     }
+
+    return { ...this.deterministicReadability(entry, m), metrics };
+  }
+
+  // Deterministik okunabilirlik: gercek metriklerden (cumle/kelime/paragraf) skor + ozgun tavsiye.
+  private deterministicReadability(
+    entry: EntryWithBlocksAndSeo,
+    m: {
+      words: number;
+      sentences: number;
+      avgSentence: number;
+      paragraphs: number;
+      longParagraphs: number;
+    },
+  ): { readabilityScore: number; tone: string; suggestions: string[] } {
+    const isTr = entry.localeCode === 'tr';
+    // Ideal ~14-18 kelime/cumle; uzun cumle ve uzun paragraf okunabilirligi dusurur.
+    let score = 100;
+    if (m.avgSentence > 18) score -= Math.min(35, (m.avgSentence - 18) * 2.5);
+    if (m.longParagraphs > 0) score -= Math.min(20, m.longParagraphs * 8);
+    if (m.words > 0 && m.words < 40) score -= 10; // cok kisa = zayif icerik
+    score = Math.max(20, Math.min(100, Math.round(score)));
+
+    const tone = isTr
+      ? 'Profesyonel ve kurumsal'
+      : 'Professional and corporate';
+    const s: string[] = [];
+    if (m.avgSentence > 18) {
+      s.push(
+        isTr
+          ? `Ortalama cumle uzunlugu ${Math.round(m.avgSentence)} kelime — 14-18 araligina indirmek icin uzun cumleleri bolun.`
+          : `Average sentence length is ${Math.round(m.avgSentence)} words — split long sentences toward the 14-18 range.`,
+      );
+    }
+    if (m.longParagraphs > 0) {
+      s.push(
+        isTr
+          ? `${m.longParagraphs} adet uzun blok metni (40+ kelime) var — alt baslik veya madde imleriyle bolun.`
+          : `${m.longParagraphs} long text block(s) (40+ words) — break them with subheadings or bullets.`,
+      );
+    }
+    s.push(
+      isTr
+        ? 'Teknik terimlerin (PAM, zero-trust, MFA) ilk gecisinde kisa bir parantez-aciklama ekleyin (GEO/LLM uyumu).'
+        : 'Add a short parenthetical gloss on first use of technical terms (PAM, zero-trust, MFA) for GEO/LLM compatibility.',
+    );
+    if (m.sentences > 0 && score >= 80) {
+      s.push(
+        isTr
+          ? 'Metin akiskan; bold vurgu ve madde imleriyle taranabilirligi biraz daha artirabilirsiniz.'
+          : 'Text reads well; bold highlights and bullets can further improve scannability.',
+      );
+    }
+    return { readabilityScore: score, tone, suggestions: s };
+  }
+
+  // ===================== Ortak yardimcilar =====================
+
+  // Sayfadaki tum kullaniciya acik metinleri toplar (skor/ozet/SEO turetme icin).
+  private collectText(entry: EntryWithBlocksAndSeo): string {
+    const parts: string[] = [entry.title, entry.excerpt ?? ''];
+    const walk = (v: unknown): void => {
+      if (typeof v === 'string') {
+        const s = v.trim();
+        if (
+          s &&
+          !s.startsWith('/') &&
+          !s.startsWith('http') &&
+          !/^[a-z0-9_-]+$/.test(s)
+        ) {
+          parts.push(s.replace(/<[^>]+>/g, ' ')); // html etiketlerini soy
+        }
+      } else if (Array.isArray(v)) v.forEach(walk);
+      else if (v && typeof v === 'object')
+        Object.values(v as Record<string, unknown>).forEach(walk);
+    };
+    entry.blocks.forEach((b) => walk(b.data));
+    return parts.filter(Boolean).join('. ');
+  }
+
+  private textMetrics(text: string): {
+    words: number;
+    sentences: number;
+    avgSentence: number;
+    paragraphs: number;
+    longParagraphs: number;
+  } {
+    const clean = text.replace(/\s+/g, ' ').trim();
+    const words = clean ? clean.split(/\s+/).length : 0;
+    const sentenceArr = clean
+      .split(/[.!?]+/)
+      .map((x) => x.trim())
+      .filter((x) => x.split(/\s+/).filter(Boolean).length > 1);
+    const sentences = Math.max(1, sentenceArr.length);
+    const avgSentence = words / sentences;
+    const longParagraphs = sentenceArr.filter(
+      (x) => x.split(/\s+/).length > 40,
+    ).length;
+    return {
+      words,
+      sentences,
+      avgSentence,
+      paragraphs: sentenceArr.length,
+      longParagraphs,
+    };
+  }
+
+  // ```json ... ``` citlerini ayiklar, ilk { ile son } arasini JSON.parse eder.
+  private extractJson<T>(text: string): T | null {
+    if (!text) return null;
+    let s = text.trim();
+    const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fence) s = fence[1].trim();
+    const start = s.indexOf('{');
+    const end = s.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    try {
+      return JSON.parse(s.slice(start, end + 1)) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  // Saglam Claude JSON cagrisi: thinking varsayilan KAPALI (yapisal gorevde token bogmaz),
+  // citler ayiklanir, hata loglanir, basarisizsa null doner (cagiran deterministik fallback'e duser).
+  private async callClaudeJson<T>(
+    apiKey: string,
+    system: string,
+    userContent: string,
+    opts: { maxTokens?: number; think?: boolean } = {},
+  ): Promise<T | null> {
+    const client = new Anthropic({ apiKey });
+    try {
+      const response = await client.messages.create({
+        model: process.env.AI_MODEL ?? 'claude-opus-4-8',
+        max_tokens: opts.maxTokens ?? 8000,
+        system,
+        messages: [{ role: 'user', content: userContent }],
+        ...(opts.think
+          ? { thinking: { type: 'enabled' as const, budget_tokens: 4000 } }
+          : {}),
+      });
+      const text = response.content
+        .filter((b): b is TextBlock => b.type === 'text')
+        .map((b) => b.text)
+        .join('')
+        .trim();
+      const parsed = this.extractJson<T>(text);
+      if (parsed === null) {
+        this.logger.warn(
+          `Claude JSON parse edilemedi (ilk 160: ${text.slice(0, 160)})`,
+        );
+      }
+      return parsed;
+    } catch (err: unknown) {
+      this.logger.error(
+        `Claude cagrisi hatasi: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return null;
+    }
+  }
+
+  // Icerikten deterministik meta degerleri turetir (AI bos birakirsa veya anahtar yoksa).
+  private deriveSeo(entry: EntryWithBlocksAndSeo): {
+    metaTitle: string;
+    metaDescription: string;
+    ogTitle: string;
+    ogDescription: string;
+  } {
+    const brand = 'Kron Technologies';
+    const title = entry.title.trim();
+    const metaTitle = (title.length > 50 ? title : `${title} | ${brand}`).slice(
+      0,
+      60,
+    );
+    const raw = (
+      entry.excerpt?.trim() ||
+      this.firstBodyText(entry) ||
+      title
+    ).replace(/\s+/g, ' ');
+    const metaDescription =
+      raw.length > 155 ? `${raw.slice(0, 152).trimEnd()}...` : raw;
+    return {
+      metaTitle,
+      metaDescription,
+      ogTitle: title,
+      ogDescription: metaDescription,
+    };
+  }
+
+  private firstBodyText(entry: EntryWithBlocksAndSeo): string {
+    for (const b of entry.blocks) {
+      const d = b.data;
+      const cand = (d.body ?? d.subtitle ?? d.intro ?? d.html) as
+        | string
+        | undefined;
+      if (typeof cand === 'string' && cand.trim())
+        return cand.replace(/<[^>]+>/g, ' ').trim();
+    }
+    return '';
+  }
+
+  private deterministicSeoAdvice(entry: EntryWithBlocksAndSeo): Array<{
+    severity: 'info' | 'warning' | 'error';
+    message: string;
+    recommendation: string;
+  }> {
+    const isTr = entry.localeCode === 'tr';
+    const out: Array<{
+      severity: 'info' | 'warning' | 'error';
+      message: string;
+      recommendation: string;
+    }> = [];
+    const seo = entry.seo;
+    if (!seo?.metaDescription || seo.metaDescription.length < 80) {
+      out.push({
+        severity: 'warning',
+        message: isTr
+          ? 'Meta aciklama eksik veya cok kisa.'
+          : 'Meta description missing or too short.',
+        recommendation: isTr
+          ? 'Asagidaki onerilen meta aciklamayi uygulayin (120-155 karakter).'
+          : 'Apply the proposed meta description below (120-155 chars).',
+      });
+    }
+    if (!seo?.ogTitle || !seo?.ogDescription) {
+      out.push({
+        severity: 'info',
+        message: isTr
+          ? 'Open Graph alanlari bos.'
+          : 'Open Graph fields are empty.',
+        recommendation: isTr
+          ? 'Sosyal paylasim gorunumu icin OG Title/Description doldurun (asagidaki oneri).'
+          : 'Fill OG Title/Description for social sharing (proposal below).',
+      });
+    }
+    if (!entry.blocks.some((b) => b.type === 'FAQ')) {
+      out.push({
+        severity: 'info',
+        message: isTr ? 'FAQ blogu yok (GEO).' : 'No FAQ block (GEO).',
+        recommendation: isTr
+          ? 'LLM tabanli aramalar icin bir FAQ blogu ekleyin (FAQPage schema cikar).'
+          : 'Add a FAQ block for LLM-based search (emits FAQPage schema).',
+      });
+    }
+    return out;
+  }
+
+  // Anahtarsiz ceviri modu: kucuk terim sozlugu + BIREBIR KOPYA (asla "(EN)" eklemez).
+  private glossaryTranslate(text: string, target: string): string {
+    const s = text;
+    if (!s.trim() || s.startsWith('/') || s.startsWith('http')) return s;
+    const trEn: Record<string, string> = {
+      Ürünler: 'Products',
+      Çözümler: 'Solutions',
+      Kaynaklar: 'Resources',
+      İletişim: 'Contact',
+      Hakkımızda: 'About Us',
+      'Daha Fazla': 'Learn More',
+      'Demo Talep Et': 'Request a Demo',
+      'Bize Ulaşın': 'Contact Us',
+      Özellikler: 'Features',
+      'Öne Çıkanlar': 'Highlights',
+      'Neden Kron?': 'Why Kron?',
+      'Sıkça Sorulan Sorular': 'Frequently Asked Questions',
+    };
+    const map =
+      target === 'en'
+        ? trEn
+        : Object.fromEntries(Object.entries(trEn).map(([k, v]) => [v, k]));
+    let out = s;
+    for (const [from, to] of Object.entries(map)) {
+      out = out.replace(
+        new RegExp(from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+        to,
+      );
+    }
+    return out; // sozlukte yoksa birebir kopya (taslak; el ile cevrilir)
   }
 }
