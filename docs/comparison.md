@@ -232,6 +232,22 @@ hizlanir (Cloudflare + tarayici cache) — fark esas **ilk ziyarette** ve **iste
 profilinde** (34'e karsi 4 script; 25'e karsi 0 ucuncu-parti). Rebuild gorselleri artik
 `next/image` ile WebP/AVIF olarak servis edilir (dogrulandi: `image/webp`).
 
+### Core Web Vitals — uygulanan teknikler
+
+CWV gercek deger olarak **uretim + RUM** (gercek kullanici olcumu) ister; uretim katmani
+kapsamda degil (plan: `deployment.md`'de `web-vitals` → kendi ucumuz). Ama her CWV metrigi
+icin **somut teknik** uygulandi:
+
+| Metrik | Risk | Uygulanan teknik (kanit) |
+|--------|------|--------------------------|
+| **LCP** (en buyuk icerik) | Yavas hero gorseli / font | Hero grafigi `priority` (`hero-slide.tsx`); gorseller `next/image` (WebP/AVIF, dogru boyut); `next/font` Roboto (`display:swap`, yalniz kullanilan agirliklar); SSR/ISR ile hizli ilk byte |
+| **CLS** (gorsel kayma) | Boyutsuz gorsel / gec font | Tum `next/image`'da `width/height` veya `fill`+`sizes` → yer rezerve; banner yukseklikleri sabit; font swap |
+| **INP** (etkilesim gecikmesi) | Agir client JS | **RSC varsayilan** (blok render'i sunucu tarafi); `"use client"` yalniz carousel/form/editorde; **tek** carousel kutuphanesi; mukerrer kutuphane yok (krontech'te 2 jQuery + 2 carousel) |
+
+> Durustluk: DEV modunda CWV yaniltici (minify yok). Prod build + RUM ile gercek deger
+> alinir. Yine de ham yuk olcumu (yukarisi) — soguk **1.6 s**, **4 script** — LCP/INP icin
+> saglikli bir zemin oldugunu gosterir.
+
 ---
 
 ## 4. Sonuc

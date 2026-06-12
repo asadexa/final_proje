@@ -42,8 +42,17 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
   return (
     <html lang={locale} className={`${roboto.variable} h-full`}>
       <body className="flex min-h-full flex-col bg-surface font-sans text-ink antialiased">
+        {/* Erisilebilirlik: klavye kullanicisi icin "icerige atla" baglantisi (odakta gorunur) */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+        >
+          {locale === "tr" ? "İçeriğe geç" : "Skip to content"}
+        </a>
         <SiteHeader locale={locale} dict={dict} />
-        <main className="flex-1">{children}</main>
+        <main id="main" className="flex-1">
+          {children}
+        </main>
         {/* krontech paritesi: her sayfada footer ustu koyu iletisim formu */}
         <FooterContactForm locale={locale} />
         <SiteFooter locale={locale} dict={dict} />
