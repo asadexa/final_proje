@@ -23,6 +23,7 @@ export default function ArchitectPage(): ReactElement {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [locale, setLocale] = useState("tr");
+  const [type, setType] = useState("PAGE");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<ArchitectResult | null>(null);
@@ -37,7 +38,7 @@ export default function ArchitectPage(): ReactElement {
     setResult(null);
     const r = await adminRequest<ArchitectResult>("/admin/ai/architect", {
       method: "POST",
-      body: JSON.stringify({ prompt, localeCode: locale }),
+      body: JSON.stringify({ prompt, localeCode: locale, type }),
     });
     setBusy(false);
     if (r.ok && r.data) setResult(r.data);
@@ -48,8 +49,8 @@ export default function ArchitectPage(): ReactElement {
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-2 text-2xl font-bold text-dark">AI Site Mimarı</h1>
       <p className="mb-6 text-sm text-ink-soft">
-        Sayfayı doğal dille tarif edin; uygun bloklarla <strong>taslak</strong> oluşturulur.
-        Üretilen her blok şema doğrulamasından geçer — geçemeyen blok kaydedilmez.
+        İçerik tipini seçip (Sayfa / Blog Yazısı / Ürün) doğal dille tarif edin; uygun bloklarla{" "}
+        <strong>taslak</strong> oluşturulur. Üretilen her blok şema doğrulamasından geçer — geçemeyen blok kaydedilmez.
       </p>
 
       <div className="space-y-4 rounded-lg border border-line bg-surface p-5">
@@ -78,7 +79,22 @@ export default function ArchitectPage(): ReactElement {
             ))}
           </div>
         </div>
-        <div className="flex items-end gap-4">
+        <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <label htmlFor="ai-type" className="mb-1 block text-sm font-medium text-ink-soft">
+              İçerik tipi
+            </label>
+            <select
+              id="ai-type"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="rounded border border-line bg-surface px-3 py-2 text-sm"
+            >
+              <option value="PAGE">Sayfa</option>
+              <option value="POST">Blog Yazısı</option>
+              <option value="PRODUCT">Ürün</option>
+            </select>
+          </div>
           <div>
             <label htmlFor="ai-locale" className="mb-1 block text-sm font-medium text-ink-soft">
               Dil

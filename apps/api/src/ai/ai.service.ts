@@ -99,6 +99,7 @@ export class AiService {
     localeCode: string,
     userId: string,
     userRole: string,
+    entryType: EntryType = 'PAGE',
   ): Promise<ArchitectResult> {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     let draft: DraftPage;
@@ -106,7 +107,12 @@ export class AiService {
     let note: string | undefined;
 
     if (apiKey) {
-      const ai = await this.generateWithClaude(apiKey, prompt, localeCode);
+      const ai = await this.generateWithClaude(
+        apiKey,
+        prompt,
+        localeCode,
+        entryType,
+      );
       if (ai) {
         draft = ai;
         usedAi = true;
@@ -142,7 +148,7 @@ export class AiService {
     const slug = await this.uniqueSlug(this.slugify(draft.title), localeCode);
     const entry = await this.content.create(
       {
-        type: 'PAGE',
+        type: entryType,
         localeCode,
         slug,
         title: draft.title,
@@ -167,15 +173,29 @@ export class AiService {
     apiKey: string,
     prompt: string,
     localeCode: string,
+    entryType: EntryType,
   ): Promise<DraftPage | null> {
     const lang = localeCode === 'tr' ? 'Turkce' : 'Ingilizce';
+    const typeLabel =
+      entryType === 'POST'
+        ? 'blog yazisi'
+        : entryType === 'PRODUCT'
+          ? 'urun sayfasi'
+          : 'kurumsal sayfa';
+    const flow =
+      entryType === 'POST'
+        ? 'Blog yazisi akisi: HERO (baslik + kisa giris) ile basla; govdeyi BIRDEN COK RICH_TEXT bloguyla yaz (h2/h3/p/ul ile makale derinligi); uygunsa FAQ ekle; CTA_BANNER ile bitir. Pazarlama bloklari (STATS/FEATURE_GRID) yerine ICERIK agirlikli ol.'
+        : entryType === 'PRODUCT'
+          ? 'Urun sayfasi akisi: HERO ile basla; FEATURE_GRID + VALUE_PROP + STATS ile degeri anlat; FAQ ekle; CTA_BANNER veya CONTACT_FORM ile bitir.'
+          : 'Kurumsal sayfa akisi: HERO ile basla, 4-7 blok kullan, FAQ ekle (GEO/SEO icin), CTA_BANNER veya CONTACT_FORM ile bitir.';
     const system = [
-      "Kurumsal bir siber guvenlik sirketi (Kron Technologies benzeri) CMS'i icin sayfa tasarlayan bir mimar asistansin.",
-      `Icerik dili: ${lang}.`,
+      "Kurumsal bir siber guvenlik sirketi (Kron Technologies benzeri) CMS'i icin icerik tasarlayan bir mimar asistansin.",
+      `Icerik dili: ${lang}. Hedef icerik tipi: ${typeLabel}.`,
       BLOCK_CATALOG,
       'YANIT KURALI: YALNIZ gecerli JSON dondur (markdown cit yok, aciklama yok):',
       '{ "title": "...", "excerpt": "...", "seo": { "metaTitle": "...", "metaDescription": "50-160 karakter" }, "blocks": [{ "type": "...", "data": { ... } }] }',
-      'Iyi bir sayfa: HERO ile basla, 4-7 blok kullan, FAQ ekle (GEO/SEO icin), CTA_BANNER veya CONTACT_FORM ile bitir. Linkler /' +
+      flow +
+        ' Linkler /' +
         localeCode +
         '/contact gibi yerel yollara isaret etsin.',
     ].join('\n\n');

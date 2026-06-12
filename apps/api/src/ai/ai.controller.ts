@@ -1,6 +1,12 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { IsIn, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -21,6 +27,15 @@ export class ArchitectDto {
   @ApiProperty({ example: 'tr', enum: ['tr', 'en'] })
   @IsIn(['tr', 'en'])
   localeCode!: string;
+
+  @ApiProperty({
+    example: 'PAGE',
+    enum: ['PAGE', 'POST', 'PRODUCT'],
+    required: false,
+  })
+  @IsOptional()
+  @IsIn(['PAGE', 'POST', 'PRODUCT'])
+  type?: 'PAGE' | 'POST' | 'PRODUCT';
 }
 
 export class TranslateEntryDto {
@@ -43,7 +58,13 @@ export class AiController {
     summary: 'Dogal dil promptundan taslak sayfa uret (key yoksa sablon modu)',
   })
   architect(@Body() dto: ArchitectDto, @CurrentUser() user: AuthUser) {
-    return this.ai.architect(dto.prompt, dto.localeCode, user.id, user.role);
+    return this.ai.architect(
+      dto.prompt,
+      dto.localeCode,
+      user.id,
+      user.role,
+      dto.type ?? 'PAGE',
+    );
   }
 
   @Get('entries/:id/health-suggestions')
