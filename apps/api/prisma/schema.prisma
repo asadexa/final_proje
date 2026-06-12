@@ -54,6 +54,7 @@ enum BlockType {
   FAQ
   PRODUCT_TABS
   TESTIMONIAL
+  RESOURCE_HUB
 }
 
 enum CategoryKind {

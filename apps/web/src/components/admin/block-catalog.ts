@@ -278,4 +278,23 @@ export const BLOCK_CATALOG: Record<string, BlockMeta> = {
       },
     ],
   },
+  RESOURCE_HUB: {
+    title: "Kaynaklar Hub'ı",
+    desc: "Kaynaklar sayfası düzeni: banner + ortalı giriş + görselli kartlar (mavi gradyan).",
+    presets: [
+      {
+        name: "3 kartlı hub",
+        data: {
+          banner: { title: "Kaynaklar", image: { url: "/kron/pages/resources/banner.jpg" }, crumbs: ["Ana Sayfa", "Kaynaklar"] },
+          title: "Kaynaklar",
+          intro: "Case study, blog ve datasheet içeriklerini keşfedin.",
+          moreLabel: "Detaylı Bilgi",
+          cards: [
+            { title: "CASE STUDY'LER", description: "Gerçek kurulum hikayeleri.", image: { url: "/kron/pages/resources/card-case-studies.jpg" }, href: "/tr/case-studies" },
+            { title: "BLOG", description: "Güncel yazılar.", image: { url: "/kron/pages/resources/card-blog.jpg" }, href: "/tr/blog" },
+          ],
+        },
+      },
+    ],
+  },
 };

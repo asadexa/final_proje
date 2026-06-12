@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactElement, ReactNode } from "react";
 import { HeroCarousel } from "./hero-carousel";
 import { HeroSlide, type HeroSlideData } from "./hero-slide";
+import { PageBanner } from "./page-banner";
 import { ProductCarousel } from "./product-carousel";
 import { TestimonialSlider, type TestimonialItem } from "./testimonial-slider";
 
@@ -169,22 +170,40 @@ function Stats({ data }: BlockProps): ReactElement {
   );
 }
 
+// Ozellik/kart izgarasi; link'li ogeler tiklanabilir kart olur (orn. kaynaklar sayfasi).
 function FeatureGrid({ data }: BlockProps): ReactElement {
-  const items = arr<{ title?: string; description?: string }>(data.items);
+  const items = arr<{ title?: string; description?: string; link?: Cta }>(data.items);
   return (
     <section className="bg-surface-muted">
       <Container className="py-16">
         {str(data.title) && <h2 className="mb-10 text-2xl font-bold text-dark">{str(data.title)}</h2>}
         <div className="grid gap-6 md:grid-cols-3">
-          {items.map((it, i) => (
-            <div
-              key={i}
-              className="rounded-lg border border-line bg-surface p-6 transition hover:border-primary hover:shadow-sm"
-            >
-              <h3 className="text-lg font-semibold text-dark">{it.title}</h3>
-              {it.description && <p className="mt-2 text-sm text-ink-soft">{it.description}</p>}
-            </div>
-          ))}
+          {items.map((it, i) => {
+            const inner = (
+              <>
+                <h3 className="text-lg font-semibold text-dark group-hover:text-primary">
+                  {it.title}
+                </h3>
+                {it.description && <p className="mt-2 text-sm text-ink-soft">{it.description}</p>}
+                {it.link?.href && (
+                  <span className="mt-4 inline-block text-sm font-medium text-primary">
+                    {it.link.label ?? ""} →
+                  </span>
+                )}
+              </>
+            );
+            const cls =
+              "rounded-lg border border-line bg-surface p-6 transition hover:border-primary hover:shadow-sm";
+            return it.link?.href ? (
+              <Link key={i} href={it.link.href} className={`group block ${cls}`}>
+                {inner}
+              </Link>
+            ) : (
+              <div key={i} className={cls}>
+                {inner}
+              </div>
+            );
+          })}
         </div>
       </Container>
     </section>
@@ -485,6 +504,81 @@ function Testimonial({ data }: BlockProps): ReactElement | null {
   return <TestimonialSlider items={items} />;
 }
 
+// Kaynaklar hub'i — krontech /resources birebir: 226px banner + breadcrumb +
+// ortali baslik/giris + gorselli kartlar (mavi gradyan, kose centik, outline buton).
+// Onceden sayfada hardcoded'di; bloklasarak CMS'ten yonetilir oldu.
+function ResourceHub({ data }: BlockProps): ReactElement {
+  const banner = data.banner as { title?: string; image?: ImageData; crumbs?: string[] } | undefined;
+  const cards = arr<{ title?: string; description?: string; image?: ImageData; href?: string }>(
+    data.cards,
+  );
+  const more = str(data.moreLabel) || "Discover More";
+  return (
+    <div>
+      {banner?.title && (
+        <PageBanner
+          title={banner.title}
+          image={banner.image?.url ?? ""}
+          crumbs={banner.crumbs ?? []}
+        />
+      )}
+
+      <section className="mt-10 text-center">
+        <Container>
+          <h2 className="mb-3 text-[2rem] font-medium text-dark">{str(data.title)}</h2>
+          {str(data.intro) && <p className="mx-auto max-w-3xl text-ink-soft">{str(data.intro)}</p>}
+        </Container>
+      </section>
+
+      <section className="pb-16">
+        <Container>
+          <div className="grid gap-8 px-4 md:grid-cols-3">
+            {cards.map((c, i) => (
+              <div
+                key={i}
+                className="kron-notch mt-4 flex h-full flex-col bg-surface p-5 shadow-[0_6px_12px_-4px_rgba(37,38,41,0.12)]"
+              >
+                {/* gorsel kart kenarina tasar (krontech -20px margin + gradyan) */}
+                {c.image?.url && (
+                  <div className="kron-gradient-img -mx-5 -mt-5">
+                    <Image src={c.image.url} alt={c.image.alt ?? c.title ?? ""} width={700} height={340} className="h-auto w-full" />
+                  </div>
+                )}
+                {/* krontech h4 baslik = link rengi (mavi), bold */}
+                <h4 className="mt-5 text-2xl font-bold text-primary">
+                  {c.href ? (
+                    <Link href={c.href} className="hover:underline">
+                      {c.title}
+                    </Link>
+                  ) : (
+                    c.title
+                  )}
+                </h4>
+                {c.description && <p className="mt-3 text-ink-soft">{c.description}</p>}
+                {/* buton her zaman kartin altina hizalanir */}
+                <div className="mt-auto pt-5">
+                  {c.href ? (
+                    <Link
+                      href={c.href}
+                      className="inline-block rounded-none border-2 border-primary px-[30px] py-2.5 text-[15px] font-medium text-primary transition-colors hover:bg-primary hover:text-white"
+                    >
+                      {more}
+                    </Link>
+                  ) : (
+                    <span className="inline-block cursor-default rounded-none border-2 border-primary px-[30px] py-2.5 text-[15px] font-medium text-primary">
+                      {more}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Container>
+      </section>
+    </div>
+  );
+}
+
 // Logo bulutu — basit logo gridi (musteri/partner logolari).
 function LogoCloud({ data }: BlockProps): ReactElement {
   const logos = arr<ImageData>(data.logos);
@@ -542,4 +636,5 @@ export const REGISTRY: Record<string, (props: BlockProps) => ReactElement | null
   MEDIA_TEXT: MediaText,
   TESTIMONIAL: Testimonial,
   LOGO_CLOUD: LogoCloud,
+  RESOURCE_HUB: ResourceHub,
 };

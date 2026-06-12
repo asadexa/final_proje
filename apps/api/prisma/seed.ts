@@ -589,6 +589,370 @@ async function main(): Promise<void> {
       }
     }
 
+    // --- Nav/footer hedefleri: kurumsal / cozum / sektor / legal sayfalar ---
+    // Header ve footer'daki TUM linkler gercek bir sayfaya gider (olu link yok).
+    // Icerik kisa ama gercekci; admin editorden genisletilebilir (CMS hikayesi).
+    // product=true olanlar PRODUCT tipi olarak olusur (Product JSON-LD + tagline).
+    const STATIC_PAGES: Array<{ slug: string; product?: boolean; title: L; tagline?: L; body: L }> = [
+      // — Urunler (nav Products + footer) —
+      {
+        slug: 'cloudpam', product: true,
+        title: { en: 'Cloud PAM', tr: 'Cloud PAM' },
+        tagline: { en: 'PAM as a cloud service', tr: 'Bulut hizmeti olarak PAM' },
+        body: {
+          en: "<p>Cloud PAM delivers Kron PAM's privileged access controls as a cloud service: fast onboarding and no infrastructure to operate, with the same session recording, password vault and policy engine — managed by Kron.</p>",
+          tr: "<p>Cloud PAM, Kron PAM'in ayrıcalıklı erişim kontrollerini bulut hizmeti olarak sunar: hızlı devreye alma, işletilecek altyapı yok; aynı oturum kaydı, parola kasası ve politika motoru — Kron tarafından yönetilir.</p>",
+        },
+      },
+      {
+        slug: 'password-vault', product: true,
+        title: { en: 'Password Vault', tr: 'Password Vault' },
+        tagline: { en: 'Encrypted credential vault with rotation', tr: 'Rotasyonlu şifreli parola kasası' },
+        body: {
+          en: '<p>Password Vault stores privileged credentials in an encrypted, access-controlled repository. Passwords are checked out on demand, rotated automatically and never shared in plain text.</p>',
+          tr: '<p>Password Vault, ayrıcalıklı kimlik bilgilerini şifreli ve erişim kontrollü bir kasada saklar. Parolalar ihtiyaç anında teslim alınır, otomatik döndürülür ve asla düz metin olarak paylaşılmaz.</p>',
+        },
+      },
+      {
+        slug: 'privileged-session-manager', product: true,
+        title: { en: 'Privileged Session Manager', tr: 'Privileged Session Manager' },
+        tagline: { en: 'Record and control every privileged session', tr: 'Her ayrıcalıklı oturumu kaydedin ve kontrol edin' },
+        body: {
+          en: '<p>Privileged Session Manager records and monitors every privileged session in real time. Indisputable audit trails, live session termination and policy-based command filtering reduce insider risk.</p>',
+          tr: '<p>Privileged Session Manager her ayrıcalıklı oturumu gerçek zamanlı kaydeder ve izler. İnkâr edilemez denetim izleri, canlı oturum sonlandırma ve politika tabanlı komut filtreleme iç tehdit riskini azaltır.</p>',
+        },
+      },
+      {
+        slug: 'multi-factor-authentication', product: true,
+        title: { en: 'Multi-Factor Authentication', tr: 'Multi-Factor Authentication' },
+        tagline: { en: 'Location- and time-aware OTP', tr: 'Konum ve zaman duyarlı OTP' },
+        body: {
+          en: '<p>Kron MFA adds location- and time-aware one-time passwords to privileged access. Even stolen credentials are useless without the second factor.</p>',
+          tr: '<p>Kron MFA, ayrıcalıklı erişime konum ve zaman duyarlı tek kullanımlık parolalar ekler. Çalınan kimlik bilgileri ikinci faktör olmadan işe yaramaz.</p>',
+        },
+      },
+      {
+        slug: 'ipdr-logging', product: true,
+        title: { en: 'IPDR Logging', tr: 'IPDR Logging' },
+        tagline: { en: 'Carrier-scale IP data records', tr: 'Operatör ölçeğinde IP veri kayıtları' },
+        body: {
+          en: '<p>IPDR Logging collects and correlates IP data records at carrier scale, giving operators regulatory-grade traceability for millions of subscribers.</p>',
+          tr: '<p>IPDR Logging, IP veri kayıtlarını operatör ölçeğinde toplar ve ilişkilendirir; milyonlarca abone için mevzuat düzeyinde izlenebilirlik sağlar.</p>',
+        },
+      },
+      {
+        slug: 'network-performance-monitoring', product: true,
+        title: { en: 'Network Performance Monitoring', tr: 'Network Performance Monitoring' },
+        tagline: { en: 'Real-time service quality visibility', tr: 'Gerçek zamanlı hizmet kalitesi görünürlüğü' },
+        body: {
+          en: '<p>Network Performance Monitoring gives real-time visibility into service quality across the network — latency, loss and utilisation in a single dashboard.</p>',
+          tr: '<p>Network Performance Monitoring, ağ genelinde hizmet kalitesine gerçek zamanlı görünürlük sağlar — gecikme, kayıp ve kullanım tek panelde.</p>',
+        },
+      },
+      {
+        slug: 'quality-assurance', product: true,
+        title: { en: 'Quality Assurance', tr: 'Quality Assurance' },
+        tagline: { en: 'End-to-end telecom service testing', tr: 'Uçtan uca telekom servis testi' },
+        body: {
+          en: "<p>Kron's Quality Assurance suite tests and validates telecom services end to end, catching degradations before customers do.</p>",
+          tr: '<p>Kron Quality Assurance paketi telekom servislerini uçtan uca test edip doğrular; bozulmaları müşterilerden önce yakalar.</p>',
+        },
+      },
+      // — Cozumler (nav Solutions) —
+      {
+        slug: 'zero-trust-and-least-privilege',
+        title: { en: 'Zero Trust & Least Privilege', tr: 'Sıfır Güven ve En Az Yetki' },
+        body: {
+          en: '<p>Apply Zero Trust to privileged access: verify every session, grant only the least privilege needed and record everything. Kron PAM enforces these principles across servers, databases and network devices.</p>',
+          tr: "<p>Sıfır Güven'i ayrıcalıklı erişime uygulayın: her oturumu doğrulayın, yalnızca gereken en az yetkiyi verin ve her şeyi kaydedin. Kron PAM bu ilkeleri sunucularda, veritabanlarında ve ağ cihazlarında uygular.</p>",
+        },
+      },
+      {
+        slug: 'secure-remote-access',
+        title: { en: 'Secure Remote Access', tr: 'Güvenli Uzaktan Erişim' },
+        body: {
+          en: '<p>Give vendors and remote administrators recorded, approval-gated access through the browser — no VPN, no shared passwords.</p>',
+          tr: '<p>Tedarikçilere ve uzak yöneticilere tarayıcı üzerinden kayıtlı, onay kapılı erişim verin — VPN yok, paylaşılan parola yok.</p>',
+        },
+      },
+      {
+        slug: 'insider-threat-protection',
+        title: { en: 'Insider Threat Protection', tr: 'İç Tehdit Koruması' },
+        body: {
+          en: '<p>Most breaches start inside. Session recording, command filtering and least-privilege policies make privileged misuse visible — and stoppable.</p>',
+          tr: '<p>Çoğu ihlal içeriden başlar. Oturum kaydı, komut filtreleme ve en-az-yetki politikaları ayrıcalık kötüye kullanımını görünür — ve durdurulabilir — kılar.</p>',
+        },
+      },
+      {
+        slug: 'pam-as-a-service',
+        title: { en: 'PAM as a Service', tr: 'Hizmet Olarak PAM' },
+        body: {
+          en: '<p>Get enterprise-grade PAM without running the infrastructure: Kron operates the platform while you keep the control and the audit trail.</p>',
+          tr: '<p>Altyapı işletmeden kurumsal sınıf PAM: platformu Kron işletir, kontrol ve denetim izi sizde kalır.</p>',
+        },
+      },
+      {
+        slug: 'audit-and-regulatory-compliance',
+        title: { en: 'Audit & Regulatory Compliance', tr: 'Denetim ve Mevzuat Uyumu' },
+        body: {
+          en: '<p>Meet ISO 27001, PCI DSS, SOX, GDPR and KVKK requirements with indisputable logs, session recordings and access reports generated from a single platform.</p>',
+          tr: '<p>ISO 27001, PCI DSS, SOX, GDPR ve KVKK gereksinimlerini tek platformdan üretilen inkâr edilemez loglar, oturum kayıtları ve erişim raporlarıyla karşılayın.</p>',
+        },
+      },
+      {
+        slug: 'ot-security-with-kron-pam',
+        title: { en: 'OT Security with Kron PAM', tr: 'Kron PAM ile OT Güvenliği' },
+        body: {
+          en: '<p>Secure operational technology: control and record privileged access to SCADA and field devices without touching the production line.</p>',
+          tr: '<p>Operasyonel teknolojiyi güvenceye alın: SCADA ve saha cihazlarına ayrıcalıklı erişimi üretim hattına dokunmadan kontrol edin ve kaydedin.</p>',
+        },
+      },
+      // — Sektorler (footer Sectors) —
+      {
+        slug: 'energy',
+        title: { en: 'Energy', tr: 'Enerji' },
+        body: {
+          en: '<p>Energy utilities run critical infrastructure under strict regulation. Kron PAM controls who touches SCADA, metering and IT systems — with full audit trails for EPDK compliance.</p>',
+          tr: '<p>Enerji şirketleri kritik altyapıyı sıkı regülasyon altında işletir. Kron PAM; SCADA, sayaç ve BT sistemlerine kimin dokunduğunu EPDK uyumu için tam denetim iziyle kontrol eder.</p>',
+        },
+      },
+      {
+        slug: 'finance',
+        title: { en: 'Finance', tr: 'Finans' },
+        body: {
+          en: "<p>Banks trust Kron to govern privileged access across core banking, databases and branch networks — deployed at one of the world's leading banks in under three months.</p>",
+          tr: "<p>Bankalar; ana bankacılık, veritabanları ve şube ağlarındaki ayrıcalıklı erişimi yönetmek için Kron'a güvenir — dünyanın önde gelen bankalarından birinde 3 aydan kısa sürede devreye alındı.</p>",
+        },
+      },
+      {
+        slug: 'government',
+        title: { en: 'Government', tr: 'Kamu' },
+        body: {
+          en: "<p>Public institutions secure citizen data and national infrastructure with Kron's domestically developed, fully auditable access management products.</p>",
+          tr: "<p>Kamu kurumları, vatandaş verisini ve ulusal altyapıyı Kron'un yerli geliştirilen, tam denetlenebilir erişim yönetimi ürünleriyle korur.</p>",
+        },
+      },
+      {
+        slug: 'telecom',
+        title: { en: 'Telecom', tr: 'Telekom' },
+        body: {
+          en: "<p>From AAA to telemetry pipelines, Kron's carrier-grade products run inside the world's largest operators — Turkcell secures hundreds of thousands of devices with Kron PAM.</p>",
+          tr: "<p>AAA'dan telemetri pipeline'ına, Kron'un operatör sınıfı ürünleri dünyanın en büyük operatörlerinde çalışır — Turkcell yüz binlerce cihazı Kron PAM ile korur.</p>",
+        },
+      },
+      // — Hakkimizda (nav About + footer) —
+      {
+        slug: 'about-us',
+        title: { en: 'About Us', tr: 'Hakkımızda' },
+        body: {
+          en: '<p>Kron Technologies builds cybersecurity and telecom software — privileged access management, data security and telemetry — trusted by enterprises and operators on six continents.</p><p>Founded in 2007, Kron is listed on Borsa Istanbul and recognized as a leader in privileged access management by KuppingerCole Analysts.</p>',
+          tr: "<p>Kron; ayrıcalıklı erişim yönetimi, veri güvenliği ve telemetri alanlarında siber güvenlik ve telekom yazılımları geliştirir; altı kıtada kurumların ve operatörlerin güvenini taşır.</p><p>2007'de kurulan Kron, Borsa İstanbul'da işlem görür ve KuppingerCole Analysts tarafından ayrıcalıklı erişim yönetiminde lider olarak tanınmıştır.</p>",
+        },
+      },
+      {
+        slug: 'management',
+        title: { en: 'Management', tr: 'Yönetim' },
+        body: {
+          en: "<p>Kron's leadership team combines deep telecom engineering heritage with global cybersecurity go-to-market experience.</p>",
+          tr: '<p>Kron yönetim ekibi, derin telekom mühendisliği birikimini küresel siber güvenlik pazar deneyimiyle birleştirir.</p>',
+        },
+      },
+      {
+        slug: 'board-of-directors',
+        title: { en: 'Board of Directors', tr: 'Yönetim Kurulu' },
+        body: {
+          en: "<p>Kron's board of directors oversees strategy and corporate governance as a publicly listed technology company.</p>",
+          tr: '<p>Kron yönetim kurulu, halka açık bir teknoloji şirketi olarak strateji ve kurumsal yönetimi gözetir.</p>',
+        },
+      },
+      {
+        slug: 'human-resources',
+        title: { en: 'Careers', tr: 'Kariyer' },
+        body: {
+          en: "<p>Join a team that ships security software used by the world's largest operators. Engineering, product and field roles in Istanbul and abroad.</p>",
+          tr: '<p>Dünyanın en büyük operatörlerinin kullandığı güvenlik yazılımlarını geliştiren ekibe katılın. İstanbul ve yurt dışında mühendislik, ürün ve saha rolleri.</p>',
+        },
+      },
+      {
+        slug: 'newsroom',
+        title: { en: 'Newsroom', tr: 'Basın Odası' },
+        body: {
+          en: '<p>Press releases, product announcements and media coverage about Kron.</p>',
+          tr: '<p>Kron hakkında basın bültenleri, ürün duyuruları ve medya yansımaları.</p>',
+        },
+      },
+      {
+        slug: 'awards',
+        title: { en: 'Awards', tr: 'Ödüller' },
+        body: {
+          en: "<p>From KuppingerCole leadership ratings to national technology awards, Kron's products are recognized worldwide.</p>",
+          tr: '<p>KuppingerCole liderlik derecelendirmelerinden ulusal teknoloji ödüllerine, Kron ürünleri dünya çapında tanınır.</p>',
+        },
+      },
+      {
+        slug: 'announcements',
+        title: { en: 'Announcements', tr: 'Duyurular' },
+        body: {
+          en: '<p>Investor-relations announcements and public disclosures.</p>',
+          tr: '<p>Yatırımcı ilişkileri duyuruları ve kamuyu aydınlatma açıklamaları.</p>',
+        },
+      },
+      // — Kaynaklar (nav Resources) —
+      {
+        slug: 'case-studies',
+        title: { en: 'Case Studies', tr: 'Vaka Çalışmaları' },
+        body: {
+          en: '<p>How Turkcell, Anadolu Efes and Sekerbank secure privileged access with Kron — real deployments, measurable results. Explore the stories on the <a href="/en/kron-pam">Kron PAM</a> page.</p>',
+          tr: '<p>Turkcell, Anadolu Efes ve Şekerbank ayrıcalıklı erişimi Kron ile nasıl güvenceye alıyor — gerçek kurulumlar, ölçülebilir sonuçlar. Hikayeleri <a href="/tr/kron-pam">Kron PAM</a> sayfasında inceleyin.</p>',
+        },
+      },
+      {
+        slug: 'podcast',
+        title: { en: 'Podcast', tr: 'Podcast' },
+        body: {
+          en: "<p>Kron's podcast series on privileged access, data security and telecom — conversations with practitioners from the field.</p>",
+          tr: '<p>Ayrıcalıklı erişim, veri güvenliği ve telekom üzerine Kron podcast serisi — sahadan uygulayıcılarla sohbetler.</p>',
+        },
+      },
+      {
+        slug: 'cybersecurity-resources',
+        title: { en: 'Resources Hub', tr: 'Kaynak Merkezi' },
+        body: {
+          en: '<p>Datasheets, case studies, webinars and blog posts — all Kron resources in one hub. Start from the <a href="/en/resources">resources page</a>.</p>',
+          tr: "<p>Datasheet'ler, vaka çalışmaları, webinarlar ve blog yazıları — tüm Kron kaynakları tek merkezde. <a href=\"/tr/resources\">Kaynaklar sayfasından</a> başlayın.</p>",
+        },
+      },
+      // — Legal (footer) —
+      {
+        slug: 'privacy-policy',
+        title: { en: 'Privacy Policy', tr: 'Gizlilik Politikası' },
+        body: {
+          en: '<p>Kron Technologies processes personal data as a data controller in accordance with GDPR and Turkish data protection law (KVKK). Data collected through this site (contact and demo forms) is used only to respond to your request and is retained no longer than necessary.</p><p>You may request access, correction or deletion of your data at any time by contacting us.</p>',
+          tr: '<p>Kron, kişisel verileri veri sorumlusu sıfatıyla GDPR ve 6698 sayılı KVKK uyarınca işler. Bu site üzerinden (iletişim ve demo formları) toplanan veriler yalnızca talebinizi yanıtlamak için kullanılır ve gerekenden uzun süre saklanmaz.</p><p>Verilerinize erişim, düzeltme veya silme talebinizi dilediğiniz zaman bize iletebilirsiniz.</p>',
+        },
+      },
+      {
+        slug: 'cookie-policy',
+        title: { en: 'Cookie Policy', tr: 'Çerez Politikası' },
+        body: {
+          en: '<p>This site uses strictly necessary cookies for session management. No third-party advertising or tracking cookies are set. You can manage or delete cookies through your browser settings.</p>',
+          tr: '<p>Bu site, oturum yönetimi için yalnızca zorunlu çerezler kullanır. Üçüncü taraf reklam veya izleme çerezi kullanılmaz. Çerezleri tarayıcı ayarlarınızdan yönetebilir veya silebilirsiniz.</p>',
+        },
+      },
+      {
+        slug: 'information-note',
+        title: { en: 'Information Note', tr: 'Aydınlatma Metni' },
+        body: {
+          en: '<p>Under Article 10 of the Turkish Personal Data Protection Law (KVKK), Kron informs visitors that personal data submitted via forms is processed for communication and demo-scheduling purposes, is not transferred abroad, and data-subject rights under Article 11 can be exercised by contacting Kron.</p>',
+          tr: "<p>6698 sayılı KVKK'nın 10. maddesi uyarınca: formlar aracılığıyla iletilen kişisel veriler iletişim ve demo planlama amaçlarıyla işlenir, yurt dışına aktarılmaz; 11. maddedeki haklarınızı Kron'a başvurarak kullanabilirsiniz.</p>",
+        },
+      },
+    ];
+
+    for (const sp of STATIC_PAGES) {
+      const g = await prisma.translationGroup.create({
+        data: { type: sp.product ? 'PRODUCT' : 'PAGE' },
+      });
+      for (const code of ['tr', 'en'] as const) {
+        const metaDesc = plain(sp.body[code]).slice(0, 158);
+        await prisma.entry.create({
+          data: {
+            type: sp.product ? 'PRODUCT' : 'PAGE',
+            slug: sp.slug, title: sp.title[code],
+            excerpt: sp.tagline?.[code],
+            status: 'PUBLISHED', publishedAt: new Date(),
+            locale: { connect: { code } }, group: { connect: { id: g.id } },
+            ...(sp.product ? { product: { create: { tagline: (sp.tagline ?? sp.title)[code] } } } : {}),
+            seo: { create: { metaTitle: sp.title[code], metaDescription: metaDesc } },
+            blocks: {
+              create: [
+                sp.product
+                  ? {
+                      type: 'HERO' as const, order: 0,
+                      data: {
+                        variant: 'product', title: sp.title[code], subtitle: (sp.tagline ?? sp.title)[code],
+                        buttons: [{ label: code === 'tr' ? 'Demo Talep Et' : 'Request a Demo', href: `/${code}/contact` }],
+                      },
+                    }
+                  : { type: 'HERO' as const, order: 0, data: { title: sp.title[code] } },
+                { type: 'RICH_TEXT' as const, order: 1, data: { html: sp.body[code] } },
+              ],
+            },
+          },
+        });
+      }
+    }
+
+    // --- Kaynaklar hub'i ('resources') — RESOURCE_HUB blogu ---
+    // Onceden route iceinde hardcoded'di; artik CMS'ten yonetilir (admin'den
+    // duzenlenebilir). Route, entry yoksa statik yedege duser (ayni gorunum).
+    {
+      const g = await prisma.translationGroup.create({ data: { type: 'PAGE' } });
+      for (const code of ['tr', 'en'] as const) {
+        const tr = code === 'tr';
+        await prisma.entry.create({
+          data: {
+            type: 'PAGE', slug: 'resources', title: tr ? 'Kaynaklar' : 'Resources',
+            status: 'PUBLISHED', publishedAt: new Date(),
+            locale: { connect: { code } }, group: { connect: { id: g.id } },
+            seo: {
+              create: {
+                metaTitle: tr ? 'Kaynaklar' : 'Cybersecurity Resources',
+                metaDescription: tr
+                  ? 'Datasheet, vaka çalışması ve blog — Kron siber güvenlik kaynakları.'
+                  : "Datasheets, case studies and blog — Kron cybersecurity resources.",
+              },
+            },
+            blocks: {
+              create: [
+                {
+                  type: 'RESOURCE_HUB', order: 0,
+                  data: {
+                    banner: {
+                      title: tr ? 'Kaynaklar' : 'Resources',
+                      image: { url: '/kron/pages/resources/banner.jpg' },
+                      crumbs: [tr ? 'Ana Sayfa' : 'Home', tr ? 'Kaynaklar' : 'Resources'],
+                    },
+                    title: tr ? 'Kaynaklar' : 'Cybersecurity Resources',
+                    intro: tr
+                      ? "Kron'un üst düzey telekom ve siber güvenlik teknolojileri hakkında daha fazla bilgi edinmek için case study'lerimizi, blog'larımızı ve datasheet'lerimizi inceleyin."
+                      : "Explore our cybersecurity library of webinars, case studies, and datasheets to learn more about Kron's high-end Privileged Access Management solutions.",
+                    moreLabel: tr ? 'Detaylı Bilgi' : 'Discover More',
+                    cards: [
+                      {
+                        title: tr ? "CASE STUDY'LER" : 'CASE STUDIES',
+                        description: tr
+                          ? "Kron'un Ayrıcalıklı Erişim Yönetimi case study'leri ile hassas verilerinizi ve kritik sistemlerinize erişen ayrıcalıklı hesapları nasıl koruyacağınızı öğrenin."
+                          : "Find out how to protect your sensitive data and critical systems with Kron's Privileged Access Management case studies.",
+                        image: { url: '/kron/pages/resources/card-case-studies.jpg' },
+                        href: `/${code}/case-studies`,
+                      },
+                      {
+                        title: tr ? "DATASHEET'LER" : 'DATASHEETS',
+                        description: tr
+                          ? "Kron'un dünyanın önde gelen Ayrıcalıklı Erişim Yönetimi ürünü hakkında daha fazla bilgi almak için şimdi datasheet'leri inceleyin."
+                          : "Uncover the datasheets of Kron's world-leading Privileged Access Management suite.",
+                        image: { url: '/kron/pages/resources/card-datasheets.jpg' },
+                        href: `/${code}/kron-pam-resources`,
+                      },
+                      {
+                        title: 'BLOG',
+                        description: tr
+                          ? "Bilişim teknolojilerindeki gelişmeler, siber güvenlik alanındaki trendler, erişim ve veri güvenliği hakkında detaylar en güncel haliyle Kron Blog'da."
+                          : 'Details on latest news in information technologies, trends in cyber security, access and data security are on the Kron Blog in its most up-to-date form.',
+                        image: { url: '/kron/pages/resources/card-blog.jpg' },
+                        href: `/${code}/blog`,
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        });
+      }
+    }
+
     // --- Blog (POST) — tr + en ---
     const postGroup = await prisma.translationGroup.create({ data: { type: 'POST' } });
     await prisma.entry.create({

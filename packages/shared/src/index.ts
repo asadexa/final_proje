@@ -35,6 +35,7 @@ export const BLOCK_TYPES = [
   'FAQ',
   'PRODUCT_TABS',
   'TESTIMONIAL',
+  'RESOURCE_HUB',
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -170,6 +171,28 @@ export const blockSchemas = {
         author: z.string().optional(),
         image: imageRefSchema.optional(),
         logo: imageRefSchema.optional(), // musteri logosu (krontech .slider-logo, max 160x60)
+      }),
+    ),
+  }),
+  // Kaynaklar hub'i (krontech /resources birebir): 226px banner + breadcrumb +
+  // ortali baslik/giris + gorselli kartlar (mavi gradyanli, kose centikli).
+  RESOURCE_HUB: z.object({
+    banner: z
+      .object({
+        title: z.string(),
+        image: imageRefSchema.optional(),
+        crumbs: z.array(z.string()).optional(),
+      })
+      .optional(),
+    title: z.string(),
+    intro: z.string().optional(),
+    moreLabel: z.string().optional(), // kart butonu metni ("Detaylı Bilgi" / "Discover More")
+    cards: z.array(
+      z.object({
+        title: z.string(),
+        description: z.string().optional(),
+        image: imageRefSchema.optional(),
+        href: z.string().optional(), // bos = tiklanamaz kart
       }),
     ),
   }),

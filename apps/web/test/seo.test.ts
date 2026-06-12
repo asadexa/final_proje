@@ -35,7 +35,6 @@ describe("seo helpers", () => {
         slug: "test-page",
         title: "Test Page",
         excerpt: "This is a test page",
-        localeCode: "tr",
         blocks: [],
         seo: {
           metaTitle: "Custom Meta Title",
@@ -76,6 +75,7 @@ describe("seo helpers", () => {
         {
           id: "b1",
           type: "FAQ",
+          order: 0,
           data: {
             items: [
               { question: "What?", answer: "This." }

@@ -183,6 +183,20 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
       ],
     },
   ],
+  RESOURCE_HUB: [
+    { key: "title", label: "Başlık", kind: "text", required: true },
+    { key: "intro", label: "Giriş metni", kind: "textarea" },
+    { key: "moreLabel", label: "Kart buton metni", kind: "text", hint: "örn. Detaylı Bilgi" },
+    {
+      key: "cards", label: "Kartlar", kind: "list",
+      fields: [
+        { key: "title", label: "Başlık", kind: "text", required: true },
+        { key: "description", label: "Açıklama", kind: "textarea" },
+        IMG("image", "Görsel"),
+        { key: "href", label: "Bağlantı", kind: "text", hint: "boş = tıklanamaz" },
+      ],
+    },
+  ],
 };
 
 // ----------------------------- jenerik renderer -----------------------------

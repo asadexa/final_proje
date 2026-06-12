@@ -254,3 +254,17 @@ Kullanici GIF'i Kapak olarak secti; blog listesi + Highlights'ta gorsel KIRIK ci
 | **Env degisikligi** | .env/.env.example: S3_PUBLIC_URL=/media + S3_INTERNAL_URL (docker disi dev icin http://localhost:9000 notu). Hatirlatma: env degisikligi `restart` ile degil `up -d` ile uygulanir |
 
 E2E: GIF upload -> url `/media/uploads/...` -> dogrudan GET 200 + `/_next/image` 200 (onceden kirik) -> kapakli post publish -> blog listesi + sidebar'da gorsel OK; testler 8+38 yesil. NOT: kullanicinin gordugu "ABC" karti reseed'le silinmis icerigin BAYAT ISR render'iydi (hayalet); revalidate ile kendiliginden gider.
+
+## Teslim oncesi eksik kapatma turu (2026-06-12)
+
+Tum gereksinimler odev metnine karsi yeniden tarandi; tespit edilen eksikler kapatildi.
+
+| Eksik | Cozum |
+|------|-------|
+| **Nav/footer'da 30 olu link** (cozumler, sektorler, hakkimizda, legal, 7 urun) | Data-driven `STATIC_PAGES` seed: 30 sayfa x2 dil, kisa ama gercekci icerik. Urun olanlar (Cloud PAM, Password Vault, PSM, MFA, IPDR, NPM, QA) PRODUCT tipi (Product JSON-LD + tagline + urun banner'i + Demo CTA); digerleri PAGE (koyu hero + RICH_TEXT). Sonuc: 39 slug x 2 dil = 78 URL'de SIFIR olu link; sitemap 84 -> 146 |
+| **Kaynaklar sayfasi hardcoded** ("tum icerikler yonetilebilir" geregi) | Yeni `RESOURCE_HUB` blok tipi (shared Zod + Prisma enum MIGRATION `resource_hub_block` + bilesen + admin katalog/form girisleri). Sayfa artik 'resources' PAGE entry'sinden render edilir; entry yoksa ayni gorunumlu statik yedege duser. Tasarim birebir korundu (FEATURE_GRID'e cevirmek geriletirdi) |
+| **Resources kartlarindaki 2 olu hedef** | case-studies + kron-pam-resources stub'lari artik var -> kartlar tiklanir (CMS verisi + yedek statikte) |
+| **seo.test.ts 2 pre-existing tip hatasi** | PublicEntry'de olmayan localeCode kaldirildi + BlockNode.order eklendi -> web tsc %100 temiz |
+| **Onceden kapali sanilanlar dogrulandi** | Admin redirect CRUD zaten varmis (admin-redirects.controller + /admin/redirects). Swagger 200, rate-limit basliklari, OG etiketleri, URL-koruma/SEO-kayip stratejisi docs'ta mevcut |
+
+Prisma generate notu (Windows): `src/generated` container-local volume — container'da generate host'a YANSIMAZ; host tsc icin host'ta da `npx prisma generate` calistir. Dogrulama: 78 URL 200, testler 38+15+8 yesil, reseed KULLANICI ONAYIYLA yapildi.

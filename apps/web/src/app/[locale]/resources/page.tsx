@@ -2,15 +2,20 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Blocks } from "@/components/blocks";
 import { PageBanner } from "@/components/page-banner";
+import { getEntry } from "@/lib/api";
 import { getDictionary, isLocale } from "@/lib/i18n";
-import { staticPageMetadata } from "@/lib/seo";
+import { metadataFromEntry, staticPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
 }: PageProps<"/[locale]/resources">): Promise<Metadata> {
   const { locale } = await params;
   if (!isLocale(locale)) return {};
+  // CMS entry'si varsa SEO alanlari oradan gelir (yonetilebilir icerik).
+  const entry = await getEntry(locale, "resources");
+  if (entry) return metadataFromEntry(entry, locale, `/${locale}/resources`);
   const dict = getDictionary(locale);
   return staticPageMetadata({
     locale,
@@ -23,15 +28,19 @@ export async function generateMetadata({
   });
 }
 
-// Kaynaklar — krontech /resources birebir: 226px banner + breadcrumb + ortali
-// h2/intro + 3 kart (350x170 gorsel + mavi gradyan, h4 bold link, outline buton).
-// Icerik krontech'ten birebir (TR = krontech'in kendi yerellestirmesi; yalniz
-// h2 "RESOURCES" -> "Kaynaklar" — tam-yerellestirme kararinin uzantisi).
-// Case Studies / Datasheets hedef sayfalari kapsam disi -> kart tiklanamaz
-// (urun sekme cubugu karariyla tutarli; bkz. docs/decision-log.md).
+// Kaynaklar — krontech /resources birebir. Icerik CMS'TEN gelir: slug
+// 'resources' PAGE entry'si (RESOURCE_HUB blogu) admin'den duzenlenebilir.
+// Entry yoksa (seed'lenmemis ortam) asagidaki statik yedege zarifce duser —
+// gorunum iki yolda da AYNI (ayni bilesen/siniflar).
 export default async function ResourcesPage({ params }: PageProps<"/[locale]/resources">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
+
+  const entry = await getEntry(locale, "resources");
+  if (entry && entry.blocks.length > 0) {
+    return <Blocks blocks={entry.blocks} locale={locale} />;
+  }
+
   const dict = getDictionary(locale);
   const tr = locale === "tr";
 
@@ -52,7 +61,7 @@ export default async function ResourcesPage({ params }: PageProps<"/[locale]/res
       desc: tr
         ? "Kron'un Ayrıcalıklı Erişim Yönetimi case study'leri ile hassas verilerinizi ve kritik sistemlerinize erişen ayrıcalıklı hesapları nasıl koruyacağınızı öğrenin."
         : "Find out how to protect your sensitive data and critical systems with Kron's Privileged Access Management case studies.",
-      href: null, // kapsam disi alt sayfa
+      href: `/${locale}/case-studies`,
     },
     {
       img: "/kron/pages/resources/card-datasheets.jpg",
@@ -60,7 +69,7 @@ export default async function ResourcesPage({ params }: PageProps<"/[locale]/res
       desc: tr
         ? "Kron'un dünyanın önde gelen Ayrıcalıklı Erişim Yönetimi ürünü hakkında daha fazla bilgi almak için şimdi datasheet'leri inceleyin."
         : "Uncover the datasheets of Kron's world-leading Privileged Access Management suite.",
-      href: null,
+      href: `/${locale}/kron-pam-resources`,
     },
     {
       img: "/kron/pages/resources/card-blog.jpg",
