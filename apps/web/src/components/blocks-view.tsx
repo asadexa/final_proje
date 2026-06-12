@@ -250,21 +250,25 @@ function ValueProp({ data }: BlockProps): ReactElement {
   const cta = data.cta as Cta | undefined;
   const img = data.image as ImageData | undefined;
   return (
-    <section className="bg-surface">
+    // krontech "Why Kron?" mavi band: koyu diyagonal mavi zemin + beyaz metin
+    <section
+      className="text-white"
+      style={{ background: "linear-gradient(115deg, #1563FF 0%, #103aa0 55%, #0a2a6e 100%)" }}
+    >
       <Container wide className="py-20">
         <div className="grid items-center gap-12 md:grid-cols-2">
           <div>
             <h2
-              className="text-[2rem] font-light leading-tight text-dark md:text-[2.75rem] [&_b]:font-light [&_b]:text-primary"
+              className="text-[2rem] font-light leading-tight md:text-[2.75rem] [&_b]:font-normal [&_b]:text-white"
               dangerouslySetInnerHTML={{ __html: str(data.title) }}
             />
             {str(data.body) && (
-              <p className="mt-6 max-w-xl text-[1.25rem] leading-8 text-ink-soft">{str(data.body)}</p>
+              <p className="mt-6 max-w-xl text-[1.25rem] leading-8 text-white/80">{str(data.body)}</p>
             )}
             {cta?.href && (
               <Link
                 href={cta.href}
-                className="mt-8 inline-block rounded-none border-2 border-primary px-[40px] py-3 text-[16px] font-medium text-primary transition-colors hover:bg-primary hover:text-white"
+                className="mt-8 inline-block rounded-none border-2 border-white px-[40px] py-3 text-[16px] font-medium text-white transition-colors hover:bg-white hover:text-primary"
               >
                 {cta.label ?? ""}
               </Link>
@@ -275,7 +279,7 @@ function ValueProp({ data }: BlockProps): ReactElement {
               // next/image: otomatik WebP/AVIF + lazy + CLS korumasi (Core Web Vitals)
               <Image src={img.url} alt={img.alt ?? ""} width={800} height={600} className="h-auto w-full" />
             ) : (
-              <div className="aspect-[4/3] w-full rounded-lg bg-surface-muted" />
+              <div className="aspect-[4/3] w-full rounded-lg bg-white/10" />
             )}
           </div>
         </div>

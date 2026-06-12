@@ -81,29 +81,31 @@ export function SiteHeader({ locale, dict }: { locale: Locale; dict: Dictionary 
                     <span className="absolute inset-x-0 bottom-0 h-0.5 origin-left scale-x-0 bg-primary transition-transform duration-200 group-hover:scale-x-100" />
                   </button>
 
-                  {/* Dropdown */}
-                  <div className="invisible absolute left-0 top-full z-50 min-w-[260px] translate-y-1 rounded-md border border-line bg-surface p-2 opacity-0 shadow-lg transition-all duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                    {item.children.map((child) =>
-                      child.href ? (
-                        <a
-                          key={child.label}
-                          href={child.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block rounded px-3 py-2 text-sm text-ink-soft transition-colors hover:bg-surface-muted hover:text-primary"
-                        >
-                          {child.label}
-                        </a>
-                      ) : (
-                        <Link
-                          key={child.label}
-                          href={`${base}/${child.slug}`}
-                          className="block rounded px-3 py-2 text-sm text-ink-soft transition-colors hover:bg-surface-muted hover:text-primary"
-                        >
-                          {child.label}
-                        </Link>
-                      ),
-                    )}
+                  {/* Mega-menu dropdown (krontech-tarzi: genis, cok sutunlu) */}
+                  <div className="invisible absolute left-0 top-full z-50 w-[480px] max-w-[90vw] translate-y-1 rounded-md border-t-2 border-primary border-x border-b border-line bg-surface p-3 opacity-0 shadow-xl transition-all duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+                    <div className="grid grid-cols-2 gap-1">
+                      {item.children.map((child) =>
+                        child.href ? (
+                          <a
+                            key={child.label}
+                            href={child.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block rounded px-3 py-2 text-sm text-ink-soft transition-colors hover:bg-surface-muted hover:text-primary"
+                          >
+                            {child.label}
+                          </a>
+                        ) : (
+                          <Link
+                            key={child.label}
+                            href={`${base}/${child.slug}`}
+                            className="block rounded px-3 py-2 text-sm text-ink-soft transition-colors hover:bg-surface-muted hover:text-primary"
+                          >
+                            {child.label}
+                          </Link>
+                        ),
+                      )}
+                    </div>
                   </div>
                 </div>
               );

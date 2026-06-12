@@ -41,12 +41,18 @@ export function ProductCarousel({
         const features = p.features ?? [];
         const card = (
           <div className="flex h-full flex-col border border-[#cacaca] bg-white px-8 pt-10 text-[#4d5154] transition group-hover:border-primary">
-            {/* gorsel kenarlara tasar (krontech: negatif margin) */}
-            <div className="-mx-8 -mt-10 mb-1 overflow-hidden">
+            {/* gorsel kenarlara tasar + tutarli en-boy (tum kartlar esit yukseklik) */}
+            <div className="-mx-8 -mt-10 mb-1 aspect-[16/10] overflow-hidden bg-surface-muted">
               {p.image?.url ? (
-                <Image src={p.image.url} alt={p.image.alt ?? p.name} width={760} height={428} className="h-auto w-full" />
+                <Image
+                  src={p.image.url}
+                  alt={p.image.alt ?? p.name}
+                  width={760}
+                  height={476}
+                  className="h-full w-full object-cover object-top"
+                />
               ) : (
-                <div className="aspect-[16/9] w-full bg-surface-muted" />
+                <div className="h-full w-full" />
               )}
             </div>
             <h4 className="pt-5 text-2xl font-bold leading-tight text-[#212529]">{p.name}</h4>
