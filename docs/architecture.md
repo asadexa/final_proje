@@ -1,6 +1,6 @@
 # Mimari — Kron CMS
 
-> Bu belge her fazda detaylandirilir. Su an: **Faz 0** (genel cerceve).
+> Tum fazlar tamamlandi; bu belge guncel mimariyi ozetler.
 > Kararlarin gerekceleri: [`adr/0001-tech-stack.md`](adr/0001-tech-stack.md).
 
 ## 1. Genel bakis
@@ -10,24 +10,17 @@ bilesen, blog, urun, medya, SEO) tek bir backend'de yonetilir; public site bu ic
 API'den okuyup **SSR/ISR** ile render eder. Yonetim, ayni Next.js uygulamasi icindeki
 korumali `/admin` alanindan yapilir.
 
-```
-                    ┌───────────────────────────────────────────────┐
-   Ziyaretci ─────► │  Next.js (apps/web)                            │
-   /tr /en          │  • Public site (SSR/ISR, cok dilli)            │
-                    │  • /admin (JWT korumali yonetim paneli)        │
-                    └───────────────┬───────────────────────────────┘
-                                    │ REST (OpenAPI)
-                                    ▼
-                    ┌───────────────────────────────────────────────┐
-                    │  NestJS (apps/api)                             │
-   Editor/Admin ──► │  auth · content · media · seo · forms · publish│
-                    │  Guards(JWT/RBAC) · Cache · Throttler · Swagger│
-                    └──────┬───────────────┬───────────────┬────────┘
-                           │               │               │
-                     ┌─────▼────┐    ┌─────▼────┐    ┌──────▼─────┐
-                     │PostgreSQL│    │  Redis   │    │   MinIO    │
-                     │ (Prisma) │    │cache+kuy.│    │ (S3 medya) │
-                     └──────────┘    └──────────┘    └────────────┘
+```mermaid
+flowchart TB
+  V["Ziyaretçi · /tr /en"] -->|HTTP| W["apps/web · Next.js 16<br/>Public site SSR/ISR + /admin (JWT)"]
+  W -->|"REST · OpenAPI"| A["apps/api · NestJS 11<br/>auth · content · media · seo · forms · publish<br/>Guards JWT/RBAC · Cache · Throttler · Swagger"]
+  A -.->|"SSE · revalidateTag (publish)"| W
+  A --> PG[("PostgreSQL · Prisma 7")]
+  A --> RD[("Redis · cache + redirect cache")]
+  A --> MN[("MinIO · S3 medya")]
+  A -.->|opsiyonel| AI["Anthropic · Claude (AI Mimar)"]
+  SH["packages/shared · Zod (tek şema kaynağı, FE+BE)"] -.-> W
+  SH -.-> A
 ```
 
 ## 2. Bilesenler
@@ -36,9 +29,9 @@ korumali `/admin` alanindan yapilir.
 |---------|-----------|
 | **apps/web** | Public site (6 sayfa tipi) + admin paneli. SSR/ISR, i18n routing, SEO/GEO ciktilari, Next/Image. |
 | **apps/api** | REST API; icerik/medya/SEO/form/yayin is mantigi, auth, cache, rate limit, Swagger. |
-| **packages/shared** | Frontend+backend ortak TypeScript tipleri/enum'lari (Faz 2'de eklenecek). |
+| **packages/shared** | Frontend+backend ortak TypeScript tipleri + **Zod blok semalari** (tek kaynak). |
 | **PostgreSQL** | Birincil, iliskisel veri deposu (icerik modeli). |
-| **Redis** | Uygulama cache'i + zamanlanmis yayin kuyrugu (BullMQ) + JWT refresh denylist. |
+| **Redis** | Uygulama cache'i + redirect cache. Zamanlanmis yayin **@nestjs/schedule** cron ile; refresh token'lar DB'de hash'li tutulur. |
 | **MinIO** | S3 uyumlu obje deposu (medya kutuphanesi). |
 
 ## 3. Istek yasam dongusu (ozet)
@@ -51,9 +44,9 @@ korumali `/admin` alanindan yapilir.
 
 ## 4. Cok dillilik
 
-`/tr` ve `/en` segment-bazli routing (next-intl). Icerik modelinde her kayit bir
-**locale** ile iliskili; ceviriler bir **translation group** uzerinden eslesir (hreflang
-ve "dile gore icerik" icin). Detay: Faz 1 icerik modeli.
+`/tr` ve `/en` segment-bazli routing (**kutuphanesiz**: `[locale]` segment + `proxy.ts` +
+`dictionaries/`). Icerik modelinde her kayit bir **locale** ile iliskili; ceviriler bir
+**translation group** uzerinden eslesir (hreflang ve "dile gore icerik" icin).
 
 ## 5. Cache katmanlari (Faz 7'de detay)
 

@@ -19,6 +19,21 @@ butuncul bir sistem.
 
 Mimari detay: [`docs/architecture.md`](docs/architecture.md) · Kararlar: [`docs/adr/`](docs/adr/)
 
+```mermaid
+flowchart TB
+  V["Ziyaretçi · /tr /en"] -->|HTTP| W["apps/web · Next.js 16<br/>Public SSR/ISR + /admin"]
+  W -->|"REST · OpenAPI"| A["apps/api · NestJS 11<br/>auth · content · media · seo · forms · publish<br/>Guards JWT/RBAC · Cache · Throttler · Swagger"]
+  A -.->|"SSE · revalidateTag"| W
+  A --> PG[("PostgreSQL · Prisma 7")]
+  A --> RD[("Redis · cache · cron")]
+  A --> MN[("MinIO · S3 medya")]
+  A -.->|opsiyonel| AI["Anthropic · Claude"]
+  SH["packages/shared · Zod (tek şema kaynağı)"] -.-> W
+  SH -.-> A
+```
+
+İçerik modeli + **ER diyagramı**: [`docs/content-model.md`](docs/content-model.md)
+
 ## Hizli baslangic (tek komut)
 
 Gereksinim: **Docker** + **Docker Compose**.
@@ -53,6 +68,19 @@ npm run dev                                  # api + web birlikte
 | Test | **Vitest + Supertest** | Hiz, ESM, tek arac |
 
 Tam gerekceler: [`docs/adr/0001-tech-stack.md`](docs/adr/0001-tech-stack.md)
+
+## Dokumantasyon haritasi
+
+| Belge | Icerik |
+|-------|--------|
+| [`docs/site-analysis.md`](docs/site-analysis.md) | Sayfa/icerik/bilesen envanteri, cok dil, SEO alanlari (Faz 1 analiz) |
+| [`docs/content-model.md`](docs/content-model.md) | Icerik modeli + **ER diyagrami** + entity gerekceleri + gereksinim eslemesi |
+| [`docs/architecture.md`](docs/architecture.md) | Sistem mimarisi (diyagram) + istek yasam dongusu + cache katmanlari |
+| [`docs/comparison.md`](docs/comparison.md) | krontech.com vs rebuild — tasarim pariti + canli performans olcumu |
+| [`docs/adr/`](docs/adr/) | Mimari karar kayitlari (teknoloji, icerik modeli, auth) |
+| [`docs/deployment.md`](docs/deployment.md) | Uretim imaj stratejisi, olcekleme, logging/monitoring |
+| [`docs/demo-senaryosu.md`](docs/demo-senaryosu.md) | ~12 dk canli demo akisi + olasi sorular |
+| [`docs/decision-log.md`](docs/decision-log.md) | Her gelistirme turunun karar gunlugu (AI katkisi dahil) |
 
 ## Dizin yapisi
 
