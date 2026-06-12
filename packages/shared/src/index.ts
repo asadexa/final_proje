@@ -55,6 +55,7 @@ export const blockSchemas = {
     subtitle: z.string().optional(),
     cta: linkSchema.optional(),
     image: imageRefSchema.optional(),
+    graphic: imageRefSchema.optional(), // sag taraf gorseli (tekli hero icin de)
     // Urun sayfasi banner'i (krontech .product-banner): bg gorseli (image),
     // lead (subtitle) + birden fazla outline buton. variant='product' ile secilir.
     variant: z.enum(['product']).optional(),

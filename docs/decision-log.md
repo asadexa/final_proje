@@ -227,3 +227,18 @@ Kullanici krontech'in phishing yazisiyla bizimkini yan yana koydu: "tasarim cok 
 | **RICH_TEXT_PROSE export** | Makale tipografisi blocks-view'dan export edildi; blog detayinda Container'siz, col-8 genisliginde ayni siniflar (tek kaynak) |
 | **Cift breadcrumb fixi** | PRODUCT_TABS'li sayfalar (urun + sekme stub'lari) kendi breadcrumb'ini cizer -> [slug] genel breadcrumb'i tip yerine BLOK varligina gore bastiriyor (stub'lar PAGE tipinde oldugundan tip kontrolu yetmiyordu) |
 | **Yazar alani yok** | krontech "May 11, 2026 / Erhan YILMAZ" gosteriyor; modelimizde author alani yok -> yalniz tarih (migration'a degmez; istenirse PostDetail.author eklenir) |
+
+## Bug fix turu — POST'ta editor HERO'su kayboluyor (2026-06-12, kullanici bulgusu)
+
+Kullanici admin'den POST olusturup HERO template (baslik + butonlar + bilgisayardan GIF) ekledi, review->publish etti; yayinda hero gorunmedi. Uc ayri kok neden + bir operasyonel hata:
+
+| Konu | Teshis / Cozum |
+|------|-------|
+| **POST sayfasi TUM HERO'lari atiyordu** | Seed'in yalniz-baslik HERO'su makale basligini ciftledigi icin filtre konmustu; editorun GERCEK icerikli HERO'su da sessizce yutuluyordu. Cozum: `isMeaningfulHero` — gorsel/grafik/altbaslik/CTA/buton/slide tasiyan HERO makale ustunde render edilir; yalniz-baslik HERO atlanmaya devam (cift h1 olmasin) |
+| **Preview/publish tutarsizligi** | Preview `Blocks`'u dogrudan basiyordu (HERO gorunur), public POST sayfasi atiyordu -> "preview'da var, yayinda yok". Cozum: POST govdesi `post-article.tsx`'e cikarildi; public sayfa VE preview AYNI bileseni kullanir |
+| **Tekli HERO zemini hardcoded** | `blocks-view` tekli hero `/hero-bg.png`'yi sabitleyip `data.image`'i yok sayiyordu (carousel dogruydu). Cozum: `image?.url ?? '/hero-bg.png'` (carousel ile ayni desen); HERO semasina top-level `graphic` da eklendi (zod bilinmeyen alani soyuyordu) |
+| **OPERASYONEL HATA (benim)** | Blog turundaki `prisma migrate reset` kullanicinin elle olusturdugu post+medyayi SILDI (audit log bos, 13:26 sonrasi kayit yok). Ders: kullanici canli test yapiyorken reseed SORMADAN yapilmaz; demo oncesi de gecerli |
+
+E2E dogrulama (reseed'siz, gercek akis): login -> GIF upload (magic-byte image/gif kabul) -> HERO'lu (variant=product, gif zemin, 2 buton) + RICH_TEXT'li POST create -> publish -> public sayfada hero/gif/butonlar/govde OK + preview birebir ayni; test verisi API'den DELETE ile temizlendi.
+
+NOT (kullaniciya aciklama): blog liste/anasayfa karti gorseli HERO'dan degil entry'nin **Kapak (coverImage)** alanindan gelir — kartta gorsel istenirse editorde Kapak secilmeli.

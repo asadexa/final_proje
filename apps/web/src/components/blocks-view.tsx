@@ -108,11 +108,13 @@ function Hero({ data }: BlockProps): ReactElement {
     subtitle: str(data.subtitle) || undefined,
     cta: data.cta as Cta | undefined,
     image: data.image as { url?: string } | undefined,
+    graphic: data.graphic as { url?: string } | undefined,
   };
   return (
     <section
       className="relative bg-[#0a1733] bg-cover bg-center text-white"
-      style={{ backgroundImage: "url('/hero-bg.png')" }}
+      // editorun sectigi zemin gorseli; yoksa varsayilan (carousel ile ayni desen)
+      style={{ backgroundImage: `url('${single.image?.url ?? "/hero-bg.png"}')` }}
     >
       <HeroSlide slide={single} />
     </section>

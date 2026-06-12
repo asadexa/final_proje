@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Blocks } from "@/components/blocks";
+import { PostArticle } from "@/components/post-article";
 import { PreviewLiveSync } from "@/components/preview-live-sync";
 import { getPreviewEntry } from "@/lib/api";
 import { isLocale } from "@/lib/i18n";
@@ -40,6 +41,10 @@ export default async function PreviewPage({
               : "This entry has no blocks yet. Add sections via “+ Add block” in the admin editor; every block you add will appear here."}
           </p>
         </div>
+      ) : entry.type === "POST" ? (
+        /* POST: public sayfayla AYNI duzen (PostArticle) — preview'da gorunen
+           publish'te de birebir gorunur (HERO isleme dahil) */
+        <PostArticle entry={entry} locale={locale} path={`/${locale}/${slug}`} />
       ) : (
         <Blocks blocks={entry.blocks} locale={locale} />
       )}
