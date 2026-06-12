@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type ReactElement, useEffect, useState } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import { adminRequest, getToken } from "@/lib/admin";
 
 interface ArchitectResult {
@@ -27,19 +27,50 @@ export default function ArchitectPage(): ReactElement {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<ArchitectResult | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!getToken()) window.location.href = "/admin/login";
   }, []);
 
+  // Zaman-tahminli ilerleme (LLM stream progress vermez; sayfa uretimi yavas -> yavas easing).
+  function startProgress(): () => void {
+    let tick = 0;
+    setProgress(5);
+    if (progressTimer.current) clearInterval(progressTimer.current);
+    progressTimer.current = setInterval(() => {
+      tick += 1;
+      const t = tick * 0.4;
+      setProgress(Math.min(92, Math.round(92 * (1 - Math.exp(-t / 14)))));
+    }, 400);
+    return () => {
+      if (progressTimer.current) {
+        clearInterval(progressTimer.current);
+        progressTimer.current = null;
+      }
+      setProgress(100);
+      window.setTimeout(() => setProgress(null), 600);
+    };
+  }
+
+  useEffect(
+    () => () => {
+      if (progressTimer.current) clearInterval(progressTimer.current);
+    },
+    [],
+  );
+
   async function generate(): Promise<void> {
     setBusy(true);
     setError("");
     setResult(null);
+    const done = startProgress();
     const r = await adminRequest<ArchitectResult>("/admin/ai/architect", {
       method: "POST",
       body: JSON.stringify({ prompt, localeCode: locale, type }),
     });
+    done();
     setBusy(false);
     if (r.ok && r.data) setResult(r.data);
     else setError(r.message ?? "Üretim başarısız.");
@@ -49,8 +80,9 @@ export default function ArchitectPage(): ReactElement {
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-2 text-2xl font-bold text-dark">AI Site Mimarı</h1>
       <p className="mb-6 text-sm text-ink-soft">
-        İçerik tipini seçip (Sayfa / Blog Yazısı / Ürün) doğal dille tarif edin; uygun bloklarla{" "}
-        <strong>taslak</strong> oluşturulur. Üretilen her blok şema doğrulamasından geçer — geçemeyen blok kaydedilmez.
+        İçerik tipini seçip doğal dille tarif edin; tipine göre <strong>hazır şablon</strong> (Blog yazısı =
+        makale, Sayfa/Ürün = açılış düzeni) AI tarafından taslak metinle doldurulur. Bitmiş içerik değil,{" "}
+        <strong>düzenlemeye hazır iskelet</strong>. Üretilen her blok şema doğrulamasından geçer.
       </p>
 
       <div className="space-y-4 rounded-lg border border-line bg-surface p-5">
@@ -119,6 +151,20 @@ export default function ArchitectPage(): ReactElement {
           </button>
         </div>
         {error && <p className="text-sm text-accent">{error}</p>}
+        {progress !== null && (
+          <div className="space-y-1">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-line/30">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[11px] text-ink-soft">
+              <span className="animate-pulse">Claude içeriği oluşturuyor…</span>
+              <span className="font-medium tabular-nums text-primary">%{progress}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {result && (

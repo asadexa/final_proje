@@ -182,22 +182,37 @@ export class AiService {
         : entryType === 'PRODUCT'
           ? 'urun sayfasi'
           : 'kurumsal sayfa';
-    const flow =
+    // Tip-bazli SABIT sablon: AI serbest blok secmez, bu iskeleti TASLAK metinle doldurur.
+    const template =
       entryType === 'POST'
-        ? 'Blog yazisi akisi: HERO (baslik + kisa giris) ile basla; govdeyi BIRDEN COK RICH_TEXT bloguyla yaz (h2/h3/p/ul ile makale derinligi); uygunsa FAQ ekle; CTA_BANNER ile bitir. Pazarlama bloklari (STATS/FEATURE_GRID) yerine ICERIK agirlikli ol.'
+        ? `BLOG YAZISI SABLONU — su blok dizisini AYNEN uret, icerigi promptu yansitacak TASLAK metinle doldur:
+1) RICH_TEXT: giris paragrafi (konuyu tanit; tek <p>, 2-3 cumle)
+2) RICH_TEXT: ana govde (2-3 alt bolum; her biri <h2>baslik</h2><p>paragraf</p> seklinde)
+3) FAQ: 3 soru-cevap
+4) CTA_BANNER: yumusak kapanis cagrisi { cta: {label, href:"/${localeCode}/contact"} }
+KURAL: HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA — bu bir MAKALE, pazarlama sayfasi degil. Sayfa basligi entry basligindan gelir; govdede tekrar etme.`
         : entryType === 'PRODUCT'
-          ? 'Urun sayfasi akisi: HERO ile basla; FEATURE_GRID + VALUE_PROP + STATS ile degeri anlat; FAQ ekle; CTA_BANNER veya CONTACT_FORM ile bitir.'
-          : 'Kurumsal sayfa akisi: HERO ile basla, 4-7 blok kullan, FAQ ekle (GEO/SEO icin), CTA_BANNER veya CONTACT_FORM ile bitir.';
+          ? `URUN SAYFASI SABLONU — su blok dizisini AYNEN uret:
+1) HERO: urun adi + kisa tagline + cta { label, href:"/${localeCode}/contact" }
+2) FEATURE_GRID: 3-4 ozellik (title + description)
+3) STATS: 3-4 olcum (value + label)
+4) VALUE_PROP: neden bu urun (title + body)
+5) FAQ: 3 soru-cevap
+6) CTA_BANNER: demo/iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }`
+          : `KURUMSAL SAYFA SABLONU — su blok dizisini AYNEN uret:
+1) HERO: baslik + alt baslik + cta { label, href:"/${localeCode}/contact" }
+2) FEATURE_GRID: 3-4 ozellik
+3) VALUE_PROP: deger onermesi (title + body)
+4) FAQ: 3 soru-cevap
+5) CTA_BANNER: iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }`;
     const system = [
       "Kurumsal bir siber guvenlik sirketi (Kron Technologies benzeri) CMS'i icin icerik tasarlayan bir mimar asistansin.",
       `Icerik dili: ${lang}. Hedef icerik tipi: ${typeLabel}.`,
+      'AMAC: editore HAZIR, duzenlenebilir bir TASLAK iskelet ver. Sablonu birebir takip et, dengeli ve kisa tut (her seyi yapma; isi kolaylastirmak hedef).',
       BLOCK_CATALOG,
       'YANIT KURALI: YALNIZ gecerli JSON dondur (markdown cit yok, aciklama yok):',
       '{ "title": "...", "excerpt": "...", "seo": { "metaTitle": "...", "metaDescription": "50-160 karakter" }, "blocks": [{ "type": "...", "data": { ... } }] }',
-      flow +
-        ' Linkler /' +
-        localeCode +
-        '/contact gibi yerel yollara isaret etsin.',
+      template,
     ].join('\n\n');
 
     // Opus 4.8 ADAPTIVE thinking ister (eski thinking.enabled/budget_tokens -> 400).
