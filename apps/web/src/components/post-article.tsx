@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactElement } from "react";
 import { BlogShareLinks, formatBlogDate, HighlightsSidebar } from "@/components/blog-shared";
+import { BlogToc } from "@/components/blog-toc";
 import { Blocks } from "@/components/blocks";
 import { RICH_TEXT_PROSE } from "@/components/blocks-view";
 import { listEntries } from "@/lib/api";
@@ -90,6 +91,10 @@ export async function PostArticle({
   const author = entry.authorName?.trim() || (locale === "tr" ? "Kron Ekibi" : "Kron Team");
   // Govde tek RICH_TEXT akisi; H2'lerden TOC + h2 id enjeksiyonu.
   const { html: bodyHtml, toc } = buildToc(richTexts.map((b) => String(b.data.html ?? "")).join("\n"));
+  // Okuma suresi: govde kelime sayisi / ~200 wpm (her zaman hesaplanir; post.readingMin'e bagimli degil).
+  const words = bodyHtml.replace(/<[^>]+>/g, " ").trim().split(/\s+/).filter(Boolean).length;
+  const readMin = Math.max(1, Math.round(words / 200));
+  const readLabel = locale === "tr" ? `${readMin} dk okuma` : `${readMin} min read`;
 
   return (
     <>
@@ -135,33 +140,17 @@ export async function PostArticle({
               />
             )}
             <h1 className="text-[32px] font-semibold leading-tight text-dark">{entry.title}</h1>
-            {/* krontech .blog-terms: 12px — tarih · yazar */}
+            {/* krontech .blog-terms: 12px — tarih · yazar · okuma suresi */}
             <p className="mb-[17px] mt-2 text-xs text-[#333]">
               {dateStr && <span>{dateStr}</span>}
               {dateStr && <span className="px-1.5 opacity-50">·</span>}
               <span>{author}</span>
+              <span className="px-1.5 opacity-50">·</span>
+              <span>{readLabel}</span>
             </p>
             <BlogShareLinks url={absoluteUrl(path)} title={entry.title} />
-            {/* Icindekiler — govdedeki H2'lerden otomatik (krontech Table of Contents) */}
-            {toc.length > 1 && (
-              <nav
-                aria-label={locale === "tr" ? "İçindekiler" : "Table of Contents"}
-                className="my-6 rounded-lg border border-line bg-surface-muted p-4"
-              >
-                <p className="mb-2 text-sm font-semibold text-dark">
-                  {locale === "tr" ? "İçindekiler" : "Table of Contents"}
-                </p>
-                <ol className="space-y-1 text-sm">
-                  {toc.map((t, i) => (
-                    <li key={t.id}>
-                      <a href={`#${t.id}`} className="text-primary hover:underline">
-                        {i + 1}. {t.text}
-                      </a>
-                    </li>
-                  ))}
-                </ol>
-              </nav>
-            )}
+            {/* Icindekiler — sticky + acilir-kapanir (client); h2 listesi server'da uretildi */}
+            {toc.length > 1 && <BlogToc toc={toc} locale={locale} />}
             {/* Govde tek akis (krontech makale): H2 bolumleri + inline gorsel + listeler.
                 H2 id'leri render aninda eklenir (TOC anchor'lari); HTML zaten DB'ye
                 yazilirken whitelist-sanitize edildi (guvenli <img>/<figure> dahil). */}
