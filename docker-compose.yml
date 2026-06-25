@@ -78,6 +78,14 @@ services:
     env_file: .env
     ports:
       - "${API_PORT:-4000}:${API_PORT:-4000}"
+    # web bu healthcheck'i bekler: /docs-json yalniz migrate+seed+start BITINCE 200 doner
+    # -> web asla api hazir olmadan acilmaz (degerlendirici erken-bos-sayfa gormez)
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:'+(process.env.API_PORT||4000)+'/docs-json',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 40s
     volumes:
       - ./apps/api:/app/apps/api
       - ./packages:/app/packages
@@ -112,7 +120,8 @@ services:
       - /app/apps/web/node_modules
       - /app/apps/web/.next
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   pgdata:

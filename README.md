@@ -43,6 +43,11 @@ cp .env.example .env
 docker compose up --build
 ```
 
+> **İlk build ~3-8 dk** sürer (monorepo bağımlılıkları + Next derlemesi + migrate/seed). `web`
+> artık `api` tamamen hazır olmadan (migrate + **seed** + serve) başlamaz; bu yüzden `web`
+> container'ı ayağa kalkıp Next derlemesi bittiğinde `http://localhost:3000` **dolu** açılır —
+> erken açıp boş sayfa görme riski yoktur.
+
 | Servis | Adres |
 |--------|-------|
 | Web (public + admin) | http://localhost:3000 |
