@@ -273,8 +273,10 @@ Prisma generate notu (Windows): `src/generated` container-local volume — conta
 
 Ikinci tur eng-review: mevcut admin panel kodu (16 sayfa + 9 bilesen) mimari / kod-kalitesi /
 test / performans acisindan yeniden tarandi. Asagidakiler bu turda ALINAN KARARLAR.
-**Durum: A1 + A2 + C3 + C5 (Serit A) UYGULANDI** (asagida "Uygulama durumu" + degisen dosyalar);
-C2 + T1 + P1 sonraki turlara birakildi.
+**Durum: TUM kararlar UYGULANDI ve commit'lendi** — A1/A2/C3/C5 (Serit A) + BFCache sertlestirme +
+**C2** (editor bolme, commit `85f844a`) + **T1** (testler + Playwright, commit `a4042db`) + P1/C4/mid-edit
+guard/jest. Branch `eng-review-admin-hardening`. Acik kalan: yalniz CSRF (Faz 9, gerekceli) +
+menude secilmeyen 4 ozellik (kapsam disi). Detaylar asagida.
 
 | Konu | Teshis / Karar / Nasil |
 |------|-------|
