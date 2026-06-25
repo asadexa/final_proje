@@ -68,6 +68,43 @@ describe('sanitizeRichHtml (zengin metin politikasi)', () => {
   });
 });
 
+describe('sanitizeRichHtml — inline gorseller (blog makalesi)', () => {
+  it('guvenli site-ici <img>e izin verir (yalniz src+alt+loading)', () => {
+    const out = sanitizeRichHtml('<img src="/kron/blog/x.jpg" alt="resim" />');
+    expect(out).toContain('<img src="/kron/blog/x.jpg"');
+    expect(out).toContain('alt="resim"');
+    expect(out).toContain('loading="lazy"');
+  });
+
+  it('guvenli https <img>e izin verir', () => {
+    const out = sanitizeRichHtml('<img src="https://cdn.kron.com/a.png" alt="a">');
+    expect(out).toContain('<img src="https://cdn.kron.com/a.png"');
+  });
+
+  it('img uzerindeki onerror/onload gibi nitelikleri ATAR (yalniz src/alt kalir)', () => {
+    const out = sanitizeRichHtml('<img src="/a.jpg" onerror="alert(1)" onload="x()">');
+    expect(out).toContain('<img src="/a.jpg"');
+    expect(out).not.toContain('onerror');
+    expect(out).not.toContain('onload');
+  });
+
+  it('javascript:/data: semali src tasiyan img tamamen dusurulur', () => {
+    expect(sanitizeRichHtml('<img src="javascript:alert(1)">')).not.toContain('<img');
+    expect(sanitizeRichHtml('<img src="data:text/html,<script>x</script>">')).not.toContain(
+      '<img',
+    );
+  });
+
+  it('<figure>/<figcaption> ile gorsel + altyazi korunur', () => {
+    const out = sanitizeRichHtml(
+      '<figure><img src="/kron/blog/y.jpg" alt="y" /><figcaption>Altyazi</figcaption></figure>',
+    );
+    expect(out).toContain('<figure>');
+    expect(out).toContain('<figcaption>Altyazi</figcaption>');
+    expect(out).toContain('<img src="/kron/blog/y.jpg"');
+  });
+});
+
 describe('sanitizeBlockData (blok tipine gore alan eslemesi)', () => {
   it('RICH_TEXT.html alanini temizler', () => {
     const out = sanitizeBlockData('RICH_TEXT', {

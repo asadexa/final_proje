@@ -41,7 +41,7 @@ Kullanabilecegin blok tipleri ve data alanlari (BASKA TIP KULLANMA):
 - VALUE_PROP: { title (zorunlu), body (zorunlu), cta?: {label,href}, image?: {url,alt} }
 - STATS: { title?, subtitle?, items: [{ value (zorunlu), label (zorunlu) }] }
 - MEDIA_TEXT: { title?, body (zorunlu), image: {url?,alt?}, imageSide?: "left"|"right", cta?: {label,href} }
-- RICH_TEXT: { html (zorunlu; h2/h3/p/ul kullan) }
+- RICH_TEXT: { html (zorunlu; <h2>/<h3>/<p>/<ul><li> ve inline gorsel icin <figure><img src alt/><figcaption></figure> kullanabilirsin) }
 - FAQ: { title?, items: [{ question (zorunlu), answer (zorunlu) }] }
 - CTA_BANNER: { title (zorunlu), cta: {label (zorunlu), href (zorunlu)} }
 - CONTACT_FORM: { title?, formKey (zorunlu; "contact" kullan), consentText? }
@@ -134,14 +134,26 @@ export class AiService {
         'ANTHROPIC_API_KEY tanimli degil — deterministik sablon modu kullanildi.';
     }
 
-    // Gorsel whitelist: MEDIA_TEXT vb. bloklarin image.url'i YALNIZ kutuphaneden
-    // olabilir; AI listede olmayan bir url uydurursa temizlenir (404 imkansiz, bos slot kalir).
+    // Gorsel whitelist: gorseller YALNIZ kutuphaneden olabilir; AI listede olmayan
+    // bir url uydurursa temizlenir (404 imkansiz).
     if (mediaList.length > 0) {
       const allow = new Set(mediaList.map((m) => m.url));
       for (const b of draft.blocks) {
+        // (a) MEDIA_TEXT vb. image alani
         const img = b.data.image as { url?: unknown } | undefined;
         if (img && typeof img.url === 'string' && !allow.has(img.url)) {
           delete img.url;
+        }
+        // (b) RICH_TEXT govdesindeki inline <img>/<figure>: listede olmayan src kaldirilir
+        if (typeof b.data.html === 'string') {
+          b.data.html = b.data.html
+            .replace(/<figure\b[\s\S]*?<\/figure>/gi, (block) => {
+              const m = /<img\b[^>]*\bsrc="([^"]*)"/i.exec(block);
+              return m && allow.has(m[1]) ? block : '';
+            })
+            .replace(/<img\b[^>]*\bsrc="([^"]*)"[^>]*>/gi, (m, src: string) =>
+              allow.has(src) ? m : '',
+            );
         }
       }
     }
@@ -228,14 +240,12 @@ export class AiService {
     // Tip-bazli SABIT sablon: AI serbest blok secmez, bu iskeleti TASLAK metinle doldurur.
     const template =
       entryType === 'POST'
-        ? `BLOG YAZISI SABLONU — gorselli, makale havasinda. Su blok dizisini uret, icerigi promptu yansitan TASLAK metinle doldur:
-1) MEDIA_TEXT: lead bolum — body'de kisa giris (2-3 cumle); image: asagidaki listeden konuya EN UYGUN gorsel + uygun alt metin
-2) RICH_TEXT: ana govde (2-3 alt bolum; her biri <h2>baslik</h2><p>paragraf</p>)
-3) MEDIA_TEXT: ikinci gorselli bolum (ara baslik + paragraf body'de; listeden uygun gorsel, imageSide:"right")
-4) FAQ: 3 soru-cevap
-5) CTA_BANNER: yumusak kapanis cagrisi { cta: {label, href:"/${localeCode}/contact"} }
-GORSEL KURALI: MEDIA_TEXT.image.url SADECE asagidaki listeden olabilir. Bir bolume uygun gorsel YOKSA image alanini bos birak (image: {}) ya da o blogu RICH_TEXT yap — ASLA listede olmayan url UYDURMA, hayali yol yazma.
-KURAL: HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA — bu bir MAKALE, pazarlama sayfasi degil. Sayfa basligi entry basligindan gelir; govdede tekrar etme.${mediaCatalog}`
+        ? `BLOG YAZISI SABLONU — krontech makale yapisi: TEK rich govde + sonunda FAQ ve CTA. Su 3 blogu uret:
+1) RICH_TEXT (govdenin TAMAMI tek html): once 1-2 giris paragrafi (<p>); ardindan 3-4 bolum, her biri <h2>Bolum Basligi</h2> + altinda <p> paragraf(lar). Uygun yerlerde <ul><li>...</li></ul> madde listesi kullan. Konuya uyan 1-2 yere asagidaki listeden GERCEK gorsel gom: <figure><img src="LISTEDEKI_URL" alt="kisa alt"/><figcaption>kisa aciklama</figcaption></figure>.
+2) FAQ: 3 soru-cevap
+3) CTA_BANNER: yumusak kapanis { cta: {label, href:"/${localeCode}/contact"} }
+GORSEL KURALI: <img src> SADECE asagidaki listeden olabilir; uygun gorsel yoksa hic gorsel ekleme. ASLA listede olmayan url UYDURMA.
+KURAL: Govde TEK RICH_TEXT olmali — MEDIA_TEXT / HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA. <h1> kullanma (sayfa basligi entry basligindan gelir). H2 basliklarini anlamli yaz; icindekiler (TOC) bunlardan uretilir.${mediaCatalog}`
         : entryType === 'PRODUCT'
           ? `URUN SAYFASI SABLONU — su blok dizisini AYNEN uret:
 1) HERO: urun adi + kisa tagline + cta { label, href:"/${localeCode}/contact" }

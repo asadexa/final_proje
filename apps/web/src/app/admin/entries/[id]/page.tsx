@@ -51,6 +51,7 @@ interface AdminEntry {
   title: string;
   slug: string;
   excerpt?: string | null;
+  authorName?: string | null;
   featured?: boolean;
   status: EntryStatus;
   publishAt?: string | null;
@@ -254,6 +255,7 @@ export default function EntryEditorPage(): ReactElement {
       title: entry.title,
       slug: entry.slug,
       excerpt: entry.excerpt ?? undefined,
+      authorName: entry.authorName ?? undefined,
       featured: entry.featured ?? false,
       status: entry.status,
       publishAt: entry.publishAt ?? undefined,
@@ -420,6 +422,17 @@ export default function EntryEditorPage(): ReactElement {
               />
             </div>
           </div>
+          {entry.type === "POST" && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-soft">Yazar</label>
+              <input
+                className={inputCls}
+                value={entry.authorName ?? ""}
+                placeholder="Boş bırakılırsa: Kron Ekibi"
+                onChange={(e) => patchEntry({ authorName: e.target.value })}
+              />
+            </div>
+          )}
           {entry.type === "POST" && (
             <label className="flex items-center gap-2 text-sm text-ink-soft">
               <input

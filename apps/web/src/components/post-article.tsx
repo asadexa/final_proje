@@ -37,6 +37,38 @@ function isMeaningfulHero(b: BlockNode): boolean {
   );
 }
 
+// Baslik metninden anchor id'si (Turkce karakter sadelestirme).
+function slugifyHeading(s: string): string {
+  const map: Record<string, string> = { ç: "c", ğ: "g", ı: "i", ö: "o", ş: "s", ü: "u", İ: "i" };
+  return (
+    s
+      .replace(/<[^>]+>/g, "")
+      .toLowerCase()
+      .split("")
+      .map((c) => map[c] ?? c)
+      .join("")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "bolum"
+  );
+}
+
+// Govdedeki <h2>'lere id enjekte eder + TOC listesi cikarir (krontech "Table of Contents").
+function buildToc(html: string): { html: string; toc: Array<{ id: string; text: string }> } {
+  const toc: Array<{ id: string; text: string }> = [];
+  const used = new Set<string>();
+  const out = html.replace(/<h2(?:\s[^>]*)?>([\s\S]*?)<\/h2>/gi, (_m, inner: string) => {
+    const text = inner.replace(/<[^>]+>/g, "").trim();
+    let id = slugifyHeading(text);
+    const base = id;
+    for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
+    used.add(id);
+    toc.push({ id, text });
+    return `<h2 id="${id}">${inner}</h2>`;
+  });
+  return { html: out, toc };
+}
+
 export async function PostArticle({
   entry,
   locale,
@@ -54,6 +86,10 @@ export async function PostArticle({
   const dateStr = entry.publishedAt ? formatBlogDate(locale, entry.publishedAt) : null;
   const cover = entry.coverImage?.url;
   const homeLabel = locale === "tr" ? "Ana Sayfa" : "Home";
+  // Yazar: editorde duzenlenir; bos ise varsayilan site adi (krontech "tarih / yazar").
+  const author = entry.authorName?.trim() || (locale === "tr" ? "Kron Ekibi" : "Kron Team");
+  // Govde tek RICH_TEXT akisi; H2'lerden TOC + h2 id enjeksiyonu.
+  const { html: bodyHtml, toc } = buildToc(richTexts.map((b) => String(b.data.html ?? "")).join("\n"));
 
   return (
     <>
@@ -99,17 +135,37 @@ export async function PostArticle({
               />
             )}
             <h1 className="text-[32px] font-semibold leading-tight text-dark">{entry.title}</h1>
-            {/* krontech .blog-terms: 12px, mb-17 (yazar alani modelde yok -> tarih) */}
-            {dateStr && <p className="mb-[17px] mt-2 text-xs text-[#333]">{dateStr}</p>}
+            {/* krontech .blog-terms: 12px — tarih · yazar */}
+            <p className="mb-[17px] mt-2 text-xs text-[#333]">
+              {dateStr && <span>{dateStr}</span>}
+              {dateStr && <span className="px-1.5 opacity-50">·</span>}
+              <span>{author}</span>
+            </p>
             <BlogShareLinks url={absoluteUrl(path)} title={entry.title} />
-            {richTexts.map((b) => (
-              <div
-                key={b.id}
-                className={RICH_TEXT_PROSE}
-                // Icerik yazma kapisinda whitelist-sanitize edilir (guvenlik turu)
-                dangerouslySetInnerHTML={{ __html: String(b.data.html ?? "") }}
-              />
-            ))}
+            {/* Icindekiler — govdedeki H2'lerden otomatik (krontech Table of Contents) */}
+            {toc.length > 1 && (
+              <nav
+                aria-label={locale === "tr" ? "İçindekiler" : "Table of Contents"}
+                className="my-6 rounded-lg border border-line bg-surface-muted p-4"
+              >
+                <p className="mb-2 text-sm font-semibold text-dark">
+                  {locale === "tr" ? "İçindekiler" : "Table of Contents"}
+                </p>
+                <ol className="space-y-1 text-sm">
+                  {toc.map((t, i) => (
+                    <li key={t.id}>
+                      <a href={`#${t.id}`} className="text-primary hover:underline">
+                        {i + 1}. {t.text}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )}
+            {/* Govde tek akis (krontech makale): H2 bolumleri + inline gorsel + listeler.
+                H2 id'leri render aninda eklenir (TOC anchor'lari); HTML zaten DB'ye
+                yazilirken whitelist-sanitize edildi (guvenli <img>/<figure> dahil). */}
+            <div className={RICH_TEXT_PROSE} dangerouslySetInnerHTML={{ __html: bodyHtml }} />
           </div>
           <aside>
             <HighlightsSidebar posts={featured} locale={locale} />

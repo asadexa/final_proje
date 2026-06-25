@@ -159,6 +159,11 @@ model Entry {
   authorId String?
   author   User?   @relation("EntryAuthor", fields: [authorId], references: [id])
 
+  // Blog meta'sinda gosterilen serbest-metin yazar adi (User iliskisinden BAGIMSIZ;
+  // krontech "tarih / yazar" satiri). Editorde duzenlenir; bos ise PostArticle
+  // varsayilan site adini gosterir.
+  authorName String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
