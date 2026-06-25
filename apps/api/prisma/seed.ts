@@ -10,6 +10,32 @@ if (!connectionString) {
 }
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
+// Paylasimli kapak: ayni gorsel URL'i icin TEK Media satiri uretir ve connect eder.
+// (Eskiden her entry icin nested create -> ayni dosya birden cok Media kaydi = medya
+//  kutuphanesinde duplication. Cache ile URL basina tek kayit garanti edilir.)
+const coverCache = new Map<string, string>();
+async function sharedCover(
+  url: string,
+  alt: string,
+): Promise<NonNullable<Prisma.EntryCreateInput['coverImage']>> {
+  let id = coverCache.get(url);
+  if (!id) {
+    const mime = url.endsWith('.png')
+      ? 'image/png'
+      : url.endsWith('.gif')
+        ? 'image/gif'
+        : url.endsWith('.webp')
+          ? 'image/webp'
+          : 'image/jpeg';
+    const media = await prisma.media.create({
+      data: { key: `seed/shared${url}`, url, mime, size: 0, alt },
+    });
+    id = media.id;
+    coverCache.set(url, id);
+  }
+  return { connect: { id } };
+}
+
 async function main(): Promise<void> {
   // 1) Diller
   await prisma.locale.upsert({
@@ -962,7 +988,7 @@ async function main(): Promise<void> {
         status: 'PUBLISHED', publishedAt: new Date('2025-07-08'),
         locale: { connect: { code: 'tr' } }, group: { connect: { id: postGroup.id } },
         post: { create: { readingMin: 4, tags: ['zero-trust', 'pam'] } },
-        coverImage: { create: { key: 'seed/blog/sifir-guven-ve-kron-pam', url: '/kron/blog/non-human.png', mime: 'image/png', size: 0, alt: 'Sifir Guven ve Kron PAM' } },
+        coverImage: await sharedCover('/kron/blog/non-human.png', 'Sifir Guven ve Kron PAM'),
         seo: { create: { metaTitle: 'Sifir Guven ve Kron PAM', metaDescription: 'Zero Trust mimarisinde PAM.' } },
         blocks: {
           create: [
@@ -980,7 +1006,7 @@ async function main(): Promise<void> {
         status: 'PUBLISHED', publishedAt: new Date('2025-07-08'),
         locale: { connect: { code: 'en' } }, group: { connect: { id: postGroup.id } },
         post: { create: { readingMin: 4, tags: ['zero-trust', 'pam'] } },
-        coverImage: { create: { key: 'seed/blog/zero-trust-with-kron-pam', url: '/kron/blog/non-human.png', mime: 'image/png', size: 0, alt: 'Zero Trust with Kron PAM' } },
+        coverImage: await sharedCover('/kron/blog/non-human.png', 'Zero Trust with Kron PAM'),
         seo: { create: { metaTitle: 'Zero Trust with Kron PAM', metaDescription: 'PAM in a Zero Trust architecture.' } },
         blocks: {
           create: [
@@ -1000,7 +1026,7 @@ async function main(): Promise<void> {
         status: 'PUBLISHED', publishedAt: new Date('2025-06-17'),
         locale: { connect: { code: 'tr' } }, group: { connect: { id: postGroup2.id } },
         post: { create: { readingMin: 5, tags: ['least-privilege', 'pam'] } },
-        coverImage: { create: { key: 'seed/blog/en-az-ayricalik-ilkesi', url: '/kron/blog/multi-tenant.jpg', mime: 'image/jpeg', size: 0, alt: 'En Az Ayricalik Ilkesi' } },
+        coverImage: await sharedCover('/kron/blog/multi-tenant.jpg', 'En Az Ayricalik Ilkesi'),
         seo: { create: { metaTitle: 'En Az Ayricalik Ilkesi', metaDescription: 'En az ayricalik ve Kron PAM.' } },
         blocks: { create: [
           { type: 'HERO', order: 0, data: { title: 'En Az Ayricalik Ilkesi ve Kron PAM' } },
@@ -1015,7 +1041,7 @@ async function main(): Promise<void> {
         status: 'PUBLISHED', publishedAt: new Date('2025-06-17'),
         locale: { connect: { code: 'en' } }, group: { connect: { id: postGroup2.id } },
         post: { create: { readingMin: 5, tags: ['least-privilege', 'pam'] } },
-        coverImage: { create: { key: 'seed/blog/least-privilege-with-kron-pam', url: '/kron/blog/multi-tenant.jpg', mime: 'image/jpeg', size: 0, alt: 'Least Privilege with Kron PAM' } },
+        coverImage: await sharedCover('/kron/blog/multi-tenant.jpg', 'Least Privilege with Kron PAM'),
         seo: { create: { metaTitle: 'Least Privilege with Kron PAM', metaDescription: 'Least privilege and Kron PAM.' } },
         blocks: { create: [
           { type: 'HERO', order: 0, data: { title: 'Least Privilege with Kron PAM' } },
@@ -1032,7 +1058,7 @@ async function main(): Promise<void> {
         status: 'PUBLISHED', publishedAt: new Date('2025-05-22'),
         locale: { connect: { code: 'tr' } }, group: { connect: { id: postGroup3.id } },
         post: { create: { readingMin: 4, tags: ['data-masking', 'data-security'] } },
-        coverImage: { create: { key: 'seed/blog/veri-maskeleme-neden-onemli', url: '/kron/blog/oracle-rac.png', mime: 'image/png', size: 0, alt: 'Veri Maskeleme Neden Onemli' } },
+        coverImage: await sharedCover('/kron/blog/oracle-rac.png', 'Veri Maskeleme Neden Onemli'),
         seo: { create: { metaTitle: 'Veri Maskeleme Neden Onemli', metaDescription: 'Dinamik veri maskeleme.' } },
         blocks: { create: [
           { type: 'HERO', order: 0, data: { title: 'Veri Maskeleme Neden Onemli?' } },
@@ -1047,7 +1073,7 @@ async function main(): Promise<void> {
         status: 'PUBLISHED', publishedAt: new Date('2025-05-22'),
         locale: { connect: { code: 'en' } }, group: { connect: { id: postGroup3.id } },
         post: { create: { readingMin: 4, tags: ['data-masking', 'data-security'] } },
-        coverImage: { create: { key: 'seed/blog/why-data-masking-matters', url: '/kron/blog/oracle-rac.png', mime: 'image/png', size: 0, alt: 'Why Data Masking Matters' } },
+        coverImage: await sharedCover('/kron/blog/oracle-rac.png', 'Why Data Masking Matters'),
         seo: { create: { metaTitle: 'Why Data Masking Matters', metaDescription: 'Dynamic data masking.' } },
         blocks: { create: [
           { type: 'HERO', order: 0, data: { title: 'Why Data Masking Matters' } },
@@ -1273,7 +1299,7 @@ async function main(): Promise<void> {
             status: 'PUBLISHED', publishedAt: new Date(p.date),
             locale: { connect: { code } }, group: { connect: { id: g.id } },
             post: { create: { readingMin: p.min, tags: p.tags } },
-            coverImage: { create: { key: `seed/blog/${d.slug}`, url: `/kron/blog/${p.img}`, mime: 'image/jpeg', size: 0, alt: d.title } },
+            coverImage: await sharedCover(`/kron/blog/${p.img}`, d.title),
             seo: { create: { metaTitle: d.title, metaDescription: d.excerpt } },
             blocks: { create: [
               { type: 'HERO', order: 0, data: { title: d.title } },

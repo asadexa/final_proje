@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, type ReactElement, useCallback, useEffect, useState } from "react";
+import { type ChangeEvent, type ReactElement, useCallback, useEffect, useMemo, useState } from "react";
 import { LoadError } from "@/components/admin/load-error";
 import { adminFetch, adminRequest, adminUpload } from "@/lib/admin";
 import { useAdminGuard } from "@/lib/use-admin-guard";
@@ -27,7 +27,7 @@ export default function MediaPage(): ReactElement {
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
-    const r = await adminRequest<MediaList>("/admin/media?pageSize=48");
+    const r = await adminRequest<MediaList>("/admin/media?pageSize=200");
     if (r.ok) setItems(r.data?.items ?? []);
     else setError(true);
     setLoading(false);
@@ -54,6 +54,18 @@ export default function MediaPage(): ReactElement {
     await load();
   }
 
+  // Kutuphane benzersiz varlik gosterir: ayni URL'e isaret eden kayitlari grupla.
+  // (Seed kapaklari entry basina ayri Media yaratiyor -> ayni dosya birden cok satir.)
+  const groups = useMemo(() => {
+    const byUrl = new Map<string, { rep: MediaItem; ids: string[] }>();
+    for (const m of items) {
+      const g = byUrl.get(m.url);
+      if (g) g.ids.push(m.id);
+      else byUrl.set(m.url, { rep: m, ids: [m.id] });
+    }
+    return Array.from(byUrl.values());
+  }, [items]);
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -72,14 +84,22 @@ export default function MediaPage(): ReactElement {
         <p className="text-sm text-muted">Henüz medya yok. Bir dosya yükleyin.</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {items.map((m) => (
-            <div key={m.id} className="overflow-hidden rounded-lg border border-line bg-surface">
-              <div className="flex aspect-video items-center justify-center bg-surface-muted">
+          {groups.map(({ rep: m, ids }) => (
+            <div key={m.url} className="overflow-hidden rounded-lg border border-line bg-surface">
+              <div className="relative flex aspect-video items-center justify-center bg-surface-muted">
                 {m.mime.startsWith("image/") ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={m.url} alt={m.alt ?? ""} className="h-full w-full object-cover" />
                 ) : (
                   <span className="px-2 text-center text-xs text-muted">{m.mime}</span>
+                )}
+                {ids.length > 1 && (
+                  <span
+                    title={`${ids.length} kayıt bu dosyaya işaret ediyor (içerik kapağı olarak kullanımda)`}
+                    className="absolute right-1.5 top-1.5 rounded bg-dark/75 px-1.5 py-0.5 text-xs font-medium text-white"
+                  >
+                    {ids.length}× kullanım
+                  </span>
                 )}
               </div>
               <div className="space-y-1 p-2">
@@ -98,13 +118,19 @@ export default function MediaPage(): ReactElement {
                   >
                     URL kopyala
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(m.id)}
-                    className="text-xs text-accent hover:underline"
-                  >
-                    Sil
-                  </button>
+                  {ids.length > 1 ? (
+                    <span className="text-xs text-muted" title="Birden çok içerikte kullanımda — silmek için önce içeriklerden kaldırın.">
+                      kullanımda
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(m.id)}
+                      className="text-xs text-accent hover:underline"
+                    >
+                      Sil
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

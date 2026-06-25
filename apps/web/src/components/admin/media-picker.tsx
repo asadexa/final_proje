@@ -27,8 +27,13 @@ export function MediaPicker({
   const [uploading, setUploading] = useState(false);
 
   async function openPanel(): Promise<void> {
-    const d = await adminFetch<{ items: MediaItem[] }>("/admin/media?pageSize=48");
-    setItems((d?.items ?? []).filter((m) => m.mime.startsWith("image/")));
+    const d = await adminFetch<{ items: MediaItem[] }>("/admin/media?pageSize=200");
+    // URL bazli dedup: ayni dosyaya isaret eden mukerrer kayitlar tek kez gosterilir.
+    const seen = new Set<string>();
+    const unique = (d?.items ?? []).filter(
+      (m) => m.mime.startsWith("image/") && !seen.has(m.url) && !!seen.add(m.url),
+    );
+    setItems(unique);
     setOpen(true);
   }
 
