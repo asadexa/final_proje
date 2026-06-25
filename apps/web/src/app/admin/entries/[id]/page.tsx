@@ -369,6 +369,9 @@ export default function EntryEditorPage(): ReactElement {
           blocks={toVisual()}
           onChange={fromVisual}
           title={entry.title}
+          authorName={entry.authorName}
+          isPost={entry.type === "POST"}
+          onPatchMeta={(p) => patchEntry(p)}
           saving={saving}
           dirty={dirty}
           onSave={() => void save()}
