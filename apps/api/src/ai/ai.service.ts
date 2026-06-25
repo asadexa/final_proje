@@ -20,6 +20,9 @@ export interface ArchitectResult {
   usedAi: boolean;
   droppedBlocks: string[]; // sema dogrulamasini gecemeyen bloklar (tip listesi)
   note?: string;
+  blocks: string[]; // uretilen (gecerli) blok tipleri — sonuc kartinda manifest icin
+  title: string; // uretilen taslagin basligi — sonuc kartinda onizleme icin
+  rationale: string; // tip-bazli kisa gerekce ("neden bu bloklar") — sonuc kartinda
 }
 
 interface DraftPage {
@@ -164,7 +167,23 @@ export class AiService {
       userId,
       userRole,
     );
-    return { entryId: entry.id, slug, usedAi, droppedBlocks: dropped, note };
+    // Tip-bazli kisa gerekce: kullanici editore girmeden "neden bu bloklar"i gorsun
+    const rationale =
+      entryType === 'POST'
+        ? 'Blog makalesi düzeni: giriş, zengin metin bölümleri ve SSS.'
+        : entryType === 'PRODUCT'
+          ? 'Ürün açılış düzeni: hero, özellik ızgarası, istatistikler, değer önermesi, SSS ve CTA.'
+          : 'Kurumsal sayfa düzeni: tanıtım, özellikler, değer önermesi, SSS ve iletişim çağrısı.';
+    return {
+      entryId: entry.id,
+      slug,
+      usedAi,
+      droppedBlocks: dropped,
+      note,
+      blocks: validBlocks.map((b) => b.type),
+      title: draft.title,
+      rationale,
+    };
   }
 
   // --------------------------- Claude (resmi SDK) ---------------------------
