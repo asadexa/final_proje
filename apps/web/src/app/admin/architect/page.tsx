@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { type ReactElement, useEffect, useRef, useState } from "react";
-import { adminRequest, getToken } from "@/lib/admin";
+import { adminRequest } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 
 interface ArchitectResult {
   entryId: string;
@@ -21,6 +22,7 @@ const EXAMPLES = [
 // AI Site Architect: prompt -> blok JSON (Zod kapisindan gecer) -> taslak sayfa.
 export default function ArchitectPage(): ReactElement {
   const router = useRouter();
+  useAdminGuard();
   const [prompt, setPrompt] = useState("");
   const [locale, setLocale] = useState("tr");
   const [type, setType] = useState("PAGE");
@@ -29,10 +31,6 @@ export default function ArchitectPage(): ReactElement {
   const [result, setResult] = useState<ArchitectResult | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (!getToken()) window.location.href = "/admin/login";
-  }, []);
 
   // Zaman-tahminli ilerleme (LLM stream progress vermez; sayfa uretimi yavas -> yavas easing).
   function startProgress(): () => void {

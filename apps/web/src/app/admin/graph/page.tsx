@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
-import { adminFetch, getToken } from "@/lib/admin";
+import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LoadError } from "@/components/admin/load-error";
+import { adminRequest } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 
 interface GraphNode {
   id: string;
@@ -34,19 +36,25 @@ const COL_X: Record<string, number> = { PAGE: 140, PRODUCT: 520, POST: 900 };
 // dugumler kirmizi halkayla vurgulanir. Zoom: tekerlek, pan: surukle.
 export default function GraphPage(): ReactElement {
   const router = useRouter();
+  const ready = useAdminGuard();
   const [data, setData] = useState<GraphData | null>(null);
+  const [error, setError] = useState(false);
   const [query, setQuery] = useState("");
   const [view, setView] = useState({ x: 0, y: 0, w: 1100, h: 800 });
   const drag = useRef<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
-    void adminFetch<GraphData>("/admin/entries/graph").then((d) => setData(d));
+  const load = useCallback(async () => {
+    setError(false);
+    const r = await adminRequest<GraphData>("/admin/entries/graph");
+    if (r.ok) setData(r.data ?? null);
+    else setError(true);
   }, []);
+
+  useEffect(() => {
+    // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
+    if (ready) void Promise.resolve().then(load);
+  }, [ready, load]);
 
   // Yerlesim: tip kolonlari, kolon icinde locale->title sirali dikey dizilim
   const layout = useMemo(() => {
@@ -71,6 +79,8 @@ export default function GraphPage(): ReactElement {
     return set;
   }, [data]);
 
+  if (error)
+    return <LoadError onRetry={() => void load()} label="Grafik yüklenemedi — sunucuya ulaşılamadı." />;
   if (!data) return <p className="text-sm text-muted">Yükleniyor...</p>;
 
   const q = query.trim().toLowerCase();

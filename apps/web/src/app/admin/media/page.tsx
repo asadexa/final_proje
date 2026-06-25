@@ -1,7 +1,9 @@
 "use client";
 
 import { type ChangeEvent, type ReactElement, useCallback, useEffect, useState } from "react";
-import { adminFetch, adminUpload, getToken } from "@/lib/admin";
+import { LoadError } from "@/components/admin/load-error";
+import { adminFetch, adminRequest, adminUpload } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 
 interface MediaItem {
   id: string;
@@ -16,24 +18,25 @@ interface MediaList {
 }
 
 export default function MediaPage(): ReactElement {
+  const ready = useAdminGuard();
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const load = useCallback(async () => {
-    const d = await adminFetch<MediaList>("/admin/media?pageSize=48");
-    setItems(d?.items ?? []);
+    setLoading(true);
+    setError(false);
+    const r = await adminRequest<MediaList>("/admin/media?pageSize=48");
+    if (r.ok) setItems(r.data?.items ?? []);
+    else setError(true);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
     // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
-    void Promise.resolve().then(load);
-  }, [load]);
+    if (ready) void Promise.resolve().then(load);
+  }, [ready, load]);
 
   async function onUpload(e: ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = e.target.files?.[0];
@@ -63,6 +66,8 @@ export default function MediaPage(): ReactElement {
 
       {loading ? (
         <p className="text-sm text-muted">Yükleniyor...</p>
+      ) : error ? (
+        <LoadError onRetry={() => void load()} label="Medya yüklenemedi — sunucuya ulaşılamadı." />
       ) : items.length === 0 ? (
         <p className="text-sm text-muted">Henüz medya yok. Bir dosya yükleyin.</p>
       ) : (

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { type ReactElement, useCallback, useEffect, useState } from "react";
-import { adminDownload, adminFetch, getToken } from "@/lib/admin";
+import { LoadError } from "@/components/admin/load-error";
+import { adminDownload, adminFetch, adminRequest } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 
 interface FieldDef {
   name: string;
@@ -26,23 +28,24 @@ const STATUSES = ["NEW", "READ", "SPAM", "ARCHIVED"];
 
 export default function FormSubmissionsPage(): ReactElement {
   const key = (useParams().key as string) ?? "";
+  const ready = useAdminGuard();
   const [list, setList] = useState<SubList | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
-    const d = await adminFetch<SubList>(`/admin/forms/${key}/submissions?pageSize=100`);
-    setList(d);
+    setLoading(true);
+    setError(false);
+    const r = await adminRequest<SubList>(`/admin/forms/${key}/submissions?pageSize=100`);
+    if (r.ok) setList(r.data ?? null);
+    else setError(true);
     setLoading(false);
   }, [key]);
 
   useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
     // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
-    void Promise.resolve().then(load);
-  }, [load]);
+    if (ready) void Promise.resolve().then(load);
+  }, [ready, load]);
 
   async function setStatus(id: string, status: string): Promise<void> {
     await adminFetch(`/admin/forms/submissions/${id}`, {
@@ -53,6 +56,8 @@ export default function FormSubmissionsPage(): ReactElement {
   }
 
   if (loading) return <p className="text-sm text-muted">Yükleniyor...</p>;
+  if (error)
+    return <LoadError onRetry={() => void load()} label="Gönderimler yüklenemedi — sunucuya ulaşılamadı." />;
   const fields = list?.fields ?? [];
   const items = list?.items ?? [];
 

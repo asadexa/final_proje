@@ -1,13 +1,11 @@
 "use client";
 
-import { type ReactElement, useEffect } from "react";
-import { getToken } from "@/lib/admin";
+import type { ReactElement } from "react";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 import { FormDefEditor } from "../form-def-editor";
 
 export default function NewFormPage(): ReactElement {
-  useEffect(() => {
-    if (!getToken()) window.location.href = "/admin/login";
-  }, []);
+  useAdminGuard();
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold text-dark">Yeni Form</h1>

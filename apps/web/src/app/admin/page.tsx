@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactElement, useEffect, useState } from "react";
-import { adminFetch, getToken } from "@/lib/admin";
+import { type ReactElement, useCallback, useEffect, useState } from "react";
+import { LoadError } from "@/components/admin/load-error";
+import { adminRequest } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 import type { EntryList } from "@/lib/types";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -13,21 +15,27 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 export default function AdminEntriesPage(): ReactElement {
+  const ready = useAdminGuard();
   const [list, setList] = useState<EntryList | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
-    void adminFetch<EntryList>("/admin/entries?pageSize=100").then((d) => {
-      setList(d);
-      setLoading(false);
-    });
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    const r = await adminRequest<EntryList>("/admin/entries?pageSize=100");
+    if (r.ok) setList(r.data ?? null);
+    else setError(true);
+    setLoading(false);
   }, []);
 
+  useEffect(() => {
+    // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
+    if (ready) void Promise.resolve().then(load);
+  }, [ready, load]);
+
   if (loading) return <p className="text-sm text-muted">Yukleniyor...</p>;
+  if (error) return <LoadError onRetry={() => void load()} label="İçerikler yüklenemedi — sunucuya ulaşılamadı." />;
   const items = list?.items ?? [];
 
   return (

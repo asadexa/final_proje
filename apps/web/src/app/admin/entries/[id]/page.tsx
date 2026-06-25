@@ -2,12 +2,18 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { type ReactElement, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useState } from "react";
 import { BLOCK_FORMS, BlockForm } from "@/components/admin/block-form";
 import { BlockPicker } from "@/components/admin/block-picker";
+import { EntryAiAssistant } from "@/components/admin/entry-ai-assistant";
+import { EntryHealthPanel } from "@/components/admin/entry-health-panel";
+import { EntrySeoForm } from "@/components/admin/entry-seo-form";
 import { MediaPicker } from "@/components/admin/media-picker";
 import { VisualEditor, type VisualBlock } from "@/components/admin/visual-editor";
-import { adminFetch, adminRequest, getRole, getToken } from "@/lib/admin";
+import { adminFetch, adminRequest, getRole } from "@/lib/admin";
+import { isoToLocalInput } from "@/lib/datetime";
+import { useAdminGuard } from "@/lib/use-admin-guard";
+import { useEntrySse } from "@/lib/use-entry-sse";
 import type { BlockNode, EntryStatus, SeoData } from "@/lib/types";
 
 const BLOCK_TYPES = [
@@ -57,13 +63,6 @@ interface AdminEntry {
 }
 const LOCALES = ["tr", "en"];
 
-// datetime-local <-> ISO donusumu YEREL saatte yapilmali; aksi halde UTC'ye
-// kayar (orn. TR'de 12:00 secimi 09:00 gorunur). slice(0,16) UTC gosterirdi.
-function isoToLocalInput(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number): string => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 interface BlockEdit {
   type: string;
   enabled: boolean;
@@ -81,31 +80,10 @@ interface VersionRow {
   note?: string | null;
   createdAt: string;
 }
-interface HealthFinding {
-  severity: "error" | "warning" | "info";
-  category: string;
-  code: string;
-  message: string;
-  where?: string;
-}
-interface HealthResult {
-  score: number;
-  findings: HealthFinding[];
-  passed: Array<{ category: string; code: string; label: string }>;
-  summary: { error: number; warning: number; info: number; passed: number; total: number };
-  categories: Array<{ category: string; label: string; score: number; findings: number; passed: number }>;
-}
-const HEALTH_CAT_LABEL: Record<string, string> = {
-  structure: "YAPI",
-  seo: "SEO",
-  a11y: "A11Y",
-  ux: "UX",
-  geo: "GEO",
-};
-
 export default function EntryEditorPage(): ReactElement {
   const id = (useParams().id as string) ?? "";
   const router = useRouter();
+  const ready = useAdminGuard();
   const [entry, setEntry] = useState<AdminEntry | null>(null);
   const [blocks, setBlocks] = useState<BlockEdit[]>([]);
   const [versions, setVersions] = useState<VersionRow[]>([]);
@@ -117,23 +95,9 @@ export default function EntryEditorPage(): ReactElement {
   const [visualMode, setVisualMode] = useState(false);
   // Blok galerisi (form editorunde de ayni secici kullanilir)
   const [blockPickerOpen, setBlockPickerOpen] = useState(false);
-  // Saglik denetimi bulgulari (null = henuz calistirilmadi)
-  const [health, setHealth] = useState<HealthResult | null>(null);
-  const [healthBusy, setHealthBusy] = useState(false);
   // Kapak gorseli secimi: undefined = degismedi, "" = kaldir, id = sec
   const [coverSel, setCoverSel] = useState<string | undefined>(undefined);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
-
-  // AI Yardımcısı states
-  const [aiTab, setAiTab] = useState<"seo" | "editorial" | "translate">("seo");
-  const [aiSuggestions, setAiSuggestions] = useState<Array<{ severity: string; message: string; recommendation: string }> | null>(null);
-  const [aiSuggestionsBusy, setAiSuggestionsBusy] = useState(false);
-  const [aiProposed, setAiProposed] = useState<{ metaTitle: string; metaDescription: string; ogTitle: string; ogDescription: string } | null>(null);
-  const [aiReadability, setAiReadability] = useState<{ readabilityScore: number; tone: string; suggestions: string[]; metrics?: { words: number; sentences: number; avgSentence: number; paragraphs: number } } | null>(null);
-  const [aiReadabilityBusy, setAiReadabilityBusy] = useState(false);
-  const [aiTranslating, setAiTranslating] = useState<string | null>(null);
-  const [aiProgress, setAiProgress] = useState<number | null>(null);
-  const aiProgressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Belirgin geri bildirim: sag-ust toast, 4sn sonra kaybolur
   const showToast = useCallback((kind: Toast["kind"], text: string) => {
@@ -168,56 +132,25 @@ export default function EntryEditorPage(): ReactElement {
   }, [id, loadVersions]);
 
   useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
     // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
-    void Promise.resolve().then(load);
-  }, [load]);
+    if (ready) void Promise.resolve().then(load);
+  }, [ready, load]);
 
-  // Kaydedilmemis degisiklik var mi (SSE handler'inda guncel deger icin ref)
-  const dirtyRef = useRef(false);
+  // Kendi PATCH/restore olaylarini yutma + disaridan gelen degisiklikte tazeleme: ayri hook (C2).
+  // markOwnWrite() kendi yazimimizdan ONCE; emit olmazsa rollbackOwnWrite() sayaci geri alir.
+  const { markOwnWrite, rollbackOwnWrite } = useEntrySse({ id, dirty, load, showToast });
+
+  // Kaydedilmemis degisiklik varken sayfadan ayrilma/yenileme/oturum-redirect oncesi tarayici
+  // uyarisi — 401 sonrasi login'e atilirken veya sekme kapanirken kayitsiz is kaybini onler.
   useEffect(() => {
-    dirtyRef.current = dirty;
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent): void => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
-  // Kendi yazma islemlerimizin tetikledigi SSE olaylarini yutmak icin sayac
-  // (her kendi PATCH/restore tam bir olay uretir -> bire bir dusulur)
-  const suppressSse = useRef(0);
-
-  // Bu icerik BASKA yerden degisirse (Time Machine restore, baska sekme/kullanici)
-  // editor kendini tazeler — "restore ettim ama editor eski hali gosteriyor" sorunu biter.
-  useEffect(() => {
-    const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-    // withCredentials: SSE ucu artik kimlik dogruluyor; httpOnly cookie gonderilir.
-    const es = new EventSource(`${api}/api/events/content`, { withCredentials: true });
-    es.onmessage = (m) => {
-      try {
-        const e = JSON.parse(m.data as string) as { entryId?: string; action?: string };
-        if (e.entryId !== id) return;
-        if (suppressSse.current > 0) {
-          suppressSse.current -= 1; // kendi kaydimizin olayi
-          return;
-        }
-        if (dirtyRef.current) {
-          showToast("err", "Bu içerik başka bir yerden değişti — kaydetmeden önce sayfayı yenileyin!");
-          return;
-        }
-        void load();
-        showToast("ok", e.action === "restore" ? "Sürüm geri yüklendi — içerik tazelendi." : "İçerik başka bir yerden güncellendi — tazelendi.");
-      } catch {
-        // bozuk event yutulur
-      }
-    };
-    return () => es.close();
-  }, [id, load, showToast]);
-
-  // AI ilerleme cubugu zamanlayicisini unmount'ta temizle (sizinti olmasin)
-  useEffect(() => {
-    return () => {
-      if (aiProgressTimer.current) clearInterval(aiProgressTimer.current);
-    };
-  }, []);
 
   function patchEntry(p: Partial<AdminEntry>): void {
     setDirty(true);
@@ -337,7 +270,7 @@ export default function EntryEditorPage(): ReactElement {
       // Kapak gorseli yalnizca degistiyse gonderilir ("" = kaldir)
       ...(coverSel !== undefined ? { coverImageId: coverSel } : {}),
     };
-    suppressSse.current += 1; // kendi SSE olayimizi yutmak icin
+    markOwnWrite(); // kendi SSE olayimizi yutmak icin
     const res = await adminRequest<AdminEntry>(`/admin/entries/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -348,7 +281,7 @@ export default function EntryEditorPage(): ReactElement {
       await load();
       return true;
     }
-    suppressSse.current = Math.max(0, suppressSse.current - 1); // emit olmadi, sayaci geri al
+    rollbackOwnWrite(); // emit olmadi, sayaci geri al
     showToast("err", `Kaydetme başarısız: ${res.message ?? "bilinmeyen hata"}`);
     return false;
   }
@@ -394,24 +327,15 @@ export default function EntryEditorPage(): ReactElement {
     else showToast("err", "Çeviri oluşturulamadı (slug bu dilde zaten var olabilir).");
   }
 
-  // Kural tabanli saglik denetimi (kaydedilmis hal uzerinden calisir)
-  async function runHealth(): Promise<void> {
-    setHealthBusy(true);
-    if (dirty) showToast("err", "Denetim KAYDEDİLMİŞ hali inceler — önce kaydedin.");
-    const r = await adminFetch<HealthResult>(`/admin/entries/${id}/health`);
-    setHealth(r);
-    setHealthBusy(false);
-  }
-
   async function restore(version: number): Promise<void> {
     if (!window.confirm(`v${version} sürümüne geri dönülsün mü?`)) return;
-    suppressSse.current += 1;
+    markOwnWrite();
     const r = await adminFetch<{ alreadyAtVersion?: boolean }>(
       `/admin/entries/${id}/versions/${version}/restore`,
       { method: "POST" },
     );
     // alreadyAtVersion veya hata: API olay yayinlamaz -> sayaci geri al
-    if (!r || r.alreadyAtVersion) suppressSse.current = Math.max(0, suppressSse.current - 1);
+    if (!r || r.alreadyAtVersion) rollbackOwnWrite();
     if (r) {
       showToast(
         "ok",
@@ -420,103 +344,6 @@ export default function EntryEditorPage(): ReactElement {
           : `v${version} geri yüklendi ✓`,
       );
       await load();
-    }
-  }
-
-  // AI cagrisi sirasinda zaman-tahminli ilerleme cubugu. LLM gercek ilerleme
-  // (stream progress) vermez; ~9sn sabitiyle %92'ye yumusak yaklasir, yanit
-  // gelince %100 -> kisa sure sonra gizlenir. Yani "tahmin", sahte kesinlik degil.
-  function startAiProgress(): () => void {
-    let tick = 0;
-    setAiProgress(6);
-    if (aiProgressTimer.current) clearInterval(aiProgressTimer.current);
-    aiProgressTimer.current = setInterval(() => {
-      tick += 1;
-      const t = tick * 0.2; // saniye
-      setAiProgress(Math.min(92, Math.round(92 * (1 - Math.exp(-t / 9)))));
-    }, 200);
-    return () => {
-      if (aiProgressTimer.current) {
-        clearInterval(aiProgressTimer.current);
-        aiProgressTimer.current = null;
-      }
-      setAiProgress(100);
-      window.setTimeout(() => setAiProgress(null), 600);
-    };
-  }
-
-  // AI SEO suggestions
-  async function runAiSeo(): Promise<void> {
-    if (dirty) {
-      showToast("err", "AI Analizi kaydedilmiş hal üzerinde çalışır — önce kaydedin.");
-      return;
-    }
-    setAiSuggestionsBusy(true);
-    const done = startAiProgress();
-    try {
-      const res = await adminFetch<{
-        suggestions: Array<{ severity: string; message: string; recommendation: string }>;
-        proposed: { metaTitle: string; metaDescription: string; ogTitle: string; ogDescription: string };
-      }>(`/admin/ai/entries/${id}/health-suggestions`);
-      setAiSuggestions(res?.suggestions ?? []);
-      setAiProposed(res?.proposed ?? null);
-    } finally {
-      done();
-      setAiSuggestionsBusy(false);
-    }
-  }
-
-  // AI Content / Editorial Analysis
-  async function runAiEditorial(): Promise<void> {
-    if (dirty) {
-      showToast("err", "AI Analizi kaydedilmiş hal üzerinde çalışır — önce kaydedin.");
-      return;
-    }
-    setAiReadabilityBusy(true);
-    const done = startAiProgress();
-    try {
-      const res = await adminFetch<{ readabilityScore: number; tone: string; suggestions: string[]; metrics?: { words: number; sentences: number; avgSentence: number; paragraphs: number } }>(
-        `/admin/ai/entries/${id}/analyze`
-      );
-      setAiReadability(res ?? null);
-    } finally {
-      done();
-      setAiReadabilityBusy(false);
-    }
-  }
-
-  // AI Translation Assistant
-  async function runAiTranslate(localeCode: string): Promise<void> {
-    if (dirty) {
-      const ok = window.confirm(
-        "Kaydedilmemiş değişiklikler var. AI çevirisi kaydedilmiş en son hali kullanır.\nÖnce kaydedilsin mi?",
-      );
-      if (ok) {
-        const saved = await save();
-        if (!saved) return;
-      }
-    }
-    setAiTranslating(localeCode);
-    const done = startAiProgress();
-    try {
-      const res = await adminFetch<{ entryId: string; slug: string }>(
-        `/admin/ai/entries/${id}/translate`,
-        {
-          method: "POST",
-          body: JSON.stringify({ targetLocale: localeCode }),
-        }
-      );
-      if (res && res.entryId) {
-        showToast("ok", "AI çeviri taslağı başarıyla oluşturuldu.");
-        router.push(`/admin/entries/${res.entryId}`);
-      } else {
-        showToast("err", "AI çeviri taslağı oluşturulamadı.");
-      }
-    } catch {
-      showToast("err", "AI çeviri hatası.");
-    } finally {
-      done();
-      setAiTranslating(null);
     }
   }
 
@@ -715,73 +542,8 @@ export default function EntryEditorPage(): ReactElement {
           ))}
         </div>
 
-        {/* SEO */}
-        <div className="space-y-4 rounded-lg border border-line bg-surface p-5">
-          <h2 className="text-sm font-semibold text-dark">SEO</h2>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink-soft">Meta Title</label>
-            <input
-              className={inputCls}
-              value={entry.seo?.metaTitle ?? ""}
-              onChange={(e) => patchSeo({ metaTitle: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink-soft">Meta Description</label>
-            <textarea
-              className={inputCls}
-              rows={2}
-              value={entry.seo?.metaDescription ?? ""}
-              onChange={(e) => patchSeo({ metaDescription: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink-soft">
-              Canonical URL <span className="font-normal text-muted">(boş = otomatik)</span>
-            </label>
-            <input
-              className={inputCls}
-              placeholder="https://..."
-              value={entry.seo?.canonicalUrl ?? ""}
-              onChange={(e) => patchSeo({ canonicalUrl: e.target.value || null })}
-            />
-          </div>
-          <div className="flex gap-6">
-            <label className="flex items-center gap-2 text-sm text-ink-soft">
-              <input
-                type="checkbox"
-                checked={entry.seo?.robotsIndex ?? true}
-                onChange={(e) => patchSeo({ robotsIndex: e.target.checked })}
-              />
-              Index
-            </label>
-            <label className="flex items-center gap-2 text-sm text-ink-soft">
-              <input
-                type="checkbox"
-                checked={entry.seo?.robotsFollow ?? true}
-                onChange={(e) => patchSeo({ robotsFollow: e.target.checked })}
-              />
-              Follow
-            </label>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink-soft">OG Title</label>
-            <input
-              className={inputCls}
-              value={entry.seo?.ogTitle ?? ""}
-              onChange={(e) => patchSeo({ ogTitle: e.target.value || null })}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink-soft">OG Description</label>
-            <textarea
-              className={inputCls}
-              rows={2}
-              value={entry.seo?.ogDescription ?? ""}
-              onChange={(e) => patchSeo({ ogDescription: e.target.value || null })}
-            />
-          </div>
-        </div>
+        {/* SEO — ayri bilesen (C2) */}
+        <EntrySeoForm seo={entry.seo} onChange={patchSeo} />
       </div>
 
       {/* Yan panel: yayin + onizleme + versiyonlar */}
@@ -862,308 +624,23 @@ export default function EntryEditorPage(): ReactElement {
           )}
         </div>
 
-        {/* Kural tabanli Saglik Denetimi (SEO/erisilebilirlik/UX/GEO) */}
-        <div className="rounded-lg border border-line bg-surface p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-dark">Sağlık Denetimi</h3>
-            <button
-              type="button"
-              onClick={() => void runHealth()}
-              disabled={healthBusy}
-              className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
-            >
-              {healthBusy ? "Denetleniyor…" : "Denetle"}
-            </button>
-          </div>
-          {health === null ? (
-            <p className="text-xs text-muted">SEO, erişilebilirlik, UX ve GEO kuralları + 0–100 skor.</p>
-          ) : (
-            <div className="space-y-3">
-              {/* skor + ozet */}
-              <div className="flex items-center gap-3">
-                <div
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold ${health.score >= 85 ? "bg-green-100 text-green-700" : health.score >= 60 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}
-                >
-                  {health.score}
-                </div>
-                <div className="text-[11px] text-muted">
-                  <div className="font-medium text-ink">
-                    {health.summary.passed}/{health.summary.total} kontrol geçti
-                  </div>
-                  <div>
-                    {health.summary.error} hata · {health.summary.warning} uyarı · {health.summary.info} bilgi
-                  </div>
-                </div>
-              </div>
+        {/* Kural tabanli Saglik Denetimi (SEO/erisilebilirlik/UX/GEO) — ayri bilesen (C2) */}
+        <EntryHealthPanel entryId={id} dirty={dirty} showToast={showToast} />
 
-              {/* kategori kirilimi */}
-              {health.categories.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {health.categories.map((c) => (
-                    <span
-                      key={c.category}
-                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${c.findings === 0 ? "bg-green-50 text-green-700" : c.score >= 60 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}
-                      title={`${c.passed} geçti, ${c.findings} bulgu`}
-                    >
-                      {c.label} {c.score}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* bulgular */}
-              {health.findings.length === 0 ? (
-                <p className="text-xs font-medium text-green-700">✓ Hiç sorun bulunamadı.</p>
-              ) : (
-                <ul className="space-y-1.5 text-xs">
-                  {health.findings.map((f, i) => (
-                    <li
-                      key={f.code + i}
-                      className={`rounded px-2 py-1.5 ${f.severity === "error" ? "bg-red-50 text-red-800" : f.severity === "warning" ? "bg-amber-50 text-amber-800" : "bg-blue-50 text-blue-800"}`}
-                    >
-                      <span className="mr-1 text-[9px] font-bold opacity-50">
-                        {HEALTH_CAT_LABEL[f.category] ?? f.category}
-                      </span>
-                      {f.message}
-                      {f.where && <span className="block text-[10px] opacity-70">{f.where}</span>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {/* gecen kontroller (gercek denetim hissi) */}
-              {health.passed.length > 0 && (
-                <details className="text-xs">
-                  <summary className="cursor-pointer text-[11px] font-medium text-green-700">
-                    ✓ Geçen {health.passed.length} kontrol
-                  </summary>
-                  <ul className="mt-1 space-y-0.5 pl-1">
-                    {health.passed.map((p, i) => (
-                      <li key={p.code + i} className="text-[11px] text-muted">
-                        ✓ {p.label}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </div>
+        {/* AI Asistanı — ayri bilesen (C2) */}
+        <EntryAiAssistant
+          entryId={id}
+          dirty={dirty}
+          missingLocales={LOCALES.filter(
+            (lc) => !(entry.group?.entries ?? []).some((s) => s.localeCode === lc),
           )}
-        </div>
-
-        {/* AI Asistanı */}
-        <div className="rounded-lg border border-line bg-surface p-4">
-          <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
-            <h3 className="text-sm font-semibold text-dark flex items-center gap-1.5">
-              <span>🤖</span> AI Asistanı
-            </h3>
-            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-              Claude Opus 4.8
-            </span>
-          </div>
-
-          {/* Tab Seçimi */}
-          <div className="mb-3 grid grid-cols-3 gap-1 rounded bg-line/20 p-0.5 text-[11px]">
-            <button
-              type="button"
-              onClick={() => setAiTab("seo")}
-              className={`rounded py-1 text-center font-medium ${aiTab === "seo" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"}`}
-            >
-              SEO
-            </button>
-            <button
-              type="button"
-              onClick={() => setAiTab("editorial")}
-              className={`rounded py-1 text-center font-medium ${aiTab === "editorial" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"}`}
-            >
-              Okunurluk
-            </button>
-            <button
-              type="button"
-              onClick={() => setAiTab("translate")}
-              className={`rounded py-1 text-center font-medium ${aiTab === "translate" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"}`}
-            >
-              Çeviri
-            </button>
-          </div>
-
-          {aiProgress !== null && (
-            <div className="mb-3 space-y-1">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/30">
-                <div
-                  className="h-full rounded-full bg-primary transition-all duration-200 ease-out"
-                  style={{ width: `${aiProgress}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-muted">
-                <span className="animate-pulse">Claude analiz ediyor…</span>
-                <span className="font-medium tabular-nums text-primary">%{aiProgress}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Tab İçerikleri */}
-          {aiTab === "seo" && (
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => void runAiSeo()}
-                disabled={aiSuggestionsBusy}
-                className="w-full rounded bg-primary/10 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
-              >
-                {aiSuggestionsBusy ? "Öneriler Alınıyor..." : "AI SEO Önerileri Al"}
-              </button>
-              {aiSuggestions === null ? (
-                <p className="text-[11px] text-muted">SEO optimizasyonu için qualitative öneriler üretin.</p>
-              ) : aiSuggestions.length === 0 ? (
-                <p className="text-[11px] font-medium text-green-700">✓ AI ek bir SEO sorunu tespit etmedi.</p>
-              ) : (
-                <ul className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {aiSuggestions.map((s, idx) => (
-                    <li
-                      key={idx}
-                      className={`rounded p-2 text-xs border ${s.severity === "error" ? "bg-red-50/50 border-red-100 text-red-900" : s.severity === "warning" ? "bg-amber-50/50 border-amber-100 text-amber-900" : "bg-blue-50/50 border-blue-100 text-blue-900"}`}
-                    >
-                      <div className="font-semibold">{s.message}</div>
-                      <div className="mt-1 text-[10px] opacity-85">💡 {s.recommendation}</div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {aiProposed && (
-                <div className="rounded border border-primary/30 bg-primary/5 p-2.5 space-y-2">
-                  <div className="text-[11px] font-semibold text-primary">✨ Önerilen meta alanları</div>
-                  <div className="space-y-1.5 text-[11px]">
-                    <div>
-                      <div className="text-muted">Meta Title <span className="opacity-60">({aiProposed.metaTitle.length} kr)</span></div>
-                      <div className="font-medium text-ink">{aiProposed.metaTitle}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted">Meta Description <span className="opacity-60">({aiProposed.metaDescription.length} kr)</span></div>
-                      <div className="text-ink">{aiProposed.metaDescription}</div>
-                    </div>
-                    {aiProposed.ogTitle && (
-                      <div>
-                        <div className="text-muted">OG Title</div>
-                        <div className="text-ink">{aiProposed.ogTitle}</div>
-                      </div>
-                    )}
-                    {aiProposed.ogDescription && (
-                      <div>
-                        <div className="text-muted">OG Description</div>
-                        <div className="text-ink">{aiProposed.ogDescription}</div>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      patchSeo({
-                        metaTitle: aiProposed.metaTitle,
-                        metaDescription: aiProposed.metaDescription,
-                        ogTitle: aiProposed.ogTitle,
-                        ogDescription: aiProposed.ogDescription,
-                      });
-                      showToast("ok", "Önerilen meta alanları forma uygulandı — kaydetmeyi unutmayın.");
-                    }}
-                    className="w-full rounded bg-primary py-1.5 text-xs font-semibold text-white hover:bg-primary-600 transition-colors"
-                  >
-                    Forma Uygula
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {aiTab === "editorial" && (
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => void runAiEditorial()}
-                disabled={aiReadabilityBusy}
-                className="w-full rounded bg-primary/10 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
-              >
-                {aiReadabilityBusy ? "Analiz Ediliyor..." : "Editoryal Analiz Çalıştır"}
-              </button>
-              {aiReadability === null ? (
-                <p className="text-[11px] text-muted">Okunabilirlik skoru ve içerik tonunu analiz edin.</p>
-              ) : (
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center bg-line/10 p-2 rounded">
-                    <span className="text-muted">Okunurluk Skoru:</span>
-                    <span className={`font-bold ${aiReadability.readabilityScore >= 80 ? "text-green-600" : aiReadability.readabilityScore >= 60 ? "text-amber-600" : "text-red-600"}`}>
-                      {aiReadability.readabilityScore} / 100
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center bg-line/10 p-2 rounded">
-                    <span className="text-muted">İçerik Tonu:</span>
-                    <span className="font-bold text-ink">{aiReadability.tone}</span>
-                  </div>
-                  {aiReadability.metrics && (
-                    <div className="grid grid-cols-3 gap-1 text-center">
-                      <div className="rounded bg-line/10 p-1.5">
-                        <div className="font-bold text-ink">{aiReadability.metrics.words}</div>
-                        <div className="text-[9px] text-muted">kelime</div>
-                      </div>
-                      <div className="rounded bg-line/10 p-1.5">
-                        <div className="font-bold text-ink">{aiReadability.metrics.sentences}</div>
-                        <div className="text-[9px] text-muted">cümle</div>
-                      </div>
-                      <div className="rounded bg-line/10 p-1.5">
-                        <div className="font-bold text-ink">{aiReadability.metrics.avgSentence}</div>
-                        <div className="text-[9px] text-muted">ort. kel/cümle</div>
-                      </div>
-                    </div>
-                  )}
-                  {aiReadability.suggestions.length > 0 && (
-                    <div className="mt-2">
-                      <div className="font-semibold text-ink-soft mb-1">Öneriler:</div>
-                      <ul className="list-disc list-inside space-y-1 text-[11px] text-muted pl-1">
-                        {aiReadability.suggestions.map((sug, idx) => (
-                          <li key={idx} className="leading-snug">{sug}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {aiTab === "translate" && (
-            <div className="space-y-3">
-              <p className="text-[11px] text-muted leading-relaxed">
-                Eksik dil alternatifini sayfa yapısını bozmadan AI ile çevirerek oluşturun.
-              </p>
-              <ul className="space-y-1.5">
-                {LOCALES.filter(
-                  (lc) => !(entry.group?.entries ?? []).some((s) => s.localeCode === lc),
-                ).map((lc) => (
-                  <li key={lc}>
-                    <button
-                      type="button"
-                      disabled={aiTranslating !== null}
-                      onClick={() => void runAiTranslate(lc)}
-                      className="w-full text-left rounded border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink hover:border-primary hover:text-primary transition-all disabled:opacity-50 flex items-center justify-between"
-                    >
-                      <span>{lc.toUpperCase()} diline AI ile Çevir</span>
-                      {aiTranslating === lc ? (
-                        <span className="text-[10px] text-muted animate-pulse">Çevriliyor...</span>
-                      ) : (
-                        <span>✨</span>
-                      )}
-                    </button>
-                  </li>
-                ))}
-                {LOCALES.filter(
-                  (lc) => !(entry.group?.entries ?? []).some((s) => s.localeCode === lc),
-                ).length === 0 && (
-                  <p className="text-[11px] font-medium text-green-700">✓ Tüm dil alternatifleri zaten mevcut.</p>
-                )}
-              </ul>
-            </div>
-          )}
-        </div>
+          onApplyMeta={(m) => {
+            patchSeo(m);
+            showToast("ok", "Önerilen meta alanları forma uygulandı — kaydetmeyi unutmayın.");
+          }}
+          onSaveBeforeTranslate={save}
+          showToast={showToast}
+        />
 
         {/* Ceviri eslestirme: ayni TranslationGroup'taki kardesler + eksik dil olusturma */}
         <div className="rounded-lg border border-line bg-surface p-4">

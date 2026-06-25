@@ -2,7 +2,8 @@
 
 import { useParams } from "next/navigation";
 import { type ReactElement, useEffect, useState } from "react";
-import { adminFetch, getToken } from "@/lib/admin";
+import { adminFetch } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 import { type FieldRow, FormDefEditor } from "../../form-def-editor";
 
 interface FormDef {
@@ -14,18 +15,16 @@ interface FormDef {
 
 export default function EditFormPage(): ReactElement {
   const key = (useParams().key as string) ?? "";
+  const ready = useAdminGuard();
   const [def, setDef] = useState<FormDef | null>(null);
 
   useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
+    if (!ready) return;
     void adminFetch<FormDef[]>("/admin/forms").then((list) => {
       const found = (list ?? []).find((f) => f.key === key);
       if (found) setDef(found);
     });
-  }, [key]);
+  }, [ready, key]);
 
   if (!def) return <p className="text-sm text-muted">Yükleniyor...</p>;
 
