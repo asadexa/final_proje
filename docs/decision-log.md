@@ -268,3 +268,146 @@ Tum gereksinimler odev metnine karsi yeniden tarandi; tespit edilen eksikler kap
 | **Onceden kapali sanilanlar dogrulandi** | Admin redirect CRUD zaten varmis (admin-redirects.controller + /admin/redirects). Swagger 200, rate-limit basliklari, OG etiketleri, URL-koruma/SEO-kayip stratejisi docs'ta mevcut |
 
 Prisma generate notu (Windows): `src/generated` container-local volume — container'da generate host'a YANSIMAZ; host tsc icin host'ta da `npx prisma generate` calistir. Dogrulama: 78 URL 200, testler 38+15+8 yesil, reseed KULLANICI ONAYIYLA yapildi.
+
+## Admin paneli yeniden muhendislik denetimi (2026-06-25) — /plan-eng-review
+
+Ikinci tur eng-review: mevcut admin panel kodu (16 sayfa + 9 bilesen) mimari / kod-kalitesi /
+test / performans acisindan yeniden tarandi. Asagidakiler bu turda ALINAN KARARLAR.
+**Durum: A1 + A2 + C3 + C5 (Serit A) UYGULANDI** (asagida "Uygulama durumu" + degisen dosyalar);
+C2 + T1 + P1 sonraki turlara birakildi.
+
+| Konu | Teshis / Karar / Nasil |
+|------|-------|
+| **KESIF — ADR 0003 ↔ kod celiskisi** | ADR 0003 madde 2: "localStorage + Bearer (XSS riski) → **Reddedildi**" diyor; ama `lib/admin.ts:6` accessToken'i `localStorage`'da (`kron_admin_token`) tutuyor. Gerekce kod yorumunda var (cross-origin web:3000→api:4000, SameSite=Lax cookie dev'de gonderilmiyor → login body'deki accessToken Bearer ile kullaniliyor). refresh_token httpOnly cookie'de (ADR'ye uygun). Yani **access token saklama ADR'nin reddettigi alternatife kaymis** — bilincli ama ADR'ye yansimamis sapma. A2 karari bunu ADR'ye geri hizalar. |
+| **A1 — Auth guard tekrari (DRY)** | 13 admin sayfasi `if(!getToken()) redirect`'i kendi `useEffect`'inde tekrarliyor (iki varyant); `admin/layout.tsx`'te guard YOK, middleware YOK → korumali shell once render olur, sonra login'e atilir (veri sizmaz: fetch token ister; ama FOUC + kirilganlik + DRY ihlali). KARAR: **paylasilan `useAdminGuard()` hook** (layout/sayfa seviyesinde tek yer). Next middleware secilMEDI: token client-side localStorage'da, server middleware onu goremez. Gercek yetki zaten sunucuda (JwtAuthGuard + RolesGuard); bu salt UX/DRY duzeltmesi. |
+| **A2 — accessToken saklama yeri** | localStorage XSS'e acik (kalici token hirsizligi). KARAR: **in-memory token (JS degiskeni) + sayfa yenilemede sessiz refresh** (httpOnly refresh cookie zaten var, `tryRefresh` mevcut). XSS token'i kalici calamaz; **ADR 0003'un httpOnly / no-localStorage niyetine geri hizalanir**. Maliyet: her sekme/yenilemede bir refresh cagrisi (kabul edildi). TAKIP: A2 uygulaninca **ADR 0003 "Sonuclar" bolumu guncellenmeli** (access token tasima = in-memory; cross-origin dev gercegi not edilmeli). |
+
+### Kod kalitesi / test / performans kararlari (ayni tur)
+
+| Konu | Teshis / Karar / Nasil |
+|------|-------|
+| **C2 — God component** | `entries/[id]/page.tsx` = 1222 satir, tek bilesen, ~10 sorumluluk (entry-meta, bloklar, SEO, health, AI 3-tab, ceviriler, versiyonlar, SSE sync, visual-mode, toast, cover). KARAR: **hedefli bolme** — en sismis 4 parca (AI Asistani paneli, SEO formu, Saglik Denetimi, SSE sync hook'u) ayri dosya/hook'a; cekirdek editor ~400 satira iner. Davranis AYNI (salt yapisal). "Make the change easy" — sonradan test de kolaylasir. Tam parcalama (10 parca) teslime yakin over-engineering diye REDDEDILDI. |
+| **C3 — Sessiz hata yutma** | `adminFetch` hata da olsa bos da olsa `null` donuyor; dashboard/media/redirects API coktugunde sessizce BOS tablo ("hic icerik yok" gibi) gosteriyor — kullanici "coktu" ile "veri yok"u ayiramiyor. KARAR: **adminFetch hata/bos ayrimi + liste sayfalarinda hata-UI** ("Yuklenemedi, tekrar dene"). Acik > kapali. |
+| **C5 — Helper boilerplate (DRY)** | `adminFetch` / `adminRequest` / `adminUpload` ayni 401→refresh→retry→redirect blogunu 3 kez kopyaliyor. KARAR: tek `rawFetch`'e cikar (C3 ile ayni dokunusta — ayni dosya). |
+| **T1 — Admin frontend 0 test** | API zaten 34/34 E2E; web admin'de SIFIR test (vitest kurulu, yalniz `lib/`). KARAR (tam kapsam): **(a)** saf-fn birim testleri — `isoToLocalInput` (timezone, gecmiste bug cikti), `fuzzyScore`, `save()` JSON-parse; **(b)** `adminFetch` 401→refresh akisi (mock fetch); **(c)** Playwright E2E: login → icerik olustur → kaydet → yayinla. "Too many tests > too few" tercihine uygun. |
+| **P1 — Command palette her acilista re-fetch** | Her Ctrl+K'da 3 paralel istek (entries pageSize=100 + forms + media). KARAR: **ilk acilista cache'le** (oturum boyu) + kucuk yenile/TTL (yeni icerik bayatlamasin). |
+| **C4 — SSE suppress sayaci (NOT)** | `entries/[id]/page.tsx:186-213` kendi yazma olayini yutmak icin sayac; cok-sekme/hata halinde drift edebilir (confidence 7, edge-case, demo riski dusuk). Karar verilmedi → TODOS adayi (bkz. asagi). |
+
+### Uygulama durumu (Serit A — UYGULANDI, 2026-06-25)
+
+Kullanici karari: once Serit A (lib/admin.ts merkezli, en az cakisma). **A1 + A2 + C3 + C5 uygulandi.**
+
+- **A2 (in-memory token):** `lib/admin.ts` accessToken artik modul degiskeninde; localStorage tamamen
+  kaldirildi. Rol JWT payload'indan cozulur (`getRole`). `ensureSession()` eklendi: token yoksa
+  refresh cookie ile sessizce geri al. **Regresyon yakalandi + duzeltildi:** eski `logout()` yalniz
+  yerel token siliyordu → in-memory + mount-refresh ile refresh cookie kalinca reload'da geri
+  girilebiliyordu; `logout()` artik `/api/auth/logout` cagirip refresh token revoke + cookie temizler.
+- **A1 (useAdminGuard):** `lib/use-admin-guard.ts` — 13 sayfadaki `if(!getToken()) redirect` tek
+  hook'a indi. Async: token yoksa once refresh, olmazsa login. 13/13 sayfa hook kullaniyor; geriye
+  yalniz 3 merkezi redirect noktasi kaldi (rawAdminFetch 401, logout, hook).
+- **C5 (rawAdminFetch):** uc helper'in 401→refresh→retry→redirect blogu tek `rawAdminFetch`'te;
+  `adminFetch` artik `adminRequest` uzerine ince sarmalayici.
+- **C3 (hata/bos ayrimi):** `adminRequest` hata ile bosu ayirir; paylasilan `LoadError` bileseni
+  (components/admin/load-error.tsx) ile **7 liste sayfasi** (icerikler, medya, yonlendirmeler,
+  formlar, denetim, grafik, form-gonderimleri) cokunce sessiz bos tablo yerine "Yuklenemedi —
+  tekrar dene" gosterir.
+- **Dogrulama:** `tsc --noEmit` temiz · `eslint` temiz · vitest **15/15** yesil.
+
+**Degisen / yeni dosyalar (Serit A):**
+- `apps/web/src/lib/admin.ts` — YENIDEN YAZILDI: in-memory accessToken (localStorage kaldirildi),
+  `getRole` JWT decode, `ensureSession`, `rawAdminFetch` (tek dusuk-seviye fetch), `adminRequest`
+  hata/bos ayrimi, `adminFetch` ince sarmalayici, `logout` sunucu revoke.
+- `apps/web/src/lib/use-admin-guard.ts` — YENI: async auth guard hook (A1).
+- `apps/web/src/components/admin/load-error.tsx` — YENI: paylasilan yukleme-hatasi kutusu (C3).
+- 13 admin sayfasi guncellendi: guard `useAdminGuard`'a tasindi; 7 liste sayfasina hata-UI eklendi
+  (`page.tsx`, `media`, `redirects`, `forms`, `audit`, `graph`, `forms/[key]`), kalan 6'sinda
+  guard-only swap (`architect`, `entries/new`, `forms/new`, `forms/[key]/edit`, `entries/[id]`,
+  `entries/[id]/history`).
+- `docs/adr/0003-auth.md` — "Guncelleme (2026-06-25)" notu: istemci in-memory token, celiski kapatildi.
+
+**Race / BFCache sertlestirme (init-sira denetimi sonrasi, 2026-06-25):**
+In-memory token modeli auth init sirasini degistirdi; CommandPalette + IdleLogout `getToken()`
+kullaniyordu — denetlendi:
+- **IdleLogout:** first-render race YOK — `getToken()` yalniz 15dk `setTimeout` callback'inde okunur
+  (o ana kadar `ensureSession` coktan biter). Degisiklik gerekmedi.
+- **CommandPalette:** hard reload sonrasi token bellege gelmeden Ctrl+K dar false-negative penceresi
+  vardi (fail-closed ama palette acilmiyordu). FIX: token yoksa once `ensureSession()` beklenir
+  (`command-palette.tsx`). Yetkisize hala acilmaz.
+- **BFCache back-button stale token (asil bulgu):** `logout` refresh token'i revoke eder ama access
+  JWT stateless (~15dk gecerli). BFCache, logout sonrasi back-button'da `/admin`'i heap'iyle geri
+  yukleyip eski in-memory token'i canlandirabiliyordu (React effect yeniden calismaz). FIX:
+  `admin.ts` `revalidateSession()` (token'a guvenmez, zorla refresh) + `use-admin-guard.ts`'e
+  `pageshow`+`persisted` dinleyici; refresh cookie yoksa login'e atar. localStorage modelinde
+  ortuk olan emniyetin in-memory'de yeniden kurulmasi. (`command-palette.tsx`, `admin.ts`,
+  `use-admin-guard.ts` guncellendi; tsc/eslint temiz, vitest 15/15.)
+
+**Uygulama durumu (C2 — UYGULANDI, 2026-06-25):** Entry editor god-component'i hedefli bolundu —
+davranis birebir AYNI (salt yapisal), tsc/eslint temiz, vitest 15/15:
+- `lib/use-entry-sse.ts` — YENI: SSE sync + kendi-yazma yutma hook'u (markOwnWrite/rollbackOwnWrite).
+- `components/admin/entry-health-panel.tsx` — YENI: Saglik Denetimi paneli (kendi state'i).
+- `components/admin/entry-seo-form.tsx` — YENI: SEO formu (sunumsal; seo + onChange).
+- `components/admin/entry-ai-assistant.tsx` — YENI: AI Asistani (SEO/okunurluk/ceviri + ilerleme
+  cubugu, kendi state'i; onApplyMeta + onSaveBeforeTranslate ile editore baglanir).
+- `app/admin/entries/[id]/page.tsx` — bu 4 parca cikarildi: **1222 → 693 satir (%43 azalma)**.
+  Cekirdek artik entry-meta + bloklar + visual-mode + kaydet/onizle/restore + ceviriler/versiyonlar.
+  (Hedef "~400 satir" idi; 693 gercek sonuc — geri kalan cekirdek tek sorumluluk grubu, parcalanmadi.)
+
+### Kalan is paketi — UYGULANDI (2026-06-25, kullanici "hepsini implemente edelim" dedi)
+
+Sapmalar (BILINCLI SAPMA) ve menude secilmeyen 4 ozellik disindaki bekleyen tum is yapildi.
+tsc/eslint temiz, vitest **28/28** (onceki 15 + 13 yeni).
+
+- **P1 — Command palette index cache:** `command-palette.tsx` her Ctrl+K'da 3 istek atmiyor; oturum
+  boyu cache + 60sn TTL (`lastIndexAt` ref, `loadIndex(force?)`).
+- **Mid-edit guard (kritik TODO KAPANDI):** `entries/[id]/page.tsx` dirty iken `beforeunload` uyarisi
+  — 401-redirect / sekme-kapatma / yenileme oncesi kayitsiz is kaybini onler.
+- **C4 (TODO KAPANDI) — SSE suppress sertlestirme:** `use-entry-sse.ts` sayac yerine ZAMAN-PENCERELI
+  kuyruk (5sn); eskimis own-write damgalari budanir → cok-sekme/hata drift'i kendiliginden duzelir.
+- **T1 — testler:** saf fonksiyonlar lib'e cikarildi (`lib/fuzzy.ts`, `lib/datetime.ts`) + test
+  (`test/fuzzy.test.ts` 5, `test/datetime.test.ts` 3); `test/admin-auth.test.ts` (5): adminFetch
+  401→refresh→retry + adminRequest hata/bos ayrimi (fetch mock). `admin.ts` `window.setTimeout`→
+  `setTimeout` (node-test edilebilir + dogru). **Playwright E2E** (`e2e/admin.spec.ts` +
+  `e2e/playwright.config.ts`): login→olustur→kaydet→yayinla + reload-oturum-korunur +
+  logout-back-button. `e2e/` kok tsc/eslint/vitest kapsami DISINDA (tsconfig exclude + eslint
+  globalIgnores) → yesil build'i kirmaz. `package.json`: `test:e2e` script + `@playwright/test` devDep.
+  **CANLI KOSULDU (Docker stack): 3/3 GECTI** (14.9s) — bkz. asagidaki Canli QA.
+- **jest temizligi:** `apps/api/package.json`'dan kullanilmayan `jest`/`ts-jest`/`@types/jest` cikarildi
+  (vitest'e gecilmisti; api'de jest kullanimi yok — dogrulandi).
+- **CSRF (ADR 0003 Faz 9) — gerekceyle ERTELENDI (uygulanmadi):** Klasik CSRF cookie-otomatik isteklere
+  etki eder; admin mutasyonlari **in-memory Bearer** ile gider (saldirgan okuyamaz) ve API cookie'leri
+  **SameSite=Lax** — Lax cross-site POST/PATCH/DELETE'te gonderilmez, mutasyon uclari zaten korunur.
+  CSRF token defense-in-depth olurdu ama gercek vektor zaten kapali → marjinal guvenlik icin gereksiz
+  karmasiklik. Faz 9 (uretim sertlestirme) notu olarak kaliyor.
+
+**Menude secilmeyen 4 ozellik — KURTARILDI (transcript `7653f47a`, 2026-06-10 menusu).** 13 maddelik
+"yeni ozellik" menusunden kullanicinin secmedigi 4 (5/8/9/11), AI'nin o gun "Onermiyorum" dedigi 4
+ile AYNI — yani bilincli over-engineering/dusuk-deger elemeleri:
+- **5 = AI Assistant** (acik uclu "her seyi yapan" asistan): kapsam patlamasi; #6 AI Architect +
+  editordeki AI Asistani paneli (SEO/okunurluk/ceviri) pratikte karsiliyor. KAPSAM DISI.
+- **8 = Heatmap** (tiklama isi haritasi): gercek trafik yok → sahte veriyle ici bos; toplama
+  altyapisi maliyetli. Deger/maliyet EN KOTU madde. KAPSAM DISI.
+- **9 = Multiplayer** (Figma-tarzi es-zamanli ortak duzenleme, CRDT/locking): haftalar surer,
+  yarim kalirsa kirilgan; SSE canli-sync (#2) hafif karsiligi var. "Bilincli kapsam disi" daha guclu. KAPSAM DISI.
+- **11 = Marketplace** (sablon/blok pazari): blok galerisi + ~25 preset (#1 icinde) pratik degeri
+  zaten veriyor; ayri marketplace sisirme. KAPSAM DISI.
+Yapilanlar 1/2/3/4/6/7/10/12/13 (git log ile dogrulandi). Sonuc: 4'u de over-engineering/dusuk-getiri,
+3'u (5/9/11) yaptiklarimizla KISMEN kapsaniyor → bilincli kapsam disi kaliyor (mulakat hikayesi:
+"neyi YAPMADIK ve neden").
+
+**Acik kalan (kapali-by-design disinda):** yalniz CSRF (Faz 9, yukarida gerekceli) + 4 hatirlanamayan ozellik.
+
+### Canli QA (Docker stack, 2026-06-25)
+
+Kullanici stack'i `docker compose` ile ayaga kaldirdi; degisiklikler canli dogrulandi.
+
+- **API auth sozlesmesi (curl):** login 201 (accessToken 229kr + access/refresh cookie) · Bearer ile
+  `GET /api/admin/entries` 200 · tokensiz 401 · refresh 201 · logout `{success:true}` · **logout
+  SONRASI refresh 401** (= `logout` fix + BFCache `revalidateSession` temeli kanitlandi). JWT payload
+  `role:"ADMIN"` icerir → `getRole` in-memory decode'u gercek token'la calisir (A2).
+- **Playwright E2E (chromium, canli web:3000): 3/3 GECTI** —
+  (1) login → yeni icerik → kaydet → **yayinla** (C2 sonrasi editor akisi + cikarilan paneller saglam);
+  (2) reload sonrasi oturum korunur **+ `localStorage.kron_admin_token` == null** (A2 canli kanit);
+  (3) logout → back-button → `/admin/login` (BFCache stale token kapandi).
+- Secici duzeltmeleri (canli DOM): login butonu ASCII "Giris Yap"; yeni-icerik Baslik/Slug
+  placeholder ile bulunur (label htmlFor yok). `test-results/` .gitignore'a eklendi.
+- NOT: create testi her kosuda bir yayinli "E2E Test İçeriği" PAGE birakir (zararsiz test verisi).
