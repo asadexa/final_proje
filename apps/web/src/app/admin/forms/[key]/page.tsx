@@ -30,15 +30,21 @@ export default function FormSubmissionsPage(): ReactElement {
   const key = (useParams().key as string) ?? "";
   const ready = useAdminGuard();
   const [list, setList] = useState<SubList | null>(null);
+  const [formName, setFormName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
-    const r = await adminRequest<SubList>(`/admin/forms/${key}/submissions?pageSize=100`);
+    // Gonderimler + form tanimi (dostca ad icin) birlikte cekilir
+    const [r, forms] = await Promise.all([
+      adminRequest<SubList>(`/admin/forms/${key}/submissions?pageSize=100`),
+      adminFetch<Array<{ key: string; name: string }>>("/admin/forms"),
+    ]);
     if (r.ok) setList(r.data ?? null);
     else setError(true);
+    setFormName((forms ?? []).find((f) => f.key === key)?.name ?? null);
     setLoading(false);
   }, [key]);
 
@@ -69,22 +75,32 @@ export default function FormSubmissionsPage(): ReactElement {
             ← Formlar
           </Link>
           <h1 className="mt-2 text-2xl font-bold text-dark">
-            {key} <span className="text-base font-normal text-muted">({items.length})</span>
+            {formName ?? key} <span className="text-base font-normal text-muted">({items.length})</span>
           </h1>
+          {formName && <code className="text-xs text-muted">/{key}</code>}
         </div>
         <button
           type="button"
+          disabled={items.length === 0}
+          title={items.length === 0 ? "Gönderim yok — dışa aktarılacak veri yok" : "CSV olarak indir"}
           onClick={() =>
             adminDownload(`/admin/forms/${key}/submissions/export`, `${key}-submissions.csv`)
           }
-          className="rounded border border-line px-3 py-1.5 text-sm font-medium text-ink-soft hover:border-primary hover:text-primary"
+          className="rounded border border-line px-3 py-1.5 text-sm font-medium text-ink-soft hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line disabled:hover:text-ink-soft"
         >
           CSV indir
         </button>
       </div>
 
       {items.length === 0 ? (
-        <p className="text-sm text-muted">Henüz gönderim yok.</p>
+        <div className="rounded-lg border border-dashed border-line bg-surface px-6 py-16 text-center">
+          <div className="text-3xl">📭</div>
+          <p className="mt-2 text-sm font-medium text-ink">Henüz gönderim yok.</p>
+          <p className="mx-auto mt-1 max-w-md text-xs text-muted">
+            Bu formu public bir sayfada <span className="font-medium text-ink-soft">CONTACT_FORM</span> bloğuyla
+            yayınlayın; gelen gönderimler burada listelenir ve CSV olarak dışa aktarılır.
+          </p>
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-line bg-surface">
           <table className="w-full text-sm">
