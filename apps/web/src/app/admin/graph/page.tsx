@@ -64,10 +64,15 @@ export default function GraphPage(): ReactElement {
     for (const n of data.nodes) (groups[n.type] ?? (groups[n.type] = [])).push(n);
     for (const [type, nodes] of Object.entries(groups)) {
       nodes.sort((a, b) => a.localeCode.localeCompare(b.localeCode) || a.slug.localeCompare(b.slug));
-      nodes.forEach((n, i) => {
+      // Her locale alt-kolonu kendi sayacindan baslar; aksi halde global indeks
+      // EN'i yukari, TR'yi asagi itip kolonlari hizasiz birakiyor.
+      const rowByLocale: Record<string, number> = {};
+      nodes.forEach((n) => {
         // tr sol alt-kolon, en sag alt-kolon
         const dx = n.localeCode === "tr" ? 0 : 180;
-        pos.set(n.id, { x: (COL_X[type] ?? 140) + dx, y: 60 + i * 34 - (n.localeCode === "en" ? Math.floor(nodes.filter((m) => m.localeCode === "tr").length) * 34 : 0) });
+        const row = rowByLocale[n.localeCode] ?? 0;
+        rowByLocale[n.localeCode] = row + 1;
+        pos.set(n.id, { x: (COL_X[type] ?? 140) + dx, y: 60 + row * 34 });
       });
     }
     return pos;
@@ -111,7 +116,7 @@ export default function GraphPage(): ReactElement {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Ara (başlık/slug)…"
-          className="rounded border border-line bg-surface px-3 py-1.5 text-sm outline-none focus:border-primary"
+          className="rounded border border-line bg-surface px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
         />
         <div className="flex items-center gap-3 text-xs text-ink-soft">
           {Object.entries(TYPE_COLOR).map(([t, c]) => (

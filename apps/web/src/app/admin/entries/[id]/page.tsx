@@ -349,7 +349,7 @@ export default function EntryEditorPage(): ReactElement {
 
   if (!entry) return <p className="text-sm text-muted">Yükleniyor...</p>;
 
-  const inputCls = "w-full rounded border border-line px-3 py-2 text-sm outline-none focus:border-primary";
+  const inputCls = "w-full rounded border border-line px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30";
 
   // Gorsel duzenleme modu tam ekran acilir (kendi arac cubugu + onizleme + panel)
   if (visualMode) {
@@ -533,7 +533,7 @@ export default function EntryEditorPage(): ReactElement {
                 <BlockForm type={b.type} data={b.data} onChange={(data) => setBlock(i, { data })} />
               ) : (
                 <textarea
-                  className="h-32 w-full rounded border border-line p-2 font-mono text-xs outline-none focus:border-primary"
+                  className="h-32 w-full rounded border border-line p-2 font-mono text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
                   value={b.dataText}
                   onChange={(e) => setBlock(i, { dataText: e.target.value })}
                 />
@@ -608,7 +608,7 @@ export default function EntryEditorPage(): ReactElement {
           <button
             type="button"
             onClick={() => setVisualMode(true)}
-            className="w-full rounded bg-dark px-4 py-2 text-sm font-medium text-white hover:bg-black"
+            className="w-full rounded border border-line bg-surface-muted px-4 py-2 text-sm font-medium text-ink hover:border-primary hover:text-primary"
           >
             🎨 Görsel Düzenle
           </button>

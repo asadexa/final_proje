@@ -13,7 +13,7 @@ export interface FieldRow {
 
 const FIELD_TYPES = ["text", "email", "tel", "textarea", "select"];
 const inputCls =
-  "w-full rounded border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary";
+  "w-full rounded border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30";
 
 // Form tanimi editoru (PDF "Form tanimlama"): alan satirlari name/label/tip/zorunlu.
 // create modunda POST /admin/forms, edit modunda PATCH /admin/forms/:key.

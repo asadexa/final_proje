@@ -203,7 +203,7 @@ export const BLOCK_FORMS: Record<string, FieldSpec[]> = {
 
 type Obj = Record<string, unknown>;
 const inputCls =
-  "w-full rounded border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary";
+  "w-full rounded border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30";
 
 function str(v: unknown): string {
   return typeof v === "string" ? v : "";

@@ -94,7 +94,7 @@ export default function ArchitectPage(): ReactElement {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={EXAMPLES[0]}
-            className="w-full rounded border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
+            className="w-full rounded border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
           />
           <div className="mt-1 flex flex-wrap gap-2">
             {EXAMPLES.map((ex) => (

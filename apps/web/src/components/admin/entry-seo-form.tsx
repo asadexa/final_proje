@@ -12,7 +12,7 @@ export function EntrySeoForm({
   seo?: SeoData | null;
   onChange: (p: Partial<SeoData>) => void;
 }): ReactElement {
-  const inputCls = "w-full rounded border border-line px-3 py-2 text-sm outline-none focus:border-primary";
+  const inputCls = "w-full rounded border border-line px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30";
   return (
     <div className="space-y-4 rounded-lg border border-line bg-surface p-5">
       <h2 className="text-sm font-semibold text-dark">SEO</h2>
