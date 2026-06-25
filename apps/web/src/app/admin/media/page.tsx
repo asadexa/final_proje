@@ -1,8 +1,17 @@
 "use client";
 
-import { type ChangeEvent, type ReactElement, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type ChangeEvent,
+  type DragEvent,
+  type ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { LoadError } from "@/components/admin/load-error";
 import { adminFetch, adminRequest, adminUpload } from "@/lib/admin";
+import { absoluteDateTime, relativeTime } from "@/lib/datetime";
 import { useAdminGuard } from "@/lib/use-admin-guard";
 
 interface MediaItem {
@@ -11,10 +20,22 @@ interface MediaItem {
   mime: string;
   title?: string | null;
   alt?: string | null;
+  size?: number;
+  width?: number | null;
+  height?: number | null;
+  createdAt?: string | null;
 }
 interface MediaList {
   items: MediaItem[];
   total: number;
+}
+
+// Insan-okur dosya boyutu (B/KB/MB/GB).
+function formatBytes(n?: number): string {
+  if (!n || n <= 0) return "—";
+  const u = ["B", "KB", "MB", "GB"];
+  const i = Math.min(u.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+  return `${(n / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
 }
 
 export default function MediaPage(): ReactElement {
@@ -22,7 +43,8 @@ export default function MediaPage(): ReactElement {
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,14 +60,32 @@ export default function MediaPage(): ReactElement {
     if (ready) void Promise.resolve().then(load);
   }, [ready, load]);
 
-  async function onUpload(e: ChangeEvent<HTMLInputElement>): Promise<void> {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    await adminUpload("/admin/media", file);
-    setUploading(false);
+  // Coklu yukleme: yalniz gorseller, sirayla; ilerleme sayaci guncellenir.
+  const uploadFiles = useCallback(
+    async (files: File[]): Promise<void> => {
+      const imgs = files.filter((f) => f.type.startsWith("image/"));
+      if (imgs.length === 0) return;
+      setProgress({ done: 0, total: imgs.length });
+      for (let i = 0; i < imgs.length; i++) {
+        await adminUpload("/admin/media", imgs[i]);
+        setProgress({ done: i + 1, total: imgs.length });
+      }
+      setProgress(null);
+      await load();
+    },
+    [load],
+  );
+
+  async function onInput(e: ChangeEvent<HTMLInputElement>): Promise<void> {
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    await load();
+    await uploadFiles(files);
+  }
+
+  function onDrop(e: DragEvent): void {
+    e.preventDefault();
+    setDragActive(false);
+    void uploadFiles(Array.from(e.dataTransfer.files));
   }
 
   async function onDelete(id: string): Promise<void> {
@@ -66,22 +106,50 @@ export default function MediaPage(): ReactElement {
     return Array.from(byUrl.values());
   }, [items]);
 
+  const uploading = progress !== null;
+
   return (
-    <div>
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!dragActive) setDragActive(true);
+      }}
+      onDragLeave={(e) => {
+        // yalniz kapsayicinin kendisinden cikinca kapat (cocuk gecislerinde titremesin)
+        if (e.currentTarget === e.target) setDragActive(false);
+      }}
+      onDrop={onDrop}
+      className={`rounded-lg ${dragActive ? "outline outline-2 outline-dashed outline-primary" : ""}`}
+    >
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-dark">Medya</h1>
         <label className="cursor-pointer rounded bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600">
-          {uploading ? "Yükleniyor..." : "+ Dosya yükle"}
-          <input type="file" className="hidden" onChange={onUpload} disabled={uploading} />
+          {uploading ? `Yükleniyor ${progress?.done}/${progress?.total}...` : "+ Dosya yükle"}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={onInput}
+            disabled={uploading}
+          />
         </label>
       </div>
+
+      {dragActive && (
+        <p className="mb-4 rounded-lg border border-dashed border-primary bg-primary/5 px-3 py-6 text-center text-sm font-medium text-primary">
+          Görselleri buraya bırakın…
+        </p>
+      )}
 
       {loading ? (
         <p className="text-sm text-muted">Yükleniyor...</p>
       ) : error ? (
         <LoadError onRetry={() => void load()} label="Medya yüklenemedi — sunucuya ulaşılamadı." />
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted">Henüz medya yok. Bir dosya yükleyin.</p>
+        <p className="text-sm text-muted">
+          Henüz medya yok. Bir dosya yükleyin veya görselleri bu alana sürükleyin.
+        </p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {groups.map(({ rep: m, ids }) => (
@@ -109,6 +177,14 @@ export default function MediaPage(): ReactElement {
                   onFocus={(e) => e.target.select()}
                   className="w-full rounded border border-line px-2 py-1 text-xs text-ink-soft"
                 />
+                <p
+                  className="truncate text-[11px] text-muted"
+                  title={m.createdAt ? absoluteDateTime(m.createdAt) : undefined}
+                >
+                  {formatBytes(m.size)}
+                  {m.width && m.height ? ` · ${m.width}×${m.height}` : ""}
+                  {m.createdAt ? ` · ${relativeTime(m.createdAt)}` : ""}
+                </p>
                 <div className="flex items-center gap-3">
                   {/* Tekrar kullanim: URL'i bloklarin image.url alanina yapistirmak icin */}
                   <button
@@ -119,7 +195,10 @@ export default function MediaPage(): ReactElement {
                     URL kopyala
                   </button>
                   {ids.length > 1 ? (
-                    <span className="text-xs text-muted" title="Birden çok içerikte kullanımda — silmek için önce içeriklerden kaldırın.">
+                    <span
+                      className="text-xs text-muted"
+                      title="Birden çok içerikte kullanımda — silmek için önce içeriklerden kaldırın."
+                    >
                       kullanımda
                     </span>
                   ) : (
