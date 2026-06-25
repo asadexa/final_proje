@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Playwright E2E: ayri runner (vitest degil); kok tsc/eslint kapsami disinda.
+    "e2e/**",
   ]),
 ]);
 
