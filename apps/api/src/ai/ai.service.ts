@@ -109,12 +109,16 @@ export class AiService {
     let usedAi = false;
     let note: string | undefined;
 
+    // Blog gorsel zenginligi: kutuphanedeki gercek gorselleri AI'a sun (yalniz POST).
+    const mediaList = entryType === 'POST' ? await this.libraryImages() : [];
+
     if (apiKey) {
       const ai = await this.generateWithClaude(
         apiKey,
         prompt,
         localeCode,
         entryType,
+        mediaList,
       );
       if (ai) {
         draft = ai;
@@ -128,6 +132,18 @@ export class AiService {
       draft = this.templateFallback(prompt, localeCode);
       note =
         'ANTHROPIC_API_KEY tanimli degil — deterministik sablon modu kullanildi.';
+    }
+
+    // Gorsel whitelist: MEDIA_TEXT vb. bloklarin image.url'i YALNIZ kutuphaneden
+    // olabilir; AI listede olmayan bir url uydurursa temizlenir (404 imkansiz, bos slot kalir).
+    if (mediaList.length > 0) {
+      const allow = new Set(mediaList.map((m) => m.url));
+      for (const b of draft.blocks) {
+        const img = b.data.image as { url?: unknown } | undefined;
+        if (img && typeof img.url === 'string' && !allow.has(img.url)) {
+          delete img.url;
+        }
+      }
     }
 
     // Zod kapisi: gecemeyen blok DB'ye giremez (dusurulur ve raporlanir)
@@ -193,6 +209,7 @@ export class AiService {
     prompt: string,
     localeCode: string,
     entryType: EntryType,
+    mediaList: Array<{ url: string; desc: string }> = [],
   ): Promise<DraftPage | null> {
     const lang = localeCode === 'tr' ? 'Turkce' : 'Ingilizce';
     const typeLabel =
@@ -201,15 +218,24 @@ export class AiService {
         : entryType === 'PRODUCT'
           ? 'urun sayfasi'
           : 'kurumsal sayfa';
+    // POST icin kullanilabilir gorseller katalogu (yalniz kutuphane url'leri).
+    const mediaCatalog =
+      mediaList.length > 0
+        ? `\n\nKULLANILABILIR GORSELLER (MEDIA_TEXT image.url icin YALNIZ bunlardan birini kullan; BASKA url UYDURMA):\n${mediaList
+            .map((m) => `- ${m.url}  (${m.desc})`)
+            .join('\n')}`
+        : '';
     // Tip-bazli SABIT sablon: AI serbest blok secmez, bu iskeleti TASLAK metinle doldurur.
     const template =
       entryType === 'POST'
-        ? `BLOG YAZISI SABLONU — su blok dizisini AYNEN uret, icerigi promptu yansitacak TASLAK metinle doldur:
-1) RICH_TEXT: giris paragrafi (konuyu tanit; tek <p>, 2-3 cumle)
-2) RICH_TEXT: ana govde (2-3 alt bolum; her biri <h2>baslik</h2><p>paragraf</p> seklinde)
-3) FAQ: 3 soru-cevap
-4) CTA_BANNER: yumusak kapanis cagrisi { cta: {label, href:"/${localeCode}/contact"} }
-KURAL: HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA — bu bir MAKALE, pazarlama sayfasi degil. Sayfa basligi entry basligindan gelir; govdede tekrar etme.`
+        ? `BLOG YAZISI SABLONU — gorselli, makale havasinda. Su blok dizisini uret, icerigi promptu yansitan TASLAK metinle doldur:
+1) MEDIA_TEXT: lead bolum — body'de kisa giris (2-3 cumle); image: asagidaki listeden konuya EN UYGUN gorsel + uygun alt metin
+2) RICH_TEXT: ana govde (2-3 alt bolum; her biri <h2>baslik</h2><p>paragraf</p>)
+3) MEDIA_TEXT: ikinci gorselli bolum (ara baslik + paragraf body'de; listeden uygun gorsel, imageSide:"right")
+4) FAQ: 3 soru-cevap
+5) CTA_BANNER: yumusak kapanis cagrisi { cta: {label, href:"/${localeCode}/contact"} }
+GORSEL KURALI: MEDIA_TEXT.image.url SADECE asagidaki listeden olabilir. Bir bolume uygun gorsel YOKSA image alanini bos birak (image: {}) ya da o blogu RICH_TEXT yap — ASLA listede olmayan url UYDURMA, hayali yol yazma.
+KURAL: HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA — bu bir MAKALE, pazarlama sayfasi degil. Sayfa basligi entry basligindan gelir; govdede tekrar etme.${mediaCatalog}`
         : entryType === 'PRODUCT'
           ? `URUN SAYFASI SABLONU — su blok dizisini AYNEN uret:
 1) HERO: urun adi + kisa tagline + cta { label, href:"/${localeCode}/contact" }
@@ -248,6 +274,33 @@ KURAL: HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA — bu bir MAKALE
     );
     if (parsed && parsed.title && Array.isArray(parsed.blocks)) return parsed;
     return null;
+  }
+
+  // Kutuphanedeki gercek gorseller (URL bazli dedup) — AI bunlardan secer, uydurmaz.
+  // Aciklama = alt metin yoksa dosya adindan turetilir (anlamsal eslesmeye yardim eder).
+  private async libraryImages(
+    limit = 24,
+  ): Promise<Array<{ url: string; desc: string }>> {
+    const rows = await this.prisma.media.findMany({
+      where: { mime: { startsWith: 'image/' } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: { url: true, alt: true },
+    });
+    const seen = new Set<string>();
+    const out: Array<{ url: string; desc: string }> = [];
+    for (const m of rows) {
+      if (seen.has(m.url)) continue;
+      seen.add(m.url);
+      const file = m.url.split('/').pop() ?? m.url;
+      const desc =
+        m.alt && m.alt.trim()
+          ? m.alt.trim()
+          : file.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]/g, ' ');
+      out.push({ url: m.url, desc });
+      if (out.length >= limit) break;
+    }
+    return out;
   }
 
   // --------------------------- Sablon fallback ---------------------------
