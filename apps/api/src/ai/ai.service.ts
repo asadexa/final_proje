@@ -35,7 +35,7 @@ interface DraftPage {
 // LLM'e verilen blok katalogu — @kron/shared semalarinin kisa izdusumu.
 const BLOCK_CATALOG = `
 Kullanabilecegin blok tipleri ve data alanlari (BASKA TIP KULLANMA):
-- HERO: { title (zorunlu, <b>..</b> mavi vurgu), subtitle?, eyebrow?, cta?: {label,href}, image?: {url,alt} }
+- HERO: { title (zorunlu, <b>..</b> mavi vurgu), subtitle?, eyebrow?, cta?: {label,href}, image?: {url,alt}, variant?: "product" (urun banner'i), buttons?: [{label,href}] (urun banner icin) }
 - SECTION_HEADING: { title (zorunlu), intro?, align?: "left"|"center", level?: "h1"|"h2" (sayfa basligi icin "h1") }
 - FEATURE_GRID: { title?, items: [{ title (zorunlu), description?, icon? }] }
 - VALUE_PROP: { title (zorunlu), body (zorunlu), cta?: {label,href}, image?: {url,alt} }
@@ -205,7 +205,7 @@ export class AiService {
       entryType === 'POST'
         ? 'Blog makalesi düzeni: giriş, zengin metin bölümleri ve SSS.'
         : entryType === 'PRODUCT'
-          ? 'Ürün açılış düzeni: hero, özellik ızgarası, istatistikler, değer önermesi, SSS ve CTA.'
+          ? 'Ürün sayfası düzeni: ürün-banner hero, dönüşümlü özellik bölümleri (görsel+metin), istatistikler, değer önermesi, SSS ve demo CTA.'
           : style === 'content'
             ? 'İçerik sayfası düzeni: sade başlık + makale gövdesi (bölümler, listeler), pazarlama bloğu yok.'
             : 'Landing düzeni: hero, özellikler, görsel+metin, değer önermesi, SSS ve iletişim çağrısı.';
@@ -257,15 +257,16 @@ export class AiService {
 GORSEL KURALI: <img src> SADECE asagidaki listeden olabilir; uygun gorsel yoksa hic gorsel ekleme. ASLA listede olmayan url UYDURMA.
 KURAL: Govde TEK RICH_TEXT olmali — MEDIA_TEXT / HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA. <h1> kullanma (sayfa basligi entry basligindan gelir). H2 basliklarini anlamli yaz; icindekiler (TOC) bunlardan uretilir.${mediaCatalog}`
         : entryType === 'PRODUCT'
-          ? `URUN SAYFASI SABLONU — su blok dizisini uret (uygun yerlere asagidaki listeden GERCEK gorsel koy):
-1) HERO: urun adi + kisa tagline + cta { label, href:"/${localeCode}/contact" } + image: listeden konuya uygun bir gorsel
-2) FEATURE_GRID: 3-4 ozellik (title + description)
-3) MEDIA_TEXT: bir ozelligi anlatan gorselli bolum (title + body + listeden image, imageSide:"right")
+          ? `URUN SAYFASI SABLONU — krontech urun sayfasi dokusu: urun-banner hero + donusumlu ozellik bolumleri (landing'den FARKLI). Su blok dizisini uret:
+1) HERO (URUN BANNER'i): { title: urun adi, subtitle: kisa tagline, variant: "product", image: listeden uygun gorsel, buttons: [{label:"Doküman", href:"#"}, {label:"Demo Talep Et", href:"/${localeCode}/contact"}] }
+2) MEDIA_TEXT: 1. ozellik/yetenek (title + body + listeden image, imageSide:"right")
+3) MEDIA_TEXT: 2. ozellik/yetenek (title + body + listeden image, imageSide:"left")
 4) STATS: 3-4 olcum (value + label)
 5) VALUE_PROP: neden bu urun (title + body + listeden image)
 6) FAQ: 3 soru-cevap
-7) CTA_BANNER: demo/iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }
-GORSEL KURALI: image.url SADECE asagidaki listeden olabilir; uygun gorsel YOKSA o image alanini HIC ekleme (bos {} verme) ve MEDIA_TEXT'i atla. ASLA url UYDURMA.${mediaCatalog}`
+7) CTA_BANNER: demo cagrisi { cta: {label:"Demo Talep Et", href:"/${localeCode}/contact"} }
+GORSEL KURALI: image.url SADECE asagidaki listeden olabilir; uygun gorsel YOKSA o image alanini HIC ekleme (bos {} verme) ve ilgili MEDIA_TEXT'i atla. ASLA url UYDURMA.
+KURAL: Ozellikleri FEATURE_GRID yerine DONUSUMLU MEDIA_TEXT ile anlat (urun sayfasi dokusu). PRODUCT_SHOWCASE / PRODUCT_TABS KULLANMA.${mediaCatalog}`
           : style === 'content'
             ? `ICERIK SAYFASI SABLONU — sade, makale benzeri kurumsal/bilgi sayfasi (PAZARLAMA DEGIL). Su bloklari uret:
 1) SECTION_HEADING: { title: sayfa basligi, intro: 1-2 cumle kisa giris, level: "h1" }
