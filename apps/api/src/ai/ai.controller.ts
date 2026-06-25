@@ -36,6 +36,17 @@ export class ArchitectDto {
   @IsOptional()
   @IsIn(['PAGE', 'POST', 'PRODUCT'])
   type?: 'PAGE' | 'POST' | 'PRODUCT';
+
+  @ApiProperty({
+    example: 'landing',
+    enum: ['landing', 'content'],
+    required: false,
+    description:
+      'PAGE icin duzen: landing (pazarlama) | content (kurumsal/bilgi)',
+  })
+  @IsOptional()
+  @IsIn(['landing', 'content'])
+  style?: 'landing' | 'content';
 }
 
 export class TranslateEntryDto {
@@ -64,6 +75,7 @@ export class AiController {
       user.id,
       user.role,
       dto.type ?? 'PAGE',
+      dto.style ?? 'landing',
     );
   }
 

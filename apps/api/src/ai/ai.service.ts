@@ -36,7 +36,7 @@ interface DraftPage {
 const BLOCK_CATALOG = `
 Kullanabilecegin blok tipleri ve data alanlari (BASKA TIP KULLANMA):
 - HERO: { title (zorunlu, <b>..</b> mavi vurgu), subtitle?, eyebrow?, cta?: {label,href}, image?: {url,alt} }
-- SECTION_HEADING: { title (zorunlu), intro?, align?: "left"|"center" }
+- SECTION_HEADING: { title (zorunlu), intro?, align?: "left"|"center", level?: "h1"|"h2" (sayfa basligi icin "h1") }
 - FEATURE_GRID: { title?, items: [{ title (zorunlu), description?, icon? }] }
 - VALUE_PROP: { title (zorunlu), body (zorunlu), cta?: {label,href}, image?: {url,alt} }
 - STATS: { title?, subtitle?, items: [{ value (zorunlu), label (zorunlu) }] }
@@ -103,6 +103,7 @@ export class AiService {
     userId: string,
     userRole: string,
     entryType: EntryType = 'PAGE',
+    style: 'landing' | 'content' = 'landing',
   ): Promise<ArchitectResult> {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     let draft: DraftPage;
@@ -120,6 +121,7 @@ export class AiService {
         localeCode,
         entryType,
         mediaList,
+        style,
       );
       if (ai) {
         draft = ai;
@@ -204,7 +206,9 @@ export class AiService {
         ? 'Blog makalesi düzeni: giriş, zengin metin bölümleri ve SSS.'
         : entryType === 'PRODUCT'
           ? 'Ürün açılış düzeni: hero, özellik ızgarası, istatistikler, değer önermesi, SSS ve CTA.'
-          : 'Kurumsal sayfa düzeni: tanıtım, özellikler, değer önermesi, SSS ve iletişim çağrısı.';
+          : style === 'content'
+            ? 'İçerik sayfası düzeni: sade başlık + makale gövdesi (bölümler, listeler), pazarlama bloğu yok.'
+            : 'Landing düzeni: hero, özellikler, görsel+metin, değer önermesi, SSS ve iletişim çağrısı.';
     return {
       entryId: entry.id,
       slug,
@@ -225,6 +229,7 @@ export class AiService {
     localeCode: string,
     entryType: EntryType,
     mediaList: Array<{ url: string; desc: string }> = [],
+    style: 'landing' | 'content' = 'landing',
   ): Promise<DraftPage | null> {
     const lang = localeCode === 'tr' ? 'Turkce' : 'Ingilizce';
     const typeLabel =
@@ -232,7 +237,9 @@ export class AiService {
         ? 'blog yazisi'
         : entryType === 'PRODUCT'
           ? 'urun sayfasi'
-          : 'kurumsal sayfa';
+          : style === 'content'
+            ? 'kurumsal/bilgi sayfasi (icerik, pazarlama degil)'
+            : 'pazarlama (landing) sayfasi';
     // Kullanilabilir gorseller katalogu (yalniz kutuphane url'leri; tum tipler).
     const mediaCatalog =
       mediaList.length > 0
@@ -259,7 +266,14 @@ KURAL: Govde TEK RICH_TEXT olmali — MEDIA_TEXT / HERO / STATS / FEATURE_GRID /
 6) FAQ: 3 soru-cevap
 7) CTA_BANNER: demo/iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }
 GORSEL KURALI: image.url SADECE asagidaki listeden olabilir; uygun gorsel YOKSA o image alanini HIC ekleme (bos {} verme) ve MEDIA_TEXT'i atla. ASLA url UYDURMA.${mediaCatalog}`
-          : `KURUMSAL SAYFA SABLONU — su blok dizisini uret (uygun yerlere asagidaki listeden GERCEK gorsel koy):
+          : style === 'content'
+            ? `ICERIK SAYFASI SABLONU — sade, makale benzeri kurumsal/bilgi sayfasi (PAZARLAMA DEGIL). Su bloklari uret:
+1) SECTION_HEADING: { title: sayfa basligi, intro: 1-2 cumle kisa giris, level: "h1" }
+2) RICH_TEXT (govde tek html): 2-4 bolum, her biri <h2>Bolum Basligi</h2> + altinda <p> paragraf(lar) + uygun yerlerde <ul><li>...</li></ul> madde listesi. Konuya uyan 0-1 yere asagidaki listeden inline gorsel: <figure><img src="LISTEDEKI_URL" alt="..."/></figure>.
+3) (OPSIYONEL) CONTACT_FORM: { title, formKey:"contact" } — yalniz hizmet/iletisim odakli sayfada; KVKK/yasal/bilgi sayfasinda EKLEME.
+GORSEL KURALI: <img src> SADECE asagidaki listeden; uygun yoksa hic gorsel ekleme. ASLA url UYDURMA.
+KURAL: HERO / FEATURE_GRID / VALUE_PROP / STATS / PRODUCT_SHOWCASE / CTA_BANNER KULLANMA — bunlar pazarlama bloklari, normal icerik sayfasinda gereksiz. Sayfa basligi SECTION_HEADING level:"h1"; govdede <h1> kullanma.${mediaCatalog}`
+            : `KURUMSAL SAYFA SABLONU — su blok dizisini uret (uygun yerlere asagidaki listeden GERCEK gorsel koy):
 1) HERO: baslik + alt baslik + cta { label, href:"/${localeCode}/contact" } + image: listeden konuya uygun bir gorsel
 2) FEATURE_GRID: 3-4 ozellik (title + description)
 3) MEDIA_TEXT: bir faydayi anlatan gorselli bolum (title + body + listeden image, imageSide:"right")

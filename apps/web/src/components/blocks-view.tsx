@@ -127,7 +127,12 @@ function SectionHeading({ data }: BlockProps): ReactElement {
   return (
     <section className="bg-surface">
       <Container className={`py-10 ${center ? "text-center" : ""}`}>
-        <h2 className="text-2xl font-bold text-dark">{str(data.title)}</h2>
+        {data.level === "h1" ? (
+          // Icerik sayfasi basligi (SEO H1)
+          <h1 className="text-3xl font-bold text-dark md:text-[2.5rem]">{str(data.title)}</h1>
+        ) : (
+          <h2 className="text-2xl font-bold text-dark">{str(data.title)}</h2>
+        )}
         {str(data.intro) && <p className="mt-3 max-w-2xl text-ink-soft">{str(data.intro)}</p>}
       </Container>
     </section>

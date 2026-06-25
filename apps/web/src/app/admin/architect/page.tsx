@@ -52,6 +52,7 @@ export default function ArchitectPage(): ReactElement {
   const [prompt, setPrompt] = useState("");
   const [locale, setLocale] = useState("tr");
   const [type, setType] = useState("PAGE");
+  const [style, setStyle] = useState<"landing" | "content">("landing");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<ArchitectResult | null>(null);
@@ -106,7 +107,7 @@ export default function ArchitectPage(): ReactElement {
     const finish = startProgress();
     const r = await adminRequest<ArchitectResult>("/admin/ai/architect", {
       method: "POST",
-      body: JSON.stringify({ prompt, localeCode: locale, type }),
+      body: JSON.stringify({ prompt, localeCode: locale, type, style }),
     });
     const ok = r.ok && !!r.data;
     finish(ok);
@@ -191,6 +192,23 @@ export default function ArchitectPage(): ReactElement {
               <option value="PRODUCT">Ürün</option>
             </select>
           </div>
+          {type === "PAGE" && (
+            <div>
+              <label htmlFor="ai-style" className="mb-1 block text-sm font-medium text-ink-soft">
+                Sayfa stili
+              </label>
+              <select
+                id="ai-style"
+                value={style}
+                disabled={busy}
+                onChange={(e) => setStyle(e.target.value as "landing" | "content")}
+                className="rounded border border-line bg-surface px-3 py-2 text-sm disabled:opacity-60"
+              >
+                <option value="landing">Landing (pazarlama)</option>
+                <option value="content">İçerik sayfası</option>
+              </select>
+            </div>
+          )}
           <div>
             <label htmlFor="ai-locale" className="mb-1 block text-sm font-medium text-ink-soft">
               Dil
