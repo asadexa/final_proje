@@ -109,8 +109,9 @@ export class AiService {
     let usedAi = false;
     let note: string | undefined;
 
-    // Blog gorsel zenginligi: kutuphanedeki gercek gorselleri AI'a sun (yalniz POST).
-    const mediaList = entryType === 'POST' ? await this.libraryImages() : [];
+    // Gorsel zenginligi: kutuphanedeki gercek gorselleri AI'a sun (tum tipler — blog
+    // inline, sayfa/urun HERO+VALUE_PROP+MEDIA_TEXT image).
+    const mediaList = await this.libraryImages();
 
     if (apiKey) {
       const ai = await this.generateWithClaude(
@@ -139,10 +140,12 @@ export class AiService {
     if (mediaList.length > 0) {
       const allow = new Set(mediaList.map((m) => m.url));
       for (const b of draft.blocks) {
-        // (a) MEDIA_TEXT vb. image alani
+        // (a) image alani (HERO/VALUE_PROP/MEDIA_TEXT): url listede degilse veya yoksa
+        // alani TAMAMEN kaldir (renderer bos kutu basmasin; image zorunlu olan MEDIA_TEXT
+        // boylece Zod'da duser — gorselsiz MEDIA_TEXT zaten istenmiyor).
         const img = b.data.image as { url?: unknown } | undefined;
-        if (img && typeof img.url === 'string' && !allow.has(img.url)) {
-          delete img.url;
+        if (img && (typeof img.url !== 'string' || !allow.has(img.url))) {
+          delete b.data.image;
         }
         // (b) RICH_TEXT govdesindeki inline <img>/<figure>: listede olmayan src kaldirilir
         if (typeof b.data.html === 'string') {
@@ -230,10 +233,10 @@ export class AiService {
         : entryType === 'PRODUCT'
           ? 'urun sayfasi'
           : 'kurumsal sayfa';
-    // POST icin kullanilabilir gorseller katalogu (yalniz kutuphane url'leri).
+    // Kullanilabilir gorseller katalogu (yalniz kutuphane url'leri; tum tipler).
     const mediaCatalog =
       mediaList.length > 0
-        ? `\n\nKULLANILABILIR GORSELLER (MEDIA_TEXT image.url icin YALNIZ bunlardan birini kullan; BASKA url UYDURMA):\n${mediaList
+        ? `\n\nKULLANILABILIR GORSELLER (image alanlari + RICH_TEXT inline icin YALNIZ bunlardan birini kullan; BASKA url UYDURMA):\n${mediaList
             .map((m) => `- ${m.url}  (${m.desc})`)
             .join('\n')}`
         : '';
@@ -247,19 +250,23 @@ export class AiService {
 GORSEL KURALI: <img src> SADECE asagidaki listeden olabilir; uygun gorsel yoksa hic gorsel ekleme. ASLA listede olmayan url UYDURMA.
 KURAL: Govde TEK RICH_TEXT olmali — MEDIA_TEXT / HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA. <h1> kullanma (sayfa basligi entry basligindan gelir). H2 basliklarini anlamli yaz; icindekiler (TOC) bunlardan uretilir.${mediaCatalog}`
         : entryType === 'PRODUCT'
-          ? `URUN SAYFASI SABLONU — su blok dizisini AYNEN uret:
-1) HERO: urun adi + kisa tagline + cta { label, href:"/${localeCode}/contact" }
+          ? `URUN SAYFASI SABLONU — su blok dizisini uret (uygun yerlere asagidaki listeden GERCEK gorsel koy):
+1) HERO: urun adi + kisa tagline + cta { label, href:"/${localeCode}/contact" } + image: listeden konuya uygun bir gorsel
 2) FEATURE_GRID: 3-4 ozellik (title + description)
-3) STATS: 3-4 olcum (value + label)
-4) VALUE_PROP: neden bu urun (title + body)
+3) MEDIA_TEXT: bir ozelligi anlatan gorselli bolum (title + body + listeden image, imageSide:"right")
+4) STATS: 3-4 olcum (value + label)
+5) VALUE_PROP: neden bu urun (title + body + listeden image)
+6) FAQ: 3 soru-cevap
+7) CTA_BANNER: demo/iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }
+GORSEL KURALI: image.url SADECE asagidaki listeden olabilir; uygun gorsel YOKSA o image alanini HIC ekleme (bos {} verme) ve MEDIA_TEXT'i atla. ASLA url UYDURMA.${mediaCatalog}`
+          : `KURUMSAL SAYFA SABLONU — su blok dizisini uret (uygun yerlere asagidaki listeden GERCEK gorsel koy):
+1) HERO: baslik + alt baslik + cta { label, href:"/${localeCode}/contact" } + image: listeden konuya uygun bir gorsel
+2) FEATURE_GRID: 3-4 ozellik (title + description)
+3) MEDIA_TEXT: bir faydayi anlatan gorselli bolum (title + body + listeden image, imageSide:"right")
+4) VALUE_PROP: deger onermesi (title + body + listeden image)
 5) FAQ: 3 soru-cevap
-6) CTA_BANNER: demo/iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }`
-          : `KURUMSAL SAYFA SABLONU — su blok dizisini AYNEN uret:
-1) HERO: baslik + alt baslik + cta { label, href:"/${localeCode}/contact" }
-2) FEATURE_GRID: 3-4 ozellik
-3) VALUE_PROP: deger onermesi (title + body)
-4) FAQ: 3 soru-cevap
-5) CTA_BANNER: iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }`;
+6) CTA_BANNER: iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }
+GORSEL KURALI: image.url SADECE asagidaki listeden olabilir; uygun gorsel YOKSA o image alanini HIC ekleme (bos {} verme) ve MEDIA_TEXT'i atla. ASLA url UYDURMA.${mediaCatalog}`;
     const system = [
       "Kurumsal bir siber guvenlik sirketi (Kron Technologies benzeri) CMS'i icin icerik tasarlayan bir mimar asistansin.",
       `Icerik dili: ${lang}. Hedef icerik tipi: ${typeLabel}.`,

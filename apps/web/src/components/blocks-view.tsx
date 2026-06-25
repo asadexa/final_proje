@@ -313,14 +313,19 @@ function ValueProp({ data }: BlockProps): ReactElement {
         }}
       />
       <Container wide className="relative py-24">
-        <div className="grid items-center gap-12 md:grid-cols-2">
-          <div>
+        {/* Gorsel yoksa tek kolon (bos placeholder kutu yerine metin tam genislik) */}
+        <div className={`grid items-center gap-12 ${img?.url ? "md:grid-cols-2" : ""}`}>
+          <div className={img?.url ? "" : "mx-auto max-w-3xl text-center"}>
             <h2
               className="text-[2.25rem] font-light leading-[1.15] md:text-[3rem] [&_b]:font-normal [&_b]:text-white"
               dangerouslySetInnerHTML={{ __html: str(data.title) }}
             />
             {str(data.body) && (
-              <p className="mt-6 max-w-lg text-[1.2rem] leading-8 text-white/80">{str(data.body)}</p>
+              <p
+                className={`mt-6 text-[1.2rem] leading-8 text-white/80 ${img?.url ? "max-w-lg" : "mx-auto max-w-2xl"}`}
+              >
+                {str(data.body)}
+              </p>
             )}
             {cta?.href && (
               <Link
@@ -331,14 +336,18 @@ function ValueProp({ data }: BlockProps): ReactElement {
               </Link>
             )}
           </div>
-          <div className="flex justify-center">
-            {img?.url ? (
-              // next/image: otomatik WebP/AVIF + lazy + CLS korumasi (Core Web Vitals)
-              <Image src={img.url} alt={img.alt ?? ""} width={800} height={600} className="h-auto w-full max-w-[520px]" />
-            ) : (
-              <div className="aspect-[4/3] w-full rounded-lg bg-white/10" />
-            )}
-          </div>
+          {img?.url && (
+            <div className="flex justify-center">
+              {/* next/image: otomatik WebP/AVIF + lazy + CLS korumasi (Core Web Vitals) */}
+              <Image
+                src={img.url}
+                alt={img.alt ?? ""}
+                width={800}
+                height={600}
+                className="h-auto w-full max-w-[520px]"
+              />
+            </div>
+          )}
         </div>
       </Container>
     </section>
@@ -453,10 +462,13 @@ function MediaText({ data }: BlockProps): ReactElement {
   return (
     <section>
       <Container className="!px-0">
-        <div className="grid md:grid-cols-2">
-          <div className={`relative min-h-[240px] overflow-hidden ${right ? "order-1 md:order-2" : "order-1"}`}>
-            {img?.url && (
-              // fill: konteyner boyutuna gore otomatik srcset (mobil kucuk indirir)
+        {/* Gorsel yoksa tek kolon (bos gorsel kolonu basma) */}
+        <div className={`grid ${img?.url ? "md:grid-cols-2" : ""}`}>
+          {img?.url && (
+            <div
+              className={`relative min-h-[240px] overflow-hidden ${right ? "order-1 md:order-2" : "order-1"}`}
+            >
+              {/* fill: konteyner boyutuna gore otomatik srcset (mobil kucuk indirir) */}
               <Image
                 src={img.url}
                 alt={img.alt ?? str(data.title)}
@@ -464,10 +476,10 @@ function MediaText({ data }: BlockProps): ReactElement {
                 sizes="(max-width: 768px) 100vw, 570px"
                 className="object-cover"
               />
-            )}
-          </div>
+            </div>
+          )}
           <div
-            className={`flex flex-col items-start justify-center bg-surface px-8 py-10 lg:px-12 ${right ? "order-2 md:order-1" : "order-2"}`}
+            className={`flex flex-col items-start justify-center bg-surface px-8 py-10 lg:px-12 ${img?.url ? (right ? "order-2 md:order-1" : "order-2") : ""}`}
           >
             {str(data.title) && (
               <h3
