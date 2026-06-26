@@ -13,7 +13,7 @@ export interface FieldRow {
 
 const FIELD_TYPES = ["text", "email", "tel", "textarea", "select"];
 const inputCls =
-  "w-full rounded border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary";
+  "w-full rounded border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30";
 
 // Form tanimi editoru (PDF "Form tanimlama"): alan satirlari name/label/tip/zorunlu.
 // create modunda POST /admin/forms, edit modunda PATCH /admin/forms/:key.
@@ -97,41 +97,56 @@ export function FormDefEditor({
           </button>
         </div>
         {fields.map((f, i) => (
-          <div key={i} className="grid items-center gap-2 sm:grid-cols-[1fr_1fr_120px_90px_auto]">
-            <input
-              className={inputCls}
-              placeholder="name (data anahtarı)"
-              value={f.name}
-              onChange={(e) => patchField(i, { name: e.target.value })}
-            />
-            <input
-              className={inputCls}
-              placeholder="Etiket"
-              value={f.label}
-              onChange={(e) => patchField(i, { label: e.target.value })}
-            />
-            <select
-              className={inputCls}
-              value={f.type}
-              onChange={(e) => patchField(i, { type: e.target.value })}
-            >
-              {FIELD_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-            <label className="flex items-center gap-1 text-xs text-ink-soft">
+          <div key={i} className="space-y-2">
+            {/* Ana satir: aksiyon butonlari HER ZAMAN burada (select'te de kopmaz) */}
+            <div className="grid items-center gap-2 sm:grid-cols-[1fr_1fr_120px_90px_auto]">
               <input
-                type="checkbox"
-                checked={f.required}
-                onChange={(e) => patchField(i, { required: e.target.checked })}
+                className={inputCls}
+                placeholder="name (data anahtarı)"
+                value={f.name}
+                onChange={(e) => patchField(i, { name: e.target.value })}
               />
-              zorunlu
-            </label>
+              <input
+                className={inputCls}
+                placeholder="Etiket"
+                value={f.label}
+                onChange={(e) => patchField(i, { label: e.target.value })}
+              />
+              <select
+                className={inputCls}
+                value={f.type}
+                onChange={(e) => patchField(i, { type: e.target.value })}
+              >
+                {FIELD_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+              <label className="flex items-center gap-1 text-xs text-ink-soft">
+                <input
+                  type="checkbox"
+                  checked={f.required}
+                  onChange={(e) => patchField(i, { required: e.target.checked })}
+                />
+                zorunlu
+              </label>
+              <div className="flex gap-1 text-xs">
+                <button type="button" onClick={() => moveField(i, -1)} className="rounded border border-line px-2 py-1 hover:border-primary">↑</button>
+                <button type="button" onClick={() => moveField(i, 1)} className="rounded border border-line px-2 py-1 hover:border-primary">↓</button>
+                <button
+                  type="button"
+                  onClick={() => setFields((p) => p.filter((_, j) => j !== i))}
+                  className="rounded border border-line px-2 py-1 text-accent hover:border-accent"
+                >
+                  Sil
+                </button>
+              </div>
+            </div>
+            {/* select tipi: secenekler ana satirin ALTINDA tam genislik */}
             {f.type === "select" && (
               <input
-                className={`${inputCls} sm:col-span-4`}
+                className={inputCls}
                 placeholder="Seçenekler (virgülle ayırın): Evet, Hayır"
                 value={(f.options ?? []).join(", ")}
                 onChange={(e) =>
@@ -141,30 +156,27 @@ export function FormDefEditor({
                 }
               />
             )}
-            <div className="flex gap-1 text-xs">
-              <button type="button" onClick={() => moveField(i, -1)} className="rounded border border-line px-2 py-1 hover:border-primary">↑</button>
-              <button type="button" onClick={() => moveField(i, 1)} className="rounded border border-line px-2 py-1 hover:border-primary">↓</button>
-              <button
-                type="button"
-                onClick={() => setFields((p) => p.filter((_, j) => j !== i))}
-                className="rounded border border-line px-2 py-1 text-accent hover:border-accent"
-              >
-                Sil
-              </button>
-            </div>
           </div>
         ))}
       </div>
 
       {msg && <p className="text-sm text-accent">{msg}</p>}
-      <button
-        type="button"
-        disabled={saving || !name || (mode === "create" && !key)}
-        onClick={() => void save()}
-        className="rounded bg-primary px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-60"
-      >
-        {saving ? "Kaydediliyor..." : "Kaydet"}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          disabled={saving || !name || (mode === "create" && !key)}
+          onClick={() => void save()}
+          className="rounded bg-primary px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-60"
+        >
+          {saving ? "Kaydediliyor..." : "Kaydet"}
+        </button>
+        {/* Pasif Kaydet'in nedeni: zorunlu alanlar */}
+        {!saving && (!name || (mode === "create" && !key)) && (
+          <span className="text-xs text-muted">
+            {mode === "create" ? "Key ve Ad zorunlu" : "Ad zorunlu"}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

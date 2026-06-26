@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { type ReactElement, useCallback, useEffect, useState } from "react";
 import { BlocksClientRender, type RenderBlock } from "@/components/admin/blocks-client-render";
-import { adminFetch, getToken } from "@/lib/admin";
+import { adminFetch } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 import { diffSnapshots, type FieldChange, type SnapshotDiff, type SnapshotLike } from "@/lib/diff";
 
 interface VersionRow {
@@ -30,6 +31,7 @@ function changeColor(kind: FieldChange["kind"]): string {
 // Time Machine: surum zaman tuneli + gorsel onizleme + git-tarzi diff.
 export default function HistoryPage(): ReactElement {
   const id = (useParams().id as string) ?? "";
+  const ready = useAdminGuard();
   const [versions, setVersions] = useState<VersionRow[]>([]);
   const [entryTitle, setEntryTitle] = useState("");
   // Tek secim = onizleme; iki secim = karsilastirma
@@ -49,12 +51,9 @@ export default function HistoryPage(): ReactElement {
   }, [id]);
 
   useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
-    void Promise.resolve().then(load);
-  }, [load]);
+    // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
+    if (ready) void Promise.resolve().then(load);
+  }, [ready, load]);
 
   const fetchDetail = useCallback(
     async (version: number): Promise<VersionDetail | null> => {

@@ -2,24 +2,22 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, type ReactElement, useEffect, useState } from "react";
-import { adminFetch, getToken } from "@/lib/admin";
+import { type FormEvent, type ReactElement, useState } from "react";
+import { adminFetch } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 
 const TYPES = ["PAGE", "PRODUCT", "POST"];
 const LOCALES = ["tr", "en"];
 
 export default function NewEntryPage(): ReactElement {
   const router = useRouter();
+  useAdminGuard();
   const [type, setType] = useState("POST");
   const [localeCode, setLocaleCode] = useState("tr");
   const [slug, setSlug] = useState("");
   const [title, setTitle] = useState("");
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!getToken()) window.location.href = "/admin/login";
-  }, []);
 
   async function onSubmit(e: FormEvent): Promise<void> {
     e.preventDefault();
@@ -34,7 +32,7 @@ export default function NewEntryPage(): ReactElement {
     else setErr("Oluşturulamadı. Slug bu dilde benzersiz mi, alanlar dolu mu kontrol edin.");
   }
 
-  const inputCls = "w-full rounded border border-line px-3 py-2 text-sm outline-none focus:border-primary";
+  const inputCls = "w-full rounded border border-line px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30";
 
   return (
     <div className="mx-auto max-w-lg">

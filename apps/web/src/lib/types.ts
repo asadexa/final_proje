@@ -37,6 +37,7 @@ export interface PublicEntry {
   title: string;
   slug: string;
   excerpt?: string | null;
+  authorName?: string | null;
   publishedAt?: string | null;
   updatedAt?: string | null;
   blocks: BlockNode[];

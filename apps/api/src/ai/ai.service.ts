@@ -20,6 +20,9 @@ export interface ArchitectResult {
   usedAi: boolean;
   droppedBlocks: string[]; // sema dogrulamasini gecemeyen bloklar (tip listesi)
   note?: string;
+  blocks: string[]; // uretilen (gecerli) blok tipleri — sonuc kartinda manifest icin
+  title: string; // uretilen taslagin basligi — sonuc kartinda onizleme icin
+  rationale: string; // tip-bazli kisa gerekce ("neden bu bloklar") — sonuc kartinda
 }
 
 interface DraftPage {
@@ -32,13 +35,13 @@ interface DraftPage {
 // LLM'e verilen blok katalogu — @kron/shared semalarinin kisa izdusumu.
 const BLOCK_CATALOG = `
 Kullanabilecegin blok tipleri ve data alanlari (BASKA TIP KULLANMA):
-- HERO: { title (zorunlu, <b>..</b> mavi vurgu), subtitle?, eyebrow?, cta?: {label,href}, image?: {url,alt} }
-- SECTION_HEADING: { title (zorunlu), intro?, align?: "left"|"center" }
+- HERO: { title (zorunlu, <b>..</b> mavi vurgu), subtitle?, eyebrow?, cta?: {label,href}, image?: {url,alt}, variant?: "product" (urun banner'i), buttons?: [{label,href}] (urun banner icin) }
+- SECTION_HEADING: { title (zorunlu), intro?, align?: "left"|"center", level?: "h1"|"h2" (sayfa basligi icin "h1") }
 - FEATURE_GRID: { title?, items: [{ title (zorunlu), description?, icon? }] }
 - VALUE_PROP: { title (zorunlu), body (zorunlu), cta?: {label,href}, image?: {url,alt} }
 - STATS: { title?, subtitle?, items: [{ value (zorunlu), label (zorunlu) }] }
 - MEDIA_TEXT: { title?, body (zorunlu), image: {url?,alt?}, imageSide?: "left"|"right", cta?: {label,href} }
-- RICH_TEXT: { html (zorunlu; h2/h3/p/ul kullan) }
+- RICH_TEXT: { html (zorunlu; <h2>/<h3>/<p>/<ul><li> ve inline gorsel icin <figure><img src alt/><figcaption></figure> kullanabilirsin) }
 - FAQ: { title?, items: [{ question (zorunlu), answer (zorunlu) }] }
 - CTA_BANNER: { title (zorunlu), cta: {label (zorunlu), href (zorunlu)} }
 - CONTACT_FORM: { title?, formKey (zorunlu; "contact" kullan), consentText? }
@@ -100,11 +103,16 @@ export class AiService {
     userId: string,
     userRole: string,
     entryType: EntryType = 'PAGE',
+    style: 'landing' | 'content' = 'landing',
   ): Promise<ArchitectResult> {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     let draft: DraftPage;
     let usedAi = false;
     let note: string | undefined;
+
+    // Gorsel zenginligi: kutuphanedeki gercek gorselleri AI'a sun (tum tipler — blog
+    // inline, sayfa/urun HERO+VALUE_PROP+MEDIA_TEXT image).
+    const mediaList = await this.libraryImages();
 
     if (apiKey) {
       const ai = await this.generateWithClaude(
@@ -112,6 +120,8 @@ export class AiService {
         prompt,
         localeCode,
         entryType,
+        mediaList,
+        style,
       );
       if (ai) {
         draft = ai;
@@ -125,6 +135,39 @@ export class AiService {
       draft = this.templateFallback(prompt, localeCode);
       note =
         'ANTHROPIC_API_KEY tanimli degil — deterministik sablon modu kullanildi.';
+    }
+
+    // Gorsel whitelist: gorseller YALNIZ kutuphaneden olabilir; AI listede olmayan
+    // bir url uydurursa temizlenir (404 imkansiz).
+    // allow BOS olabilir (kutuphane bos) -> o zaman HICBIR gorsel gecmez (hepsi silinir);
+    // dolu ise yalniz listedeki url'ler kalir. (Eski `if (length>0)` guard'i bos kutuphanede
+    // tum temizligi atlayip uydurma/dis url'in gecmesine izin veriyordu.)
+    const allow = new Set(mediaList.map((m) => m.url));
+    // src'yi tirnak stiline (cift/tek/tirnaksiz) bakmaksizin cek (yalniz cift-tirnak yetersizdi).
+    const imgSrc = (tag: string): string | null => {
+      const m = /\bsrc\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(tag);
+      return m ? (m[2] ?? m[3] ?? m[4] ?? null) : null;
+    };
+    for (const b of draft.blocks) {
+      // (a) image alani (HERO/VALUE_PROP/MEDIA_TEXT): url listede degilse veya yoksa
+      // alani TAMAMEN kaldir (renderer bos kutu basmasin; image zorunlu olan MEDIA_TEXT
+      // boylece Zod'da duser — gorselsiz MEDIA_TEXT zaten istenmiyor).
+      const img = b.data.image as { url?: unknown } | undefined;
+      if (img && (typeof img.url !== 'string' || !allow.has(img.url))) {
+        delete b.data.image;
+      }
+      // (b) RICH_TEXT govdesindeki inline <img>/<figure>: listede olmayan src kaldirilir
+      if (typeof b.data.html === 'string') {
+        b.data.html = b.data.html
+          .replace(/<figure\b[\s\S]*?<\/figure>/gi, (block) => {
+            const src = imgSrc(block);
+            return src && allow.has(src) ? block : '';
+          })
+          .replace(/<img\b[^>]*>/gi, (tag) => {
+            const src = imgSrc(tag);
+            return src && allow.has(src) ? tag : '';
+          });
+      }
     }
 
     // Zod kapisi: gecemeyen blok DB'ye giremez (dusurulur ve raporlanir)
@@ -164,7 +207,25 @@ export class AiService {
       userId,
       userRole,
     );
-    return { entryId: entry.id, slug, usedAi, droppedBlocks: dropped, note };
+    // Tip-bazli kisa gerekce: kullanici editore girmeden "neden bu bloklar"i gorsun
+    const rationale =
+      entryType === 'POST'
+        ? 'Blog makalesi düzeni: giriş, zengin metin bölümleri ve SSS.'
+        : entryType === 'PRODUCT'
+          ? 'Ürün sayfası düzeni: ürün-banner hero, dönüşümlü özellik bölümleri (görsel+metin), istatistikler, değer önermesi, SSS ve demo CTA.'
+          : style === 'content'
+            ? 'İçerik sayfası düzeni: sade başlık + makale gövdesi (bölümler, listeler), pazarlama bloğu yok.'
+            : 'Landing düzeni: hero, özellikler, görsel+metin, değer önermesi, SSS ve iletişim çağrısı.';
+    return {
+      entryId: entry.id,
+      slug,
+      usedAi,
+      droppedBlocks: dropped,
+      note,
+      blocks: validBlocks.map((b) => b.type),
+      title: draft.title,
+      rationale,
+    };
   }
 
   // --------------------------- Claude (resmi SDK) ---------------------------
@@ -174,6 +235,8 @@ export class AiService {
     prompt: string,
     localeCode: string,
     entryType: EntryType,
+    mediaList: Array<{ url: string; desc: string }> = [],
+    style: 'landing' | 'content' = 'landing',
   ): Promise<DraftPage | null> {
     const lang = localeCode === 'tr' ? 'Turkce' : 'Ingilizce';
     const typeLabel =
@@ -181,30 +244,51 @@ export class AiService {
         ? 'blog yazisi'
         : entryType === 'PRODUCT'
           ? 'urun sayfasi'
-          : 'kurumsal sayfa';
+          : style === 'content'
+            ? 'kurumsal/bilgi sayfasi (icerik, pazarlama degil)'
+            : 'pazarlama (landing) sayfasi';
+    // Kullanilabilir gorseller katalogu (yalniz kutuphane url'leri; tum tipler).
+    const mediaCatalog =
+      mediaList.length > 0
+        ? `\n\nKULLANILABILIR GORSELLER (image alanlari + RICH_TEXT inline icin YALNIZ bunlardan birini kullan; BASKA url UYDURMA):\n${mediaList
+            .map((m) => `- ${m.url}  (${m.desc})`)
+            .join('\n')}`
+        : '';
     // Tip-bazli SABIT sablon: AI serbest blok secmez, bu iskeleti TASLAK metinle doldurur.
     const template =
       entryType === 'POST'
-        ? `BLOG YAZISI SABLONU — su blok dizisini AYNEN uret, icerigi promptu yansitacak TASLAK metinle doldur:
-1) RICH_TEXT: giris paragrafi (konuyu tanit; tek <p>, 2-3 cumle)
-2) RICH_TEXT: ana govde (2-3 alt bolum; her biri <h2>baslik</h2><p>paragraf</p> seklinde)
-3) FAQ: 3 soru-cevap
-4) CTA_BANNER: yumusak kapanis cagrisi { cta: {label, href:"/${localeCode}/contact"} }
-KURAL: HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA — bu bir MAKALE, pazarlama sayfasi degil. Sayfa basligi entry basligindan gelir; govdede tekrar etme.`
+        ? `BLOG YAZISI SABLONU — krontech makale yapisi: TEK rich govde + sonunda FAQ ve CTA. Su 3 blogu uret:
+1) RICH_TEXT (govdenin TAMAMI tek html): once 1-2 giris paragrafi (<p>); ardindan 3-4 bolum, her biri <h2>Bolum Basligi</h2> + altinda <p> paragraf(lar). Uygun yerlerde <ul><li>...</li></ul> madde listesi kullan. Konuya uyan 1-2 yere asagidaki listeden GERCEK gorsel gom: <figure><img src="LISTEDEKI_URL" alt="kisa alt"/><figcaption>kisa aciklama</figcaption></figure>.
+2) FAQ: 3 soru-cevap
+3) CTA_BANNER: yumusak kapanis { cta: {label, href:"/${localeCode}/contact"} }
+GORSEL KURALI: <img src> SADECE asagidaki listeden olabilir; uygun gorsel yoksa hic gorsel ekleme. ASLA listede olmayan url UYDURMA.
+KURAL: Govde TEK RICH_TEXT olmali — MEDIA_TEXT / HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA. <h1> kullanma (sayfa basligi entry basligindan gelir). H2 basliklarini anlamli yaz; icindekiler (TOC) bunlardan uretilir.${mediaCatalog}`
         : entryType === 'PRODUCT'
-          ? `URUN SAYFASI SABLONU — su blok dizisini AYNEN uret:
-1) HERO: urun adi + kisa tagline + cta { label, href:"/${localeCode}/contact" }
+          ? `URUN SAYFASI SABLONU — krontech urun sayfasi dokusu: urun-banner hero + donusumlu ozellik bolumleri (landing'den FARKLI). Su blok dizisini uret:
+1) HERO (URUN BANNER'i): { title: urun adi, subtitle: kisa tagline, variant: "product", image: listeden uygun gorsel, buttons: [{label:"Doküman", href:"#"}, {label:"Demo Talep Et", href:"/${localeCode}/contact"}] }
+2) MEDIA_TEXT: 1. ozellik/yetenek (title + body + listeden image, imageSide:"right")
+3) MEDIA_TEXT: 2. ozellik/yetenek (title + body + listeden image, imageSide:"left")
+4) STATS: 3-4 olcum (value + label)
+5) VALUE_PROP: neden bu urun (title + body + listeden image)
+6) FAQ: 3 soru-cevap
+7) CTA_BANNER: demo cagrisi { cta: {label:"Demo Talep Et", href:"/${localeCode}/contact"} }
+GORSEL KURALI: image.url SADECE asagidaki listeden olabilir; uygun gorsel YOKSA o image alanini HIC ekleme (bos {} verme) ve ilgili MEDIA_TEXT'i atla. ASLA url UYDURMA.
+KURAL: Ozellikleri FEATURE_GRID yerine DONUSUMLU MEDIA_TEXT ile anlat (urun sayfasi dokusu). PRODUCT_SHOWCASE / PRODUCT_TABS KULLANMA.${mediaCatalog}`
+          : style === 'content'
+            ? `ICERIK SAYFASI SABLONU — sade, makale benzeri kurumsal/bilgi sayfasi (PAZARLAMA DEGIL). Su bloklari uret:
+1) SECTION_HEADING: { title: sayfa basligi, intro: 1-2 cumle kisa giris, level: "h1" }
+2) RICH_TEXT (govde tek html): 2-4 bolum, her biri <h2>Bolum Basligi</h2> + altinda <p> paragraf(lar) + uygun yerlerde <ul><li>...</li></ul> madde listesi. Konuya uyan 0-1 yere asagidaki listeden inline gorsel: <figure><img src="LISTEDEKI_URL" alt="..."/></figure>.
+3) (OPSIYONEL) CONTACT_FORM: { title, formKey:"contact" } — yalniz hizmet/iletisim odakli sayfada; KVKK/yasal/bilgi sayfasinda EKLEME.
+GORSEL KURALI: <img src> SADECE asagidaki listeden; uygun yoksa hic gorsel ekleme. ASLA url UYDURMA.
+KURAL: HERO / FEATURE_GRID / VALUE_PROP / STATS / PRODUCT_SHOWCASE / CTA_BANNER KULLANMA — bunlar pazarlama bloklari, normal icerik sayfasinda gereksiz. Sayfa basligi SECTION_HEADING level:"h1"; govdede <h1> kullanma.${mediaCatalog}`
+            : `KURUMSAL SAYFA SABLONU — su blok dizisini uret (uygun yerlere asagidaki listeden GERCEK gorsel koy):
+1) HERO: baslik + alt baslik + cta { label, href:"/${localeCode}/contact" } + image: listeden konuya uygun bir gorsel
 2) FEATURE_GRID: 3-4 ozellik (title + description)
-3) STATS: 3-4 olcum (value + label)
-4) VALUE_PROP: neden bu urun (title + body)
+3) MEDIA_TEXT: bir faydayi anlatan gorselli bolum (title + body + listeden image, imageSide:"right")
+4) VALUE_PROP: deger onermesi (title + body + listeden image)
 5) FAQ: 3 soru-cevap
-6) CTA_BANNER: demo/iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }`
-          : `KURUMSAL SAYFA SABLONU — su blok dizisini AYNEN uret:
-1) HERO: baslik + alt baslik + cta { label, href:"/${localeCode}/contact" }
-2) FEATURE_GRID: 3-4 ozellik
-3) VALUE_PROP: deger onermesi (title + body)
-4) FAQ: 3 soru-cevap
-5) CTA_BANNER: iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }`;
+6) CTA_BANNER: iletisim cagrisi { cta: {label, href:"/${localeCode}/contact"} }
+GORSEL KURALI: image.url SADECE asagidaki listeden olabilir; uygun gorsel YOKSA o image alanini HIC ekleme (bos {} verme) ve MEDIA_TEXT'i atla. ASLA url UYDURMA.${mediaCatalog}`;
     const system = [
       "Kurumsal bir siber guvenlik sirketi (Kron Technologies benzeri) CMS'i icin icerik tasarlayan bir mimar asistansin.",
       `Icerik dili: ${lang}. Hedef icerik tipi: ${typeLabel}.`,
@@ -229,6 +313,33 @@ KURAL: HERO / STATS / FEATURE_GRID / PRODUCT_SHOWCASE KULLANMA — bu bir MAKALE
     );
     if (parsed && parsed.title && Array.isArray(parsed.blocks)) return parsed;
     return null;
+  }
+
+  // Kutuphanedeki gercek gorseller (URL bazli dedup) — AI bunlardan secer, uydurmaz.
+  // Aciklama = alt metin yoksa dosya adindan turetilir (anlamsal eslesmeye yardim eder).
+  private async libraryImages(
+    limit = 24,
+  ): Promise<Array<{ url: string; desc: string }>> {
+    const rows = await this.prisma.media.findMany({
+      where: { mime: { startsWith: 'image/' } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: { url: true, alt: true },
+    });
+    const seen = new Set<string>();
+    const out: Array<{ url: string; desc: string }> = [];
+    for (const m of rows) {
+      if (seen.has(m.url)) continue;
+      seen.add(m.url);
+      const file = m.url.split('/').pop() ?? m.url;
+      const desc =
+        m.alt && m.alt.trim()
+          ? m.alt.trim()
+          : file.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]/g, ' ');
+      out.push({ url: m.url, desc });
+      if (out.length >= limit) break;
+    }
+    return out;
   }
 
   // --------------------------- Sablon fallback ---------------------------

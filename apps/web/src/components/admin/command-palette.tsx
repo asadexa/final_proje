@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { adminFetch, getToken, logout } from "@/lib/admin";
+import { adminFetch, ensureSession, getToken, logout } from "@/lib/admin";
+import { fuzzyScore } from "@/lib/fuzzy";
 
 interface Item {
   id: string;
@@ -12,29 +13,8 @@ interface Item {
   run: () => void;
 }
 
-// Basit fuzzy: sorgu karakterleri sirayla geciyorsa eslesir; erken/ardisik
-// eslesme daha yuksek skor alir (VS Code hissi icin yeterli, kutuphanesiz).
-function fuzzyScore(query: string, text: string): number {
-  const q = query.toLowerCase();
-  const t = text.toLowerCase();
-  if (!q) return 1;
-  let qi = 0;
-  let score = 0;
-  let streak = 0;
-  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
-    if (t[ti] === q[qi]) {
-      qi++;
-      streak++;
-      score += 2 + streak; // ardisik eslesme bonusu
-    } else {
-      streak = 0;
-    }
-  }
-  if (qi < q.length) return 0; // tum karakterler gecmedi
-  return score + Math.max(0, 30 - t.length); // kisa metin bonusu
-}
-
 // Global komut paleti (Ctrl+K): aksiyon + icerik/form/medya aramasi, klavye navigasyonu.
+// fuzzy eslesme: lib/fuzzy.ts (saf fonksiyon, test edilebilir).
 export function CommandPalette(): ReactElement | null {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -42,6 +22,8 @@ export function CommandPalette(): ReactElement | null {
   const [cursor, setCursor] = useState(0);
   const [dynamic, setDynamic] = useState<Item[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  // P1: index'i her acilista degil, oturum boyu cache'le (60sn TTL). 0 = hic yuklenmedi.
+  const lastIndexAt = useRef(0);
 
   const go = useCallback(
     (path: string) => {
@@ -68,8 +50,11 @@ export function CommandPalette(): ReactElement | null {
     [go],
   );
 
-  // Acilista icerik/form/medya indexini cek (tek sefer, hafif listeler)
-  const loadIndex = useCallback(async () => {
+  // Acilista icerik/form/medya indexini cek. P1: 60sn icinde tekrar acilirsa cache kullanilir
+  // (her Ctrl+K'da 3 istek atilmaz); force=true elle yenileme icin.
+  const INDEX_TTL = 60_000;
+  const loadIndex = useCallback(async (force = false) => {
+    if (!force && lastIndexAt.current && Date.now() - lastIndexAt.current < INDEX_TTL) return;
     const [entries, forms, media] = await Promise.all([
       adminFetch<{ items: Array<{ id: string; title: string; type: string; localeCode: string; slug: string }> }>(
         "/admin/entries?pageSize=100",
@@ -95,13 +80,16 @@ export function CommandPalette(): ReactElement | null {
       items.push({ id: `m-${m.id}`, label: name, hint: "medya", group: "Medya", run: () => go("/admin/media") });
     }
     setDynamic(items);
+    lastIndexAt.current = Date.now();
   }, [go]);
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent): void {
+    async function onKey(e: KeyboardEvent): Promise<void> {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        if (!getToken()) return;
+        // Hard reload sonrasi in-memory token henuz gelmemis olabilir (ensureSession suruyor);
+        // token yoksa once oturumu garanti et — yetki yoksa palette acilmaz (fail-closed).
+        if (!getToken() && !(await ensureSession())) return;
         setOpen((o) => {
           if (!o) {
             setQuery("");
@@ -113,8 +101,9 @@ export function CommandPalette(): ReactElement | null {
       }
       if (e.key === "Escape") setOpen(false);
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const handler = (e: KeyboardEvent): void => void onKey(e);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [loadIndex]);
 
   useEffect(() => {

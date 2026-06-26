@@ -22,10 +22,16 @@ export interface VisualBlock {
 const HISTORY_LIMIT = 50;
 const COALESCE_MS = 700; // ardisik tus vuruslari tek undo adimi olsun
 
+const metaInputCls =
+  "w-full rounded border border-line bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30";
+
 export function VisualEditor({
   blocks,
   onChange,
   title,
+  authorName,
+  isPost,
+  onPatchMeta,
   saving,
   dirty,
   onSave,
@@ -37,6 +43,9 @@ export function VisualEditor({
   blocks: VisualBlock[];
   onChange: (blocks: VisualBlock[]) => void;
   title: string;
+  authorName?: string | null;
+  isPost: boolean;
+  onPatchMeta: (patch: { title?: string; authorName?: string }) => void;
   saving: boolean;
   dirty: boolean;
   onSave: () => void;
@@ -182,8 +191,34 @@ export function VisualEditor({
           </div>
         </div>
 
-        {/* Sag panel: secili blogun formu */}
+        {/* Sag panel: entry meta (baslik/yazar) + secili blogun formu */}
         <aside className="w-[400px] shrink-0 overflow-y-auto border-l border-line bg-surface p-4">
+          {/* Entry meta — bloklardan BAGIMSIZ, blok secili olmasa da her zaman duzenlenebilir */}
+          <div className="mb-4 border-b border-line pb-4">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              {isPost ? "Makale" : "Sayfa"}
+            </h3>
+            <label className="mb-1 block text-xs text-ink-soft">Başlık</label>
+            <input
+              className={metaInputCls}
+              value={title}
+              onChange={(e) => onPatchMeta({ title: e.target.value })}
+            />
+            {isPost && (
+              <>
+                <label className="mb-1 mt-3 block text-xs text-ink-soft">Yazar</label>
+                <input
+                  className={metaInputCls}
+                  value={authorName ?? ""}
+                  placeholder="Boş bırakılırsa: Kron Ekibi"
+                  onChange={(e) => onPatchMeta({ authorName: e.target.value })}
+                />
+                <p className="mt-1 text-[11px] text-muted">
+                  İçindekiler (TOC) gövdedeki H2 başlıklarından otomatik üretilir.
+                </p>
+              </>
+            )}
+          </div>
           {selBlock ? (
             <div>
               <div className="mb-3 flex items-center justify-between">

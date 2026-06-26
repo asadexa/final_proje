@@ -1,7 +1,9 @@
 "use client";
 
 import { type FormEvent, type ReactElement, useCallback, useEffect, useState } from "react";
-import { adminFetch, getToken } from "@/lib/admin";
+import { LoadError } from "@/components/admin/load-error";
+import { adminFetch, adminRequest } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 
 interface RedirectRow {
   id: string;
@@ -13,29 +15,30 @@ interface RedirectRow {
 }
 
 const inputCls =
-  "w-full rounded border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary";
+  "w-full rounded border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30";
 
 // 301/302 yonetimi (PDF SEO gereksinimi). Degisiklik API'de Redis cache'i dusurur;
 // web proxy'nin in-memory cache'i <=60sn icinde tazelenir.
 export default function RedirectsPage(): ReactElement {
+  const ready = useAdminGuard();
   const [rows, setRows] = useState<RedirectRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [msg, setMsg] = useState("");
 
   const load = useCallback(async () => {
-    const d = await adminFetch<RedirectRow[]>("/admin/redirects");
-    setRows(d ?? []);
+    setLoading(true);
+    setError(false);
+    const r = await adminRequest<RedirectRow[]>("/admin/redirects");
+    if (r.ok) setRows(r.data ?? []);
+    else setError(true);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
     // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
-    void Promise.resolve().then(load);
-  }, [load]);
+    if (ready) void Promise.resolve().then(load);
+  }, [ready, load]);
 
   async function create(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
@@ -74,6 +77,8 @@ export default function RedirectsPage(): ReactElement {
   }
 
   if (loading) return <p className="text-sm text-muted">Yükleniyor...</p>;
+  if (error)
+    return <LoadError onRetry={() => void load()} label="Yönlendirmeler yüklenemedi — sunucuya ulaşılamadı." />;
 
   return (
     <div>

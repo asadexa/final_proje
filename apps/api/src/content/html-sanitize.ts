@@ -38,6 +38,8 @@ const RICH_TAGS = [
   'ol',
   'li',
   'blockquote',
+  'figure',
+  'figcaption',
 ];
 
 // Escape edilmis metinde yalniz izinli etiketleri geri ac (nitelik tasimaz).
@@ -63,14 +65,29 @@ function restoreLinks(s: string): string {
   return s.replace(/&lt;\/a&gt;/gi, '</a>');
 }
 
+// RICH_TEXT icin inline <img>: yalniz guvenli src (http(s) veya site-ici /...).
+// Nitelikler escape edildigi icin tirnak kacisi imkansiz; src semasi + src/alt
+// disindaki tum nitelikler atilir (onerror/onload vb. hayatta kalamaz).
+const SAFE_SRC = /^(https?:\/\/|\/)/i;
+function restoreImages(s: string): string {
+  return s.replace(/&lt;img\s+([\s\S]*?)\/?&gt;/gi, (_m, attrs: string) => {
+    const src =
+      (/src=&quot;((?:(?!&quot;).)*?)&quot;/i.exec(attrs) ?? [])[1] ?? '';
+    if (!SAFE_SRC.test(src)) return '';
+    const alt =
+      (/alt=&quot;((?:(?!&quot;).)*?)&quot;/i.exec(attrs) ?? [])[1] ?? '';
+    return `<img src="${src}" alt="${alt}" loading="lazy" />`;
+  });
+}
+
 // Baslik politikasi: yalniz inline vurgu etiketleri.
 export function sanitizeTextHtml(input: string): string {
   return restoreTags(escapeAll(input), TEXT_TAGS);
 }
 
-// Zengin metin politikasi: bicimlendirme + guvenli linkler.
+// Zengin metin politikasi: bicimlendirme + guvenli linkler + guvenli inline gorseller.
 export function sanitizeRichHtml(input: string): string {
-  return restoreLinks(restoreTags(escapeAll(input), RICH_TAGS));
+  return restoreImages(restoreLinks(restoreTags(escapeAll(input), RICH_TAGS)));
 }
 
 type Json = Record<string, unknown>;

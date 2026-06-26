@@ -85,6 +85,11 @@ export class CreateEntryDto {
   @IsBoolean()
   featured?: boolean;
 
+  @ApiPropertyOptional({ description: 'Blog meta yazar adi (serbest metin)' })
+  @IsOptional()
+  @IsString()
+  authorName?: string;
+
   @ApiPropertyOptional({ enum: ENTRY_STATUSES })
   @IsOptional()
   @IsIn(ENTRY_STATUSES)

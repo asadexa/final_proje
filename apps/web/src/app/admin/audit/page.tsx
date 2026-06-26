@@ -1,7 +1,9 @@
 "use client";
 
-import { type ReactElement, useEffect, useState } from "react";
-import { adminFetch, getToken } from "@/lib/admin";
+import { type ReactElement, useCallback, useEffect, useState } from "react";
+import { LoadError } from "@/components/admin/load-error";
+import { adminRequest } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 
 interface AuditRow {
   id: string;
@@ -17,21 +19,28 @@ const fmt = new Intl.DateTimeFormat("tr-TR", { dateStyle: "short", timeStyle: "m
 
 // Denetim kaydi (PDF "Audit log"): kim, ne zaman, hangi icerige ne yapti.
 export default function AuditPage(): ReactElement {
+  const ready = useAdminGuard();
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
-    void adminFetch<AuditRow[]>("/admin/audit?pageSize=100").then((d) => {
-      setRows(d ?? []);
-      setLoading(false);
-    });
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    const r = await adminRequest<AuditRow[]>("/admin/audit?pageSize=100");
+    if (r.ok) setRows(r.data ?? []);
+    else setError(true);
+    setLoading(false);
   }, []);
 
+  useEffect(() => {
+    // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
+    if (ready) void Promise.resolve().then(load);
+  }, [ready, load]);
+
   if (loading) return <p className="text-sm text-muted">Yükleniyor...</p>;
+  if (error)
+    return <LoadError onRetry={() => void load()} label="Denetim kaydı yüklenemedi — sunucuya ulaşılamadı." />;
 
   return (
     <div>

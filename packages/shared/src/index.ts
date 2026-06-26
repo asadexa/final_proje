@@ -80,6 +80,8 @@ export const blockSchemas = {
     title: z.string(),
     intro: z.string().optional(),
     align: z.enum(['left', 'center']).default('left'),
+    // Sayfa basligi olarak kullanildiginda H1; varsayilan bolum basligi H2.
+    level: z.enum(['h1', 'h2']).optional(),
   }),
   FEATURE_GRID: z.object({
     title: z.string().optional(),

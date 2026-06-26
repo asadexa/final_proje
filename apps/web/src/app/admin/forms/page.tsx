@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactElement, useEffect, useState } from "react";
-import { adminFetch, getToken } from "@/lib/admin";
+import { type ReactElement, useCallback, useEffect, useState } from "react";
+import { LoadError } from "@/components/admin/load-error";
+import { adminRequest } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 
 interface FormDef {
   id: string;
@@ -12,21 +14,28 @@ interface FormDef {
 }
 
 export default function FormsListPage(): ReactElement {
+  const ready = useAdminGuard();
   const [forms, setForms] = useState<FormDef[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
-    void adminFetch<FormDef[]>("/admin/forms").then((d) => {
-      setForms(d ?? []);
-      setLoading(false);
-    });
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    const r = await adminRequest<FormDef[]>("/admin/forms");
+    if (r.ok) setForms(r.data ?? []);
+    else setError(true);
+    setLoading(false);
   }, []);
 
+  useEffect(() => {
+    // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
+    if (ready) void Promise.resolve().then(load);
+  }, [ready, load]);
+
   if (loading) return <p className="text-sm text-muted">Yükleniyor...</p>;
+  if (error)
+    return <LoadError onRetry={() => void load()} label="Formlar yüklenemedi — sunucuya ulaşılamadı." />;
 
   return (
     <div>

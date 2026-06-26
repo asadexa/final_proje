@@ -192,6 +192,7 @@ export class ContentService {
         title: dto.title,
         excerpt: dto.excerpt,
         featured: dto.featured ?? false,
+        authorName: dto.authorName,
         status,
         publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
         publishedAt: status === 'PUBLISHED' ? new Date() : null,
@@ -318,6 +319,7 @@ export class ContentService {
       title: dto.title,
       excerpt: dto.excerpt,
       featured: dto.featured,
+      authorName: dto.authorName,
     };
     if (dto.localeCode) {
       data.locale = { connect: { code: dto.localeCode } };

@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
-import { adminFetch, getToken } from "@/lib/admin";
+import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LoadError } from "@/components/admin/load-error";
+import { adminRequest } from "@/lib/admin";
+import { useAdminGuard } from "@/lib/use-admin-guard";
 
 interface GraphNode {
   id: string;
@@ -34,19 +36,25 @@ const COL_X: Record<string, number> = { PAGE: 140, PRODUCT: 520, POST: 900 };
 // dugumler kirmizi halkayla vurgulanir. Zoom: tekerlek, pan: surukle.
 export default function GraphPage(): ReactElement {
   const router = useRouter();
+  const ready = useAdminGuard();
   const [data, setData] = useState<GraphData | null>(null);
+  const [error, setError] = useState(false);
   const [query, setQuery] = useState("");
   const [view, setView] = useState({ x: 0, y: 0, w: 1100, h: 800 });
   const drag = useRef<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  useEffect(() => {
-    if (!getToken()) {
-      window.location.href = "/admin/login";
-      return;
-    }
-    void adminFetch<GraphData>("/admin/entries/graph").then((d) => setData(d));
+  const load = useCallback(async () => {
+    setError(false);
+    const r = await adminRequest<GraphData>("/admin/entries/graph");
+    if (r.ok) setData(r.data ?? null);
+    else setError(true);
   }, []);
+
+  useEffect(() => {
+    // setState'i effect'ten mikro-goreve ertele (react-hooks/set-state-in-effect)
+    if (ready) void Promise.resolve().then(load);
+  }, [ready, load]);
 
   // Yerlesim: tip kolonlari, kolon icinde locale->title sirali dikey dizilim
   const layout = useMemo(() => {
@@ -54,12 +62,25 @@ export default function GraphPage(): ReactElement {
     const pos = new Map<string, { x: number; y: number }>();
     const groups: Record<string, GraphNode[]> = { PAGE: [], PRODUCT: [], POST: [] };
     for (const n of data.nodes) (groups[n.type] ?? (groups[n.type] = [])).push(n);
+    // Her distinct locale kendi x-offset'ini alir (tr=0 sol, en=180, ek locale=360...).
+    // Sabit "tr/en" varsayimi yerine: tr ilk, kalanlar alfabetik. Locale dinamik bir
+    // DB tablosu oldugundan 3. bir locale eklenirse 'en' sutununa BINMESIN diye.
+    const localeOrder = [...new Set(data.nodes.map((n) => n.localeCode))].sort((a, b) =>
+      a === "tr" ? -1 : b === "tr" ? 1 : a.localeCompare(b),
+    );
+    const dxByLocale: Record<string, number> = {};
+    localeOrder.forEach((lc, i) => (dxByLocale[lc] = i * 180));
     for (const [type, nodes] of Object.entries(groups)) {
       nodes.sort((a, b) => a.localeCode.localeCompare(b.localeCode) || a.slug.localeCompare(b.slug));
-      nodes.forEach((n, i) => {
-        // tr sol alt-kolon, en sag alt-kolon
-        const dx = n.localeCode === "tr" ? 0 : 180;
-        pos.set(n.id, { x: (COL_X[type] ?? 140) + dx, y: 60 + i * 34 - (n.localeCode === "en" ? Math.floor(nodes.filter((m) => m.localeCode === "tr").length) * 34 : 0) });
+      // Her locale alt-kolonu kendi sayacindan baslar; aksi halde global indeks
+      // EN'i yukari, TR'yi asagi itip kolonlari hizasiz birakiyor.
+      const rowByLocale: Record<string, number> = {};
+      nodes.forEach((n) => {
+        // tr sol alt-kolon, en sag alt-kolon, ek locale'ler saga dogru (cakisma yok)
+        const dx = dxByLocale[n.localeCode] ?? 0;
+        const row = rowByLocale[n.localeCode] ?? 0;
+        rowByLocale[n.localeCode] = row + 1;
+        pos.set(n.id, { x: (COL_X[type] ?? 140) + dx, y: 60 + row * 34 });
       });
     }
     return pos;
@@ -71,6 +92,8 @@ export default function GraphPage(): ReactElement {
     return set;
   }, [data]);
 
+  if (error)
+    return <LoadError onRetry={() => void load()} label="Grafik yüklenemedi — sunucuya ulaşılamadı." />;
   if (!data) return <p className="text-sm text-muted">Yükleniyor...</p>;
 
   const q = query.trim().toLowerCase();
@@ -101,7 +124,7 @@ export default function GraphPage(): ReactElement {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Ara (başlık/slug)…"
-          className="rounded border border-line bg-surface px-3 py-1.5 text-sm outline-none focus:border-primary"
+          className="rounded border border-line bg-surface px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
         />
         <div className="flex items-center gap-3 text-xs text-ink-soft">
           {Object.entries(TYPE_COLOR).map(([t, c]) => (

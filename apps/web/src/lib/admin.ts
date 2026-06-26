@@ -1,30 +1,47 @@
 // Admin paneli istemci tarafi yardimcilari.
-// Cross-origin (web:3000 -> api:4000) + cookie SameSite=Lax dev'de gonderilmiyor;
-// bu yuzden login body'sindeki accessToken ile Bearer auth kullanilir (localStorage).
+//
+// A2 (2026-06-25): accessToken artik localStorage'da DEGIL, BELLEKTE (modul degiskeni)
+// tutulur — XSS kalici token calamaz. Bu, ADR 0003'un "localStorage + Bearer reddedildi"
+// kararina geri hizalanmadir. Sayfa yenilemede bellek silinir; oturum httpOnly refresh
+// cookie'si ile sessizce geri alinir (bkz. ensureSession + useAdminGuard).
+// Rol de ayri saklanmaz; access token JWT payload'indan cozulur (UI-only; gercek yetki sunucuda).
+//
+// Cross-origin (web:3000 -> api:4000): login/refresh body'sindeki accessToken ile Bearer auth;
+// refresh_token httpOnly cookie credentials:include ile tasinir.
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-const TOKEN_KEY = "kron_admin_token";
-const ROLE_KEY = "kron_admin_role";
+
+// Bellekte tutulan access token (kalici degil — reload'da refresh ile geri gelir).
+let accessToken: string | null = null;
 
 export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-// Onay akisi UI'i icin rol (gercek yetki sunucuda zorlanir; bu yalniz gorunum)
-export function getRole(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(ROLE_KEY);
+  return accessToken;
 }
 
 function setToken(token: string): void {
-  if (typeof window !== "undefined") localStorage.setItem(TOKEN_KEY, token);
+  accessToken = token;
 }
 
 function clearToken(): void {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(ROLE_KEY);
+  accessToken = null;
+}
+
+// Onay akisi UI'i icin rol — access token JWT payload'indan cozulur (gercek yetki sunucuda).
+export function getRole(): string | null {
+  const t = accessToken;
+  if (!t) return null;
+  try {
+    const part = t.split(".")[1];
+    if (!part) return null;
+    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 ? "=".repeat(4 - (b64.length % 4)) : "";
+    const json =
+      typeof atob !== "undefined"
+        ? atob(b64 + pad)
+        : Buffer.from(b64, "base64").toString("utf8");
+    return (JSON.parse(json) as { role?: string }).role ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -33,22 +50,18 @@ export async function login(email: string, password: string): Promise<boolean> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     // credentials: refresh_token httpOnly cookie'sinin TARAYICIYA yazilmasi icin sart
-    // (localhost:3000 -> :4000 same-site; CORS credentials acik)
     credentials: "include",
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) return false;
-  const data = (await res.json()) as { accessToken?: string; user?: { role?: string } };
+  const data = (await res.json()) as { accessToken?: string };
   if (!data.accessToken) return false;
   setToken(data.accessToken);
-  if (data.user?.role && typeof window !== "undefined") {
-    localStorage.setItem(ROLE_KEY, data.user.role);
-  }
   return true;
 }
 
-// Sessiz oturum yenileme: access token (15dk) dolunca refresh cookie ile yeni
-// token alinir; kullanici calismaya devam eder (onceki davranis: aniden logout).
+// Sessiz oturum yenileme: access token (15dk) dolunca refresh cookie ile yeni token alinir.
+// es zamanli 401'ler tek refresh'i paylasir.
 let refreshing: Promise<boolean> | null = null;
 async function tryRefresh(): Promise<boolean> {
   refreshing ??= (async () => {
@@ -65,8 +78,9 @@ async function tryRefresh(): Promise<boolean> {
     } catch {
       return false;
     } finally {
-      // es zamanli 401'ler tek refresh'i paylasir; bitince sifirla
-      window.setTimeout(() => {
+      // es zamanli 401'ler tek refresh'i paylasir; bitince sifirla. window.* degil setTimeout:
+      // tarayici + node (test) ortaminda calisir.
+      setTimeout(() => {
         refreshing = null;
       }, 0);
     }
@@ -74,23 +88,51 @@ async function tryRefresh(): Promise<boolean> {
   return refreshing;
 }
 
-export function logout(): void {
+// Oturum garantisi: bellekte token varsa hazir; yoksa (orn. sayfa yenilendi) refresh cookie
+// ile sessizce geri al. useAdminGuard bunu kullanir.
+export async function ensureSession(): Promise<boolean> {
+  if (accessToken) return true;
+  return tryRefresh();
+}
+
+// In-memory token'a GUVENMEDEN yeniden dogrula: token'i zorla temizle, refresh cookie ile
+// dene. BFCache geri yuklemesi (logout sonrasi back-button) eski token'i heap'e geri getirir;
+// access JWT stateless oldugundan ~15dk gecerli kalir. Bu, stale token'i atip refresh cookie
+// (logout'ta revoke + silinmis) yoksa false doner -> guard login'e yonlendirir.
+export async function revalidateSession(): Promise<boolean> {
+  clearToken();
+  return tryRefresh();
+}
+
+export async function logout(): Promise<void> {
+  // Sunucuda refresh token revoke + cookie temizle — aksi halde in-memory token silinse de
+  // refresh cookie ile reload'da geri girilebilirdi (sessiz "logout calismadi" bug'i).
+  try {
+    await fetch(`${API}/api/auth/logout`, { method: "POST", credentials: "include" });
+  } catch {
+    // ag hatasi olsa da yerel temizlige devam
+  }
   clearToken();
   if (typeof window !== "undefined") window.location.href = "/admin/login";
 }
 
-// Bearer'li admin API cagrisi. 401 -> once sessiz refresh dene, olmazsa login'e yonlendir.
-export async function adminFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
-  const doFetch = async (): Promise<Response> => {
+// Tek dusuk-seviye fetch: token ekle, 401'de sessiz refresh + retry, kalici 401'de login'e
+// yonlendir (null doner). adminFetch/adminRequest/adminDownload/adminUpload bunu paylasir (DRY).
+// json=false => Content-Type ayarlanmaz (multipart/blob icin).
+async function rawAdminFetch(
+  path: string,
+  init: RequestInit = {},
+  opts: { json?: boolean } = {},
+): Promise<Response | null> {
+  const json = opts.json ?? true;
+  const doFetch = (): Promise<Response> => {
     const token = getToken();
-    return fetch(`${API}/api${path}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        ...(init?.headers ?? {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
+    const headers: Record<string, string> = {
+      ...(json ? { "Content-Type": "application/json" } : {}),
+      ...((init.headers as Record<string, string>) ?? {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    return fetch(`${API}/api${path}`, { ...init, headers });
   };
   let res = await doFetch();
   if (res.status === 401 && (await tryRefresh())) res = await doFetch();
@@ -99,35 +141,17 @@ export async function adminFetch<T>(path: string, init?: RequestInit): Promise<T
     if (typeof window !== "undefined") window.location.href = "/admin/login";
     return null;
   }
-  if (!res.ok) return null;
-  if (res.status === 204) return {} as T;
-  return (await res.json()) as T;
+  return res;
 }
 
-// adminFetch hata govdesini yutar; bu varyant API'nin dondurdugu mesaji da tasir
-// (editor "Kaydet" gibi kullaniciya neden gostermek isteyen yerler icin).
+// Hata mesajini da tasiyan kanonik varyant: cagiran taraf "hata" ile "bos"u ayirt edebilir
+// (sessiz bos-tablo yerine acik hata UI'i icin — C3).
 export async function adminRequest<T>(
   path: string,
   init?: RequestInit,
 ): Promise<{ ok: boolean; data?: T; message?: string }> {
-  const doFetch = async (): Promise<Response> => {
-    const token = getToken();
-    return fetch(`${API}/api${path}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        ...(init?.headers ?? {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-  };
-  let res = await doFetch();
-  if (res.status === 401 && (await tryRefresh())) res = await doFetch();
-  if (res.status === 401) {
-    clearToken();
-    if (typeof window !== "undefined") window.location.href = "/admin/login";
-    return { ok: false, message: "Oturum süresi doldu." };
-  }
+  const res = await rawAdminFetch(path, init);
+  if (!res) return { ok: false, message: "Oturum süresi doldu." };
   const body = (await res.json().catch(() => null)) as
     | (T & { message?: string | string[] })
     | null;
@@ -138,13 +162,17 @@ export async function adminRequest<T>(
   return { ok: true, data: (body ?? {}) as T };
 }
 
+// Yalniz veri isteyen cagiranlar icin ince sarmalayici: hata da bos da null doner
+// (geriye donuk uyumlu). Hatayi ayirmak gereken yerler adminRequest kullanir.
+export async function adminFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
+  const r = await adminRequest<T>(path, init);
+  return r.ok ? ((r.data ?? null) as T | null) : null;
+}
+
 // Bearer'li dosya indirme (CSV export) -> blob -> tarayicida indir.
 export async function adminDownload(path: string, filename: string): Promise<void> {
-  const token = getToken();
-  const res = await fetch(`${API}/api${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) return;
+  const res = await rawAdminFetch(path, {}, { json: false });
+  if (!res || !res.ok) return;
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -156,23 +184,9 @@ export async function adminDownload(path: string, filename: string): Promise<voi
 
 // Multipart dosya yukleme (Content-Type'i tarayici ayarlar; JSON header EKLENMEZ).
 export async function adminUpload<T>(path: string, file: File): Promise<T | null> {
-  const doFetch = async (): Promise<Response> => {
-    const token = getToken();
-    const form = new FormData();
-    form.append("file", file);
-    return fetch(`${API}/api${path}`, {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: form,
-    });
-  };
-  let res = await doFetch();
-  if (res.status === 401 && (await tryRefresh())) res = await doFetch();
-  if (res.status === 401) {
-    clearToken();
-    if (typeof window !== "undefined") window.location.href = "/admin/login";
-    return null;
-  }
-  if (!res.ok) return null;
+  const form = new FormData();
+  form.append("file", file);
+  const res = await rawAdminFetch(path, { method: "POST", body: form }, { json: false });
+  if (!res || !res.ok) return null;
   return (await res.json()) as T;
 }
