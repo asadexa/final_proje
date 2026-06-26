@@ -37,15 +37,22 @@ export default function FormSubmissionsPage(): ReactElement {
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
-    // Gonderimler + form tanimi (dostca ad icin) birlikte cekilir
-    const [r, forms] = await Promise.all([
-      adminRequest<SubList>(`/admin/forms/${key}/submissions?pageSize=100`),
-      adminFetch<Array<{ key: string; name: string }>>("/admin/forms"),
-    ]);
-    if (r.ok) setList(r.data ?? null);
-    else setError(true);
-    setFormName((forms ?? []).find((f) => f.key === key)?.name ?? null);
-    setLoading(false);
+    try {
+      // Gonderimler + form tanimi (dostca ad icin) birlikte cekilir.
+      // try/catch: ag reddinde (fetch throw -> Promise.all reject) sayfa "Yukleniyor"da
+      // donmasin; kozmetik form-adi cagrisi da birincil gorunumu dusurmesin.
+      const [r, forms] = await Promise.all([
+        adminRequest<SubList>(`/admin/forms/${key}/submissions?pageSize=100`),
+        adminFetch<Array<{ key: string; name: string }>>("/admin/forms"),
+      ]);
+      if (r.ok) setList(r.data ?? null);
+      else setError(true);
+      setFormName((forms ?? []).find((f) => f.key === key)?.name ?? null);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [key]);
 
   useEffect(() => {

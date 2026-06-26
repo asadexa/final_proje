@@ -144,7 +144,9 @@ export default function AdminEntriesPage(): ReactElement {
 
   const tabs: { key: "" | EntryStatus; label: string; count: number }[] = [
     { key: "", label: "Tümü", count: preStatus.length },
-    ...STATUS_ORDER.filter((s) => (statusCounts[s] ?? 0) > 0).map((s) => ({
+    // count>0 olanlar + (sayisi 0'a dusse bile) o an SECILI statu sekmesi gorunur kalsin;
+    // aksi halde sekme kaybolur, statusFilter kalir ve liste sebepsiz bos gorunur.
+    ...STATUS_ORDER.filter((s) => (statusCounts[s] ?? 0) > 0 || s === statusFilter).map((s) => ({
       key: s,
       label: STATUS_LABEL[s],
       count: statusCounts[s] ?? 0,

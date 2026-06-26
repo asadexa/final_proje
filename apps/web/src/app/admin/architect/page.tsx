@@ -107,7 +107,8 @@ export default function ArchitectPage(): ReactElement {
     const finish = startProgress();
     const r = await adminRequest<ArchitectResult>("/admin/ai/architect", {
       method: "POST",
-      body: JSON.stringify({ prompt, localeCode: locale, type, style }),
+      // style yalniz PAGE icin anlamli; POST/PRODUCT'a stale deger gondermeyelim.
+      body: JSON.stringify({ prompt, localeCode: locale, type, ...(type === "PAGE" ? { style } : {}) }),
     });
     const ok = r.ok && !!r.data;
     finish(ok);

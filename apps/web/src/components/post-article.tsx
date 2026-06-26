@@ -40,14 +40,20 @@ function isMeaningfulHero(b: BlockNode): boolean {
 
 // Baslik metninden anchor id'si (Turkce karakter sadelestirme).
 function slugifyHeading(s: string): string {
-  const map: Record<string, string> = { ç: "c", ğ: "g", ı: "i", ö: "o", ş: "s", ü: "u", İ: "i" };
+  // Turkce harfleri (her iki kasa) ONCE ASCII'ye cevir, SONRA kucult. toLowerCase'i
+  // map'ten once calistirmak hataliydi: "İ".toLowerCase() = "i"+birlesik nokta (U+0307),
+  // nokta [a-z0-9] olmadigi icin tireye donusup "i-stanbul" gibi bozuk slug uretiyordu.
+  const map: Record<string, string> = {
+    ç: "c", Ç: "c", ğ: "g", Ğ: "g", ı: "i", I: "i", İ: "i",
+    ö: "o", Ö: "o", ş: "s", Ş: "s", ü: "u", Ü: "u",
+  };
   return (
     s
       .replace(/<[^>]+>/g, "")
-      .toLowerCase()
       .split("")
       .map((c) => map[c] ?? c)
       .join("")
+      .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 60) || "bolum"
@@ -58,8 +64,9 @@ function slugifyHeading(s: string): string {
 function buildToc(html: string): { html: string; toc: Array<{ id: string; text: string }> } {
   const toc: Array<{ id: string; text: string }> = [];
   const used = new Set<string>();
-  const out = html.replace(/<h2(?:\s[^>]*)?>([\s\S]*?)<\/h2>/gi, (_m, inner: string) => {
+  const out = html.replace(/<h2(?:\s[^>]*)?>([\s\S]*?)<\/h2>/gi, (m, inner: string) => {
     const text = inner.replace(/<[^>]+>/g, "").trim();
+    if (!text) return m; // bos/boslukli basligi atla: TOC'a girme, id ekleme
     let id = slugifyHeading(text);
     const base = id;
     for (let n = 2; used.has(id); n++) id = `${base}-${n}`;

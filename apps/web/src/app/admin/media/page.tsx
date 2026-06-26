@@ -85,6 +85,7 @@ export default function MediaPage(): ReactElement {
   function onDrop(e: DragEvent): void {
     e.preventDefault();
     setDragActive(false);
+    if (progress !== null) return; // yukleme surerken birakilani yok say (sayac/race bozulmasin)
     void uploadFiles(Array.from(e.dataTransfer.files));
   }
 
@@ -115,8 +116,11 @@ export default function MediaPage(): ReactElement {
         if (!dragActive) setDragActive(true);
       }}
       onDragLeave={(e) => {
-        // yalniz kapsayicinin kendisinden cikinca kapat (cocuk gecislerinde titremesin)
-        if (e.currentTarget === e.target) setDragActive(false);
+        // Kapsayici disina GERCEKTEN cikinca kapat: relatedTarget kapsayici icindeyse
+        // (cocuk gecisi) acik kal, titremesin; null/disari ise (pencere disi dahil) kapat.
+        // Eski "currentTarget===target" kontrolu, cocuk uzerindeyken pencere disina cikista
+        // takili kaliyordu.
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragActive(false);
       }}
       onDrop={onDrop}
       className={`rounded-lg ${dragActive ? "outline outline-2 outline-dashed outline-primary" : ""}`}

@@ -139,27 +139,34 @@ export class AiService {
 
     // Gorsel whitelist: gorseller YALNIZ kutuphaneden olabilir; AI listede olmayan
     // bir url uydurursa temizlenir (404 imkansiz).
-    if (mediaList.length > 0) {
-      const allow = new Set(mediaList.map((m) => m.url));
-      for (const b of draft.blocks) {
-        // (a) image alani (HERO/VALUE_PROP/MEDIA_TEXT): url listede degilse veya yoksa
-        // alani TAMAMEN kaldir (renderer bos kutu basmasin; image zorunlu olan MEDIA_TEXT
-        // boylece Zod'da duser — gorselsiz MEDIA_TEXT zaten istenmiyor).
-        const img = b.data.image as { url?: unknown } | undefined;
-        if (img && (typeof img.url !== 'string' || !allow.has(img.url))) {
-          delete b.data.image;
-        }
-        // (b) RICH_TEXT govdesindeki inline <img>/<figure>: listede olmayan src kaldirilir
-        if (typeof b.data.html === 'string') {
-          b.data.html = b.data.html
-            .replace(/<figure\b[\s\S]*?<\/figure>/gi, (block) => {
-              const m = /<img\b[^>]*\bsrc="([^"]*)"/i.exec(block);
-              return m && allow.has(m[1]) ? block : '';
-            })
-            .replace(/<img\b[^>]*\bsrc="([^"]*)"[^>]*>/gi, (m, src: string) =>
-              allow.has(src) ? m : '',
-            );
-        }
+    // allow BOS olabilir (kutuphane bos) -> o zaman HICBIR gorsel gecmez (hepsi silinir);
+    // dolu ise yalniz listedeki url'ler kalir. (Eski `if (length>0)` guard'i bos kutuphanede
+    // tum temizligi atlayip uydurma/dis url'in gecmesine izin veriyordu.)
+    const allow = new Set(mediaList.map((m) => m.url));
+    // src'yi tirnak stiline (cift/tek/tirnaksiz) bakmaksizin cek (yalniz cift-tirnak yetersizdi).
+    const imgSrc = (tag: string): string | null => {
+      const m = /\bsrc\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(tag);
+      return m ? (m[2] ?? m[3] ?? m[4] ?? null) : null;
+    };
+    for (const b of draft.blocks) {
+      // (a) image alani (HERO/VALUE_PROP/MEDIA_TEXT): url listede degilse veya yoksa
+      // alani TAMAMEN kaldir (renderer bos kutu basmasin; image zorunlu olan MEDIA_TEXT
+      // boylece Zod'da duser — gorselsiz MEDIA_TEXT zaten istenmiyor).
+      const img = b.data.image as { url?: unknown } | undefined;
+      if (img && (typeof img.url !== 'string' || !allow.has(img.url))) {
+        delete b.data.image;
+      }
+      // (b) RICH_TEXT govdesindeki inline <img>/<figure>: listede olmayan src kaldirilir
+      if (typeof b.data.html === 'string') {
+        b.data.html = b.data.html
+          .replace(/<figure\b[\s\S]*?<\/figure>/gi, (block) => {
+            const src = imgSrc(block);
+            return src && allow.has(src) ? block : '';
+          })
+          .replace(/<img\b[^>]*>/gi, (tag) => {
+            const src = imgSrc(tag);
+            return src && allow.has(src) ? tag : '';
+          });
       }
     }
 

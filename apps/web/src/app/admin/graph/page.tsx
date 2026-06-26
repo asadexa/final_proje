@@ -62,14 +62,22 @@ export default function GraphPage(): ReactElement {
     const pos = new Map<string, { x: number; y: number }>();
     const groups: Record<string, GraphNode[]> = { PAGE: [], PRODUCT: [], POST: [] };
     for (const n of data.nodes) (groups[n.type] ?? (groups[n.type] = [])).push(n);
+    // Her distinct locale kendi x-offset'ini alir (tr=0 sol, en=180, ek locale=360...).
+    // Sabit "tr/en" varsayimi yerine: tr ilk, kalanlar alfabetik. Locale dinamik bir
+    // DB tablosu oldugundan 3. bir locale eklenirse 'en' sutununa BINMESIN diye.
+    const localeOrder = [...new Set(data.nodes.map((n) => n.localeCode))].sort((a, b) =>
+      a === "tr" ? -1 : b === "tr" ? 1 : a.localeCompare(b),
+    );
+    const dxByLocale: Record<string, number> = {};
+    localeOrder.forEach((lc, i) => (dxByLocale[lc] = i * 180));
     for (const [type, nodes] of Object.entries(groups)) {
       nodes.sort((a, b) => a.localeCode.localeCompare(b.localeCode) || a.slug.localeCompare(b.slug));
       // Her locale alt-kolonu kendi sayacindan baslar; aksi halde global indeks
       // EN'i yukari, TR'yi asagi itip kolonlari hizasiz birakiyor.
       const rowByLocale: Record<string, number> = {};
       nodes.forEach((n) => {
-        // tr sol alt-kolon, en sag alt-kolon
-        const dx = n.localeCode === "tr" ? 0 : 180;
+        // tr sol alt-kolon, en sag alt-kolon, ek locale'ler saga dogru (cakisma yok)
+        const dx = dxByLocale[n.localeCode] ?? 0;
         const row = rowByLocale[n.localeCode] ?? 0;
         rowByLocale[n.localeCode] = row + 1;
         pos.set(n.id, { x: (COL_X[type] ?? 140) + dx, y: 60 + row * 34 });

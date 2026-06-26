@@ -10,6 +10,7 @@ export function isoToLocalInput(iso: string): string {
 // Mutlak tarih (gun.ay.yil) — relative esiginden eski tarihler ve hover title icin.
 export function absoluteDate(iso: string): string {
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—"; // gecersiz ISO -> "NaN.NaN.NaN" basma
   const pad = (n: number): string => String(n).padStart(2, "0");
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
@@ -17,6 +18,7 @@ export function absoluteDate(iso: string): string {
 // Tam tarih + saat (icerik listesi hover title'i).
 export function absoluteDateTime(iso: string): string {
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—"; // gecersiz ISO -> "NaN:NaN" basma
   const pad = (n: number): string => String(n).padStart(2, "0");
   return `${absoluteDate(iso)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

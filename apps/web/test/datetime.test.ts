@@ -60,4 +60,9 @@ describe("absoluteDate / absoluteDateTime", () => {
     const d = new Date(2026, 5, 25, 14, 30);
     expect(absoluteDateTime(d.toISOString())).toBe("25.06.2026 14:30");
   });
+  it("gecersiz ISO 'NaN.NaN.NaN' yerine '—' doner", () => {
+    expect(absoluteDate("bozuk-tarih")).toBe("—");
+    expect(absoluteDateTime("bozuk-tarih")).toBe("—");
+    expect(relativeTime("bozuk-tarih", new Date(2026, 5, 25))).toBe("—");
+  });
 });
